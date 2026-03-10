@@ -7,6 +7,8 @@ let _pacienteId = null;
 let _paciente = null;
 let _isAdmin = false;
 let _isReadOnly = false;
+let _stockModelo = 'familiar'; // 'familiar' | 'institucion'
+let _catalogo = [];            // catalog items when stockModelo === 'institucion'
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
@@ -40,6 +42,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initTabs(params.get('tab'));
     initForms();
+
+    // Load institution stock settings before rendering medications
+    try {
+        const inst = await API_B2B.getInstitucion();
+        _stockModelo = inst.stock_modelo || 'familiar';
+        if (_stockModelo === 'institucion') {
+            _catalogo = await API_B2B.getCatalogo().catch(() => []);
+        }
+    } catch(e) { /* silently continue */ }
+
     await loadPaciente();
     await loadAllData();
 });
@@ -84,7 +96,7 @@ function renderPacienteHeader(p) {
     el.innerHTML = `
         <div class="d-flex align-center gap-12 flex-wrap">
             <div class="paciente-avatar-lg">👤</div>
-            <div class="paciente-info-header">
+            <div class="paciente-info-header" style="flex:1">
                 <h1>${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</h1>
                 <div class="paciente-meta">
                     ${edad !== null ? `<span class="paciente-meta-item">🎂 ${edad} años</span>` : ''}
@@ -96,6 +108,10 @@ function renderPacienteHeader(p) {
                 </div>
                 ${p.diagnostico ? `<div class="paciente-meta"><span class="paciente-meta-item">🩺 ${escapeHtml(p.diagnostico)}</span></div>` : ''}
                 ${p.alergias ? `<div class="paciente-meta"><span class="paciente-meta-item badge-danger" style="background:#fde8e8;color:#c0392b;padding:3px 8px;border-radius:4px;font-weight:600">⚠️ Alergias: ${escapeHtml(p.alergias)}</span></div>` : ''}
+            </div>
+            <div class="d-flex gap-8 align-center flex-wrap">
+                ${p.fecha_egreso ? `<span class="badge badge-red" style="font-size:.8rem;padding:6px 12px">🚪 Alta: ${formatDate(p.fecha_egreso)} — ${escapeHtml(p.motivo_egreso || '')}</span>` : ''}
+                ${!_isReadOnly && !p.fecha_egreso ? `<button class="btn btn-sm btn-warning" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
             </div>
         </div>`;
 }
@@ -190,7 +206,11 @@ function renderMedicamentos(lista) {
                 <div class="item-subtitle">${m.frecuencia ? escapeHtml(m.frecuencia) : ''} ${m.horarios_custom ? '· ' + escapeHtml(m.horarios_custom) : ''}</div>
                 ${m.instrucciones ? `<div class="item-subtitle mt-8">${escapeHtml(m.instrucciones)}</div>` : ''}
                 <div class="item-meta">
-                    ${m.stock !== null && !_isReadOnly ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : ''}
+                    ${ !_isReadOnly ? (
+                        (_stockModelo === 'institucion' && m.catalogo_id)
+                            ? `<span class="badge ${(m.catalogo_stock??0) <= 0 ? 'badge-red' : (m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${m.catalogo_stock??0}${m.catalogo_unidad ? ' '+m.catalogo_unidad+'s' : ''}${(m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? ' ⚠️' : ''}</span>`
+                            : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : '')
+                    ) : '' }
                 </div>
             </div>
             <div class="item-actions">
@@ -204,15 +224,55 @@ function renderMedicamentos(lista) {
 let _editingMedId = null;
 function openModalMed(id) {
     _editingMedId = id || null;
-    const title = _editingMedId ? 'Editar Medicamento' : 'Nuevo Medicamento';
-    document.getElementById('modalMedTitle').textContent = title;
+    document.getElementById('modalMedTitle').textContent = _editingMedId ? 'Editar Medicamento' : 'Nuevo Medicamento';
     const f = document.getElementById('formMed');
     f.reset();
+
+    // Show/hide catalog picker
+    const catGroup = document.getElementById('catalogoPickerGroup');
+    const stockGroup = document.getElementById('stockFamiliarGroup');
+    if (catGroup) catGroup.style.display = _stockModelo === 'institucion' ? '' : 'none';
+    if (stockGroup) stockGroup.style.display = '';
+
+    // Populate catalog dropdown
+    const catSel = document.getElementById('mCatalogoSelect');
+    if (catSel && _stockModelo === 'institucion') {
+        catSel.innerHTML = '<option value="">— Sin vincular (medicamento individual) —</option>';
+        _catalogo.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.nombre}${c.presentacion ? ' — ' + c.presentacion : ''} (Stock: ${c.stock_actual})`;
+            catSel.appendChild(opt);
+        });
+    }
+
     if (_editingMedId) {
         const m = _meds.find(x => x.id === id);
-        if (m) { f.mNombre.value = m.nombre || ''; f.mDosis.value = m.dosis || ''; f.mFrecuencia.value = m.frecuencia || ''; f.mHorarios.value = m.horarios_custom || ''; f.mInstrucciones.value = m.instrucciones || ''; f.mStock.value = m.stock ?? ''; }
+        if (m) {
+            f.mNombre.value = m.nombre || '';
+            f.mDosis.value = m.dosis || '';
+            f.mFrecuencia.value = m.frecuencia || '';
+            f.mHorarios.value = m.horarios_custom || '';
+            f.mInstrucciones.value = m.instrucciones || '';
+            f.mStock.value = m.stock ?? '';
+            if (catSel && m.catalogo_id) {
+                catSel.value = m.catalogo_id;
+                if (stockGroup) stockGroup.style.display = 'none';
+            }
+        }
     }
     openModal('modalMed');
+}
+
+// Called when catalog picker changes
+function onCatalogoSelectChange(sel) {
+    const stockGroup = document.getElementById('stockFamiliarGroup');
+    if (stockGroup) stockGroup.style.display = sel.value ? 'none' : '';
+    if (sel.value) {
+        const item = _catalogo.find(c => c.id === parseInt(sel.value));
+        const f = document.getElementById('formMed');
+        if (item && f && !f.mNombre.value.trim()) f.mNombre.value = item.nombre;
+    }
 }
 
 async function handleSaveMed(e) {
@@ -220,7 +280,8 @@ async function handleSaveMed(e) {
     const f = e.target;
     const btn = f.querySelector('[type=submit]');
     btn.disabled = true;
-    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null };
+    const catSel = document.getElementById('mCatalogoSelect');
+    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catSel?.value ? parseInt(catSel.value) : null };
     try {
         if (_editingMedId) { await API_B2B.updateMedicamento(_editingMedId, data); showToast('Medicamento actualizado', 'success'); }
         else { await API_B2B.createMedicamento(data); showToast('Medicamento agregado', 'success'); }
@@ -247,6 +308,7 @@ async function handleSaveToma(e) {
         await API_B2B.registrarToma(id, f.tomaNotas.value.trim());
         showToast('Toma registrada ✅', 'success');
         closeModal('modalToma');
+        await loadMedicamentos(); // refresh stock display
     } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
@@ -255,6 +317,33 @@ async function deleteMed(id) {
         try { await API_B2B.deleteMedicamento(id); showToast('Eliminado', 'success'); await loadMedicamentos(); }
         catch (err) { showToast('Error: ' + err.message, 'error'); }
     });
+}
+
+// ============================================
+// EGRESO
+// ============================================
+function openModalEgreso() {
+    const f = document.getElementById('formEgreso');
+    if (!f) return;
+    f.reset();
+    f.eFechaEgreso.value = today();
+    const otroGroup = document.getElementById('eMotivoOtroGroup');
+    if (otroGroup) otroGroup.style.display = 'none';
+    openModal('modalEgreso');
+}
+
+async function handleSaveEgreso(e) {
+    e.preventDefault();
+    const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    const motivo = f.eMotivoEgreso.value === 'Otro'
+        ? (f.eMotivoOtro?.value?.trim() || 'Otro')
+        : f.eMotivoEgreso.value;
+    try {
+        await API_B2B.updatePaciente(_pacienteId, { fecha_egreso: f.eFechaEgreso.value, motivo_egreso: motivo });
+        showToast('Paciente dado de alta ✅', 'success');
+        closeModal('modalEgreso');
+        await loadPaciente();
+    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 // ============================================
@@ -698,6 +787,7 @@ function initForms() {
         ['formContacto', handleSaveContacto],
         ['formNota', handleSaveNota],
         ['formEditPaciente', handleEditPaciente],
+        ['formEgreso', handleSaveEgreso],
     ];
     pairs.forEach(([id, fn]) => { const f = document.getElementById(id); if (f) f.addEventListener('submit', fn); });
 }

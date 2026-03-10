@@ -257,6 +257,28 @@
     </form></div></div>
 </div>
 
+<!-- Dar de alta / Egresar -->
+<div class="modal-overlay" id="modalEgreso">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">🛎 Dar de alta al paciente</span><button class="modal-close" onclick="closeModal('modalEgreso')">✕</button></div>
+    <div class="modal-body"><form id="formEgreso">
+        <div class="alert alert-warning mb-16"><span class="alert-icon">⚠️</span><span>Esta acción registra el egreso del paciente. El registro queda guardado en la ficha.</span></div>
+        <div class="form-group"><label class="form-label">Fecha de egreso *</label><input type="date" name="eFechaEgreso" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Motivo de egreso *</label>
+            <select name="eMotivoEgreso" class="form-control" required onchange="document.getElementById('eMotivoOtroGroup').style.display=this.value==='Otro'?'':'none'">
+                <option value="">— Seleccionar —</option>
+                <option value="Alta médica">Alta médica</option>
+                <option value="Alta voluntaria">Alta voluntaria</option>
+                <option value="Traslado a otra institución">Traslado a otra institución</option>
+                <option value="Fallecimiento">Fallecimiento</option>
+                <option value="Internación hospitalaria">Internación hospitalaria</option>
+                <option value="Otro">Otro</option>
+            </select>
+        </div>
+        <div class="form-group" id="eMotivoOtroGroup" style="display:none"><label class="form-label">Especificar motivo</label><input type="text" name="eMotivoOtro" class="form-control" placeholder="Describir..."></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEgreso')">Cancelar</button><button type="submit" class="btn btn-warning">🛎 Registrar egreso</button></div>
+    </form></div></div>
+</div>
+
 <script src="../js/api-b2b.js"></script>
 <script src="../js/utils-b2b.js"></script>
 <script src="../js/paciente.js"></script>
