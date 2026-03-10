@@ -394,6 +394,9 @@ img { max-width: 100%; }
 .btn-lg { padding: 12px 28px; font-size: 1rem; }
 .btn-icon { padding: 7px; border-radius: var(--radius-sm); }
 .btn-block { width: 100%; justify-content: center; }
+/* Delete icon-only buttons: light background so the 🗑 emoji is visible against it */
+.btn.btn-danger.btn-icon { background: #fde8e8; color: #c0392b; border: 1px solid #e2a0a0; }
+.btn.btn-danger.btn-icon:hover { background: var(--pro-danger); color: #fff; border-color: var(--pro-danger); }
 
 /* ============================================
    TABLES

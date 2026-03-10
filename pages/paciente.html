@@ -70,7 +70,7 @@
                         <button class="tab-btn" data-tab="medicamentos">💊 Medicamentos</button>
                         <button class="tab-btn" data-tab="citas">📅 Citas</button>
                         <button class="tab-btn" data-tab="tareas">✅ Tareas</button>
-                        <button class="tab-btn" data-tab="sintomas">🤒 Síntomas</button>
+                        <button class="tab-btn" data-tab="sintomas">� Síntomas</button>
                         <button class="tab-btn" data-tab="signos">❤️ Signos vitales</button>
                         <button class="tab-btn" data-tab="contactos">📞 Contactos</button>
                         <button class="tab-btn" data-tab="notas">📝 Notas</button>
@@ -171,7 +171,7 @@
 
 <!-- Síntoma -->
 <div class="modal-overlay" id="modalSintoma">
-    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">🤒 Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')">✕</button></div>
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="modalSintomaTitle">🩺 Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')">✕</button></div>
     <div class="modal-body"><form id="formSintoma">
         <div class="form-group"><label class="form-label">Descripción *</label><textarea name="sDesc" class="form-control" rows="3" required placeholder="Ej: Dolor de cabeza, fiebre 38.5°C..."></textarea></div>
         <div class="form-group"><label class="form-label">Intensidad (1-10)</label><input type="range" name="sIntensidad" class="form-control" min="1" max="10" style="padding:6px 0"><div class="form-hint">1 = leve · 10 = muy intenso</div></div>

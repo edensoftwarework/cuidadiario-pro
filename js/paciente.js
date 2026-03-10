@@ -1,4 +1,4 @@
-/**
+﻿/**
  * paciente.js — Ficha completa del paciente con todas las secciones
  * by EDEN SoftWork
  */
@@ -20,6 +20,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initSidebar();
     populateSidebarUser();
+
+    // Role-based sidebar & topbar adjustments
+    if (_isReadOnly) {
+        // Familiar: replace nav with minimal options
+        const nav = document.querySelector('.sidebar-nav');
+        if (nav) nav.innerHTML = `
+            <a href="familiar.html" class="nav-item"><span class="nav-icon">👁️</span><span class="nav-label">Mi familiar</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>`;
+        const topbarLink = document.querySelector('.topbar-title a');
+        if (topbarLink) { topbarLink.href = 'familiar.html'; topbarLink.textContent = '← Mi familiar'; }
+    } else if (!_isAdmin) {
+        // Staff / médico: send them back to their assigned-patients view
+        const pacientesLink = document.querySelector('.nav-item[href="pacientes.html"]');
+        if (pacientesLink) pacientesLink.setAttribute('href', 'cuidador.html');
+        const topbarLink = document.querySelector('.topbar-title a');
+        if (topbarLink) { topbarLink.href = 'cuidador.html'; topbarLink.textContent = '← Mis pacientes'; }
+    }
+
     initTabs(params.get('tab'));
     initForms();
     await loadPaciente();
@@ -89,7 +107,7 @@ function renderDatosTab(p) {
         <div class="grid-2">
             <div class="card">
                 <div class="card-header"><span class="card-title">👤 Datos Personales</span>
-                    ${_isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">✏️ Editar</button>` : ''}
+                    ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">✏️ Editar</button>` : ''}
                 </div>
                 <div class="card-body">
                     ${row('Nombre completo', `${p.apellido || ''} ${p.nombre}`)}
@@ -172,12 +190,12 @@ function renderMedicamentos(lista) {
                 <div class="item-subtitle">${m.frecuencia ? escapeHtml(m.frecuencia) : ''} ${m.horarios_custom ? '· ' + escapeHtml(m.horarios_custom) : ''}</div>
                 ${m.instrucciones ? `<div class="item-subtitle mt-8">${escapeHtml(m.instrucciones)}</div>` : ''}
                 <div class="item-meta">
-                    ${m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : ''}
+                    ${m.stock !== null && !_isReadOnly ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : ''}
                 </div>
             </div>
             <div class="item-actions">
                 ${!_isReadOnly ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${m.id},'${escapeHtml(m.nombre)}')">✅ Toma</button>` : ''}
-                ${_isAdmin ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${m.id})">✏️</button>
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${m.id})">✏️</button>
                 <button class="btn btn-sm btn-danger btn-icon" onclick="deleteMed(${m.id})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
@@ -326,8 +344,8 @@ function renderTareas(lista) {
             </div>
             <div class="item-actions">
                 ${!_isReadOnly ? `<button class="btn btn-sm btn-success" onclick="completarTarea(${t.id},'${escapeHtml(t.titulo)}')">✅ Completar</button>
-                ${_isAdmin ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${t.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${t.id})">🗑</button>` : ''}` : ''}
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${t.id})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${t.id})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -390,11 +408,11 @@ async function loadSintomas() {
 function renderSintomas(lista) {
     const el = document.getElementById('sintomasContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModal('modalSintoma')">+ Registrar</button></div>`;
+    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModalSintoma()">+ Registrar</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">🩺</div><h3>Sin s\u00edntomas registrados</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(s => `
         <div class="item-row">
-            <div class="item-icon badge-orange">�</div>
+            <div class="item-icon badge-orange">🩺</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
@@ -403,15 +421,36 @@ function renderSintomas(lista) {
                     <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || '—')}</span>
                 </div>
             </div>
-            ${!_isReadOnly ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteSintoma(${s.id})">🗑</button>` : ''}
+            ${!_isReadOnly ? `<div class="item-actions">
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalSintoma(${s.id})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteSintoma(${s.id})">🗑</button>
+            </div>` : ''}
         </div>`).join('')}</div>`;
+}
+
+let _editingSintomaId = null;
+function openModalSintoma(id) {
+    _editingSintomaId = id || null;
+    const titleEl = document.getElementById('modalSintomaTitle');
+    if (titleEl) titleEl.textContent = id ? 'Editar s\u00edntoma' : 'Registrar s\u00edntoma';
+    const f = document.getElementById('formSintoma');
+    f.reset();
+    if (id) {
+        const s = _sintomas.find(x => x.id === id);
+        if (s) { f.sDesc.value = s.descripcion || ''; f.sIntensidad.value = s.intensidad ?? 5; }
+    }
+    openModal('modalSintoma');
 }
 
 async function handleSaveSintoma(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     const data = { paciente_id: _pacienteId, descripcion: f.sDesc.value.trim(), intensidad: f.sIntensidad.value ? parseInt(f.sIntensidad.value) : null };
-    try { await API_B2B.createSintoma(data); showToast('Síntoma registrado', 'success'); closeModal('modalSintoma'); f.reset(); await loadSintomas(); }
+    try {
+        if (_editingSintomaId) { await API_B2B.updateSintoma(_editingSintomaId, data); showToast('S\u00edntoma actualizado', 'success'); }
+        else { await API_B2B.createSintoma(data); showToast('S\u00edntoma registrado', 'success'); }
+        closeModal('modalSintoma'); f.reset(); await loadSintomas();
+    }
     catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 

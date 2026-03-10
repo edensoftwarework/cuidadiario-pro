@@ -135,13 +135,22 @@ function populateSidebarUser() {
 function formatDate(isoString, options) {
     if (!isoString) return '—';
     try {
-        return new Date(isoString).toLocaleDateString('es-AR', options || { day:'2-digit', month:'2-digit', year:'numeric' });
+        // Date-only strings (YYYY-MM-DD) parse as UTC midnight and can show the previous day
+        // in Western Hemisphere timezones. Appending T12:00:00 keeps us safely within the same day.
+        const s = /^\d{4}-\d{2}-\d{2}$/.test(String(isoString))
+            ? isoString + 'T12:00:00'
+            : isoString;
+        return new Date(s).toLocaleDateString('es-AR', options || { day:'2-digit', month:'2-digit', year:'numeric' });
     } catch { return isoString; }
 }
 function formatDateTime(isoString) {
     if (!isoString) return '—';
     try {
-        return new Date(isoString).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        // Datetimes entered by users (e.g. citas) are stored in local time but node-postgres
+        // returns them with a Z suffix (treated as UTC), causing a -3h display offset in AR.
+        // Stripping the Z makes JS parse the value as local time — matching what was entered.
+        const s = String(isoString).replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
+        return new Date(s).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     } catch { return isoString; }
 }
 function calcEdad(fechaNacimiento) {

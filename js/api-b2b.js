@@ -119,6 +119,7 @@ const API_B2B = {
     // ============================================
     async getSintomas(paciente_id)  { return this.get(`/api/b2b/sintomas?paciente_id=${paciente_id}`); },
     async createSintoma(data)       { return this.post('/api/b2b/sintomas', data); },
+    async updateSintoma(id, data)   { return this.patch(`/api/b2b/sintomas/${id}`, data); },
     async deleteSintoma(id)         { return this.del(`/api/b2b/sintomas/${id}`); },
 
     // ============================================
