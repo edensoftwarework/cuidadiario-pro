@@ -22,6 +22,14 @@ async function initConfiguracion() {
         });
     }
 
+    // Familiar: reemplazar nav por versión restringida
+    if (user.rol === 'familiar') {
+        const nav = document.querySelector('.sidebar-nav');
+        if (nav) nav.innerHTML = `
+            <a href="familiar.html" class="nav-item"><span class="nav-icon">👁️</span><span class="nav-label">Mi familiar</span></a>
+            <a href="configuracion.html" class="nav-item active"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>`;
+    }
+
     // Llenar perfil con datos del token
     document.getElementById('perfilNombre').value = user.nombre || '';
     document.getElementById('perfilEmail').value = user.email || '';
@@ -175,107 +183,11 @@ async function guardarInstitucion(e) {
 }
 
 // ============================================
-// CATÁLOGO DE MEDICAMENTOS
+// MODELO DE STOCK — muestra/oculta card info
 // ============================================
-let _catalogoItems = [];
-let _editingCatalogoId = null;
-
 function onStockModeloChange(val) {
     const card = document.getElementById('catalogoCard');
     if (card) card.style.display = val === 'institucion' ? '' : 'none';
-    if (val === 'institucion') loadCatalogo();
-}
-
-async function loadCatalogo() {
-    try {
-        _catalogoItems = await API_B2B.getCatalogo();
-        renderCatalogo(_catalogoItems);
-        const bajo = _catalogoItems.filter(c => c.stock_actual <= (c.stock_minimo ?? 5));
-        const alertEl = document.getElementById('catalogoStockBajoAlert');
-        if (alertEl) {
-            if (bajo.length > 0) {
-                alertEl.style.display = '';
-                alertEl.textContent = `⚠️ Stock bajo: ${bajo.map(c => c.nombre + ' (' + c.stock_actual + ')').join(', ')}`;
-            } else {
-                alertEl.style.display = 'none';
-            }
-        }
-    } catch (e) {
-        showToast('Error al cargar catálogo', 'error');
-    }
-}
-
-function renderCatalogo(lista) {
-    const el = document.getElementById('catalogoList');
-    if (!el) return;
-    if (lista.length === 0) {
-        el.innerHTML = '<div class="empty-state"><div class="empty-icon">💊</div><h3>Catálogo vacío</h3><p>Agregá los medicamentos que maneja la institución.</p></div>';
-        return;
-    }
-    el.innerHTML = `<div class="item-list">${lista.map(c => {
-        const low = c.stock_actual <= (c.stock_minimo ?? 5);
-        return `
-        <div class="item-row">
-            <div class="item-icon badge-purple">💊</div>
-            <div class="item-body">
-                <div class="item-title">${escapeHtml(c.nombre)}${c.presentacion ? ' — <small>' + escapeHtml(c.presentacion) + '</small>' : ''}</div>
-                ${c.principio_activo ? `<div class="item-subtitle">${escapeHtml(c.principio_activo)}</div>` : ''}
-                <div class="item-meta">
-                    <span class="badge ${c.stock_actual <= 0 ? 'badge-red' : low ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${c.stock_actual} ${c.unidad}s${low ? ' ⚠️' : ''}</span>
-                    <span class="badge badge-gray">Mín: ${c.stock_minimo ?? 5}</span>
-                </div>
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${c.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${c.id})">🗑</button>
-            </div>
-        </div>`;
-    }).join('')}</div>`;
-}
-
-function openModalCatalogoItem(id) {
-    _editingCatalogoId = id || null;
-    document.getElementById('modalCatalogoTitle').textContent = id ? 'Editar ítem del catálogo' : 'Agregar ítem al catálogo';
-    const f = document.getElementById('formCatalogoItem');
-    f.reset();
-    if (id) {
-        const item = _catalogoItems.find(c => c.id === id);
-        if (item) {
-            f.cNombre.value = item.nombre || '';
-            f.cPrincipioActivo.value = item.principio_activo || '';
-            f.cPresentacion.value = item.presentacion || '';
-            f.cStockActual.value = item.stock_actual ?? 0;
-            f.cStockMinimo.value = item.stock_minimo ?? 5;
-            f.cUnidad.value = item.unidad || 'comprimido';
-        }
-    }
-    openModal('modalCatalogoItem');
-}
-
-async function handleSaveCatalogoItem(e) {
-    e.preventDefault();
-    const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const data = {
-        nombre: f.cNombre.value.trim(),
-        principio_activo: f.cPrincipioActivo.value.trim() || null,
-        presentacion: f.cPresentacion.value.trim() || null,
-        stock_actual: parseInt(f.cStockActual.value) || 0,
-        stock_minimo: parseInt(f.cStockMinimo.value) || 5,
-        unidad: f.cUnidad.value
-    };
-    try {
-        if (_editingCatalogoId) { await API_B2B.updateCatalogoItem(_editingCatalogoId, data); showToast('Ítem actualizado ✅', 'success'); }
-        else { await API_B2B.createCatalogoItem(data); showToast('Ítem agregado ✅', 'success'); }
-        closeModal('modalCatalogoItem');
-        await loadCatalogo();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
-}
-
-async function deleteCatalogoItem(id) {
-    confirmDialog('¿Eliminar este ítem del catálogo?', async () => {
-        try { await API_B2B.deleteCatalogoItem(id); showToast('Eliminado', 'success'); await loadCatalogo(); }
-        catch (err) { showToast('Error: ' + err.message, 'error'); }
-    });
 }
 
 async function exportarDatos() {

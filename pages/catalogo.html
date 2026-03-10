@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Medicamentos — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="catalogo.html" class="nav-item active admin-only"><span class="nav-icon">💊</span><span class="nav-label">Catálogo</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">💊 Catálogo de medicamentos</div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <!-- Modelo inactivo -->
+            <div id="catalogoInactivo" style="display:none">
+                <div class="alert alert-warning" style="margin-bottom:20px">
+                    <span class="alert-icon">⚠️</span>
+                    <span>El catálogo institucional está desactivado. La institución usa el modelo <strong>familiar</strong>, donde el stock es gestionado por cada familia.
+                    Para activar el catálogo centralizado, cambiá el modelo en <a href="configuracion.html" style="color:var(--pro-primary);text-decoration:underline">Configuración</a>.</span>
+                </div>
+            </div>
+
+            <!-- Resumen de stock bajo -->
+            <div id="stockBajoCard" style="display:none" class="card" style="margin-bottom:20px;border-left:4px solid var(--pro-danger)">
+                <div class="card-header">
+                    <h3 class="card-title" style="color:var(--pro-danger)">⚠️ Stock bajo</h3>
+                    <button class="btn btn-sm btn-secondary" onclick="loadCatalogo()">🔄 Actualizar</button>
+                </div>
+                <div class="card-body">
+                    <div id="stockBajoList"></div>
+                </div>
+            </div>
+
+            <!-- Catálogo principal -->
+            <div id="catalogoMainCard" class="card" style="display:none">
+                <div class="card-header">
+                    <h3 class="card-title">📦 Inventario del catálogo</h3>
+                    <div class="d-flex gap-8 align-center">
+                        <input type="text" id="catalogoSearch" class="form-control" style="width:200px;padding:6px 10px;font-size:.85rem" placeholder="Buscar...">
+                        <button class="btn btn-primary btn-sm" onclick="openModalCatalogoItem()">+ Agregar ítem</button>
+                    </div>
+                </div>
+                <div class="card-body" style="padding-top:0">
+                    <div id="catalogoList">
+                        <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Modal Catálogo Item -->
+<div class="modal-overlay" id="modalCatalogoItem">
+    <div class="modal" style="max-width:500px">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modalCatalogoTitle">Agregar ítem al catálogo</h3>
+            <button class="modal-close" onclick="closeModal('modalCatalogoItem')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formCatalogoItem">
+                <div class="form-grid">
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Nombre del medicamento *</label>
+                        <input type="text" name="cNombre" id="cNombre" class="form-control" placeholder="Ej: Paracetamol" required>
+                    </div>
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Principio activo</label>
+                        <input type="text" name="cPrincipioActivo" id="cPrincipioActivo" class="form-control" placeholder="Ej: Paracetamol 500mg">
+                    </div>
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Presentación</label>
+                        <input type="text" name="cPresentacion" id="cPresentacion" class="form-control" placeholder="Ej: Comprimidos x30, Jarabe 120ml">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unidad</label>
+                        <select name="cUnidad" id="cUnidad" class="form-control">
+                            <option value="comprimido">Comprimido</option>
+                            <option value="cápsula">Cápsula</option>
+                            <option value="ampolla">Ampolla</option>
+                            <option value="frasco">Frasco</option>
+                            <option value="sobre">Sobre</option>
+                            <option value="parche">Parche</option>
+                            <option value="unidad">Unidad</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stock actual *</label>
+                        <input type="number" name="cStockActual" id="cStockActual" class="form-control" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stock mínimo (alerta ⚠️)</label>
+                        <input type="number" name="cStockMinimo" id="cStockMinimo" class="form-control" min="0" value="5">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:16px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalCatalogoItem')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/catalogo.js"></script>
+</body>
+</html>

@@ -323,23 +323,36 @@ async function deleteMed(id) {
 // EGRESO
 // ============================================
 function openModalEgreso() {
+    const overlay = document.getElementById('modalEgreso');
+    if (!overlay) { console.error('modalEgreso not found in DOM'); return; }
     const f = document.getElementById('formEgreso');
-    if (!f) return;
-    f.reset();
-    f.eFechaEgreso.value = today();
-    const otroGroup = document.getElementById('eMotivoOtroGroup');
-    if (otroGroup) otroGroup.style.display = 'none';
+    if (f) {
+        f.reset();
+        const fechaInput = f.querySelector('[name="eFechaEgreso"]');
+        if (fechaInput) fechaInput.value = today();
+        const otroGroup = document.getElementById('eMotivoOtroGroup');
+        if (otroGroup) otroGroup.style.display = 'none';
+    }
     openModal('modalEgreso');
 }
 
 async function handleSaveEgreso(e) {
     e.preventDefault();
-    const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const motivo = f.eMotivoEgreso.value === 'Otro'
-        ? (f.eMotivoOtro?.value?.trim() || 'Otro')
-        : f.eMotivoEgreso.value;
+    const f = e.target;
+    const btn = f.querySelector('[type=submit]');
+    btn.disabled = true;
+    const fechaInput = f.querySelector('[name="eFechaEgreso"]');
+    const motivoSel = f.querySelector('[name="eMotivoEgreso"]');
+    const motivoOtroInput = f.querySelector('[name="eMotivoOtro"]');
+    if (!fechaInput?.value || !motivoSel?.value) {
+        showToast('Completá la fecha y el motivo de egreso', 'warning');
+        btn.disabled = false; return;
+    }
+    const motivo = motivoSel.value === 'Otro'
+        ? (motivoOtroInput?.value?.trim() || 'Otro')
+        : motivoSel.value;
     try {
-        await API_B2B.updatePaciente(_pacienteId, { fecha_egreso: f.eFechaEgreso.value, motivo_egreso: motivo });
+        await API_B2B.updatePaciente(_pacienteId, { fecha_egreso: fechaInput.value, motivo_egreso: motivo });
         showToast('Paciente dado de alta ✅', 'success');
         closeModal('modalEgreso');
         await loadPaciente();

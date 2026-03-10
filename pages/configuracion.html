@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -28,6 +28,7 @@
             <span class="nav-section-label admin-only">Administración</span>
             <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
             <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="catalogo.html" class="nav-item admin-only"><span class="nav-icon">💊</span><span class="nav-label">Catálogo</span></a>
             <a href="configuracion.html" class="nav-item active"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
         </nav>
         <div class="sidebar-footer">
@@ -165,13 +166,11 @@
                 <!-- Catálogo de medicamentos (solo admin, solo modelo institucional) -->
                 <div class="card admin-only" id="catalogoCard" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">💊 Catálogo de medicamentos institucional</h3>
-                        <button class="btn btn-sm btn-primary" onclick="openModalCatalogoItem()">+ Agregar ítem</button>
+                        <h3 class="card-title">💊 Catálogo institucional activo</h3>
+                        <a href="catalogo.html" class="btn btn-sm btn-primary">💊 Ir al Catálogo</a>
                     </div>
                     <div class="card-body">
-                        <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:16px">Estos son los medicamentos disponibles en la farmacia de la institución. El stock se descuenta automáticamente al registrar tomas.</p>
-                        <div id="catalogoStockBajoAlert" style="display:none;background:#fde8e8;border:1px solid #f5c6c6;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#c0392b;font-size:.88rem"></div>
-                        <div id="catalogoList"><div class="empty-state"><div class="empty-icon">💊</div><h3>Cargando catálogo...</h3></div></div>
+                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de medicamentos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
                     </div>
                 </div>
 
@@ -247,56 +246,5 @@
 <script src="../js/utils-b2b.js"></script>
 <script src="../js/configuracion.js"></script>
 
-<!-- Modal Catálogo Item -->
-<div class="modal-overlay" id="modalCatalogoItem" style="display:none" onclick="if(event.target===this)closeModal('modalCatalogoItem')">
-    <div class="modal" style="max-width:480px">
-        <div class="modal-header">
-            <h3 class="modal-title" id="modalCatalogoTitle">Agregar ítem al catálogo</h3>
-            <button class="modal-close" onclick="closeModal('modalCatalogoItem')">✕</button>
-        </div>
-        <div class="modal-body">
-            <form id="formCatalogoItem" onsubmit="handleSaveCatalogoItem(event)">
-                <div class="form-group">
-                    <label class="form-label">Nombre del medicamento *</label>
-                    <input type="text" name="cNombre" id="cNombre" class="form-control" placeholder="Ej: Paracetamol" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Principio activo</label>
-                    <input type="text" name="cPrincipioActivo" id="cPrincipioActivo" class="form-control" placeholder="Ej: Paracetamol 500mg">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Presentación</label>
-                    <input type="text" name="cPresentacion" id="cPresentacion" class="form-control" placeholder="Ej: Comprimidos x30, Jarabe 120ml">
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="flex:1">
-                        <label class="form-label">Stock actual *</label>
-                        <input type="number" name="cStockActual" id="cStockActual" class="form-control" min="0" value="0" required>
-                    </div>
-                    <div class="form-group" style="flex:1">
-                        <label class="form-label">Stock mínimo (alerta)</label>
-                        <input type="number" name="cStockMinimo" id="cStockMinimo" class="form-control" min="0" value="5">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Unidad</label>
-                    <select name="cUnidad" id="cUnidad" class="form-control">
-                        <option value="comprimido">Comprimido</option>
-                        <option value="cápsula">Cápsula</option>
-                        <option value="ampolla">Ampolla</option>
-                        <option value="frasco">Frasco</option>
-                        <option value="sobre">Sobre</option>
-                        <option value="parche">Parche</option>
-                        <option value="unidad">Unidad</option>
-                    </select>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalCatalogoItem')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 </body>
 </html>

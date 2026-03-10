@@ -99,7 +99,6 @@ const API_B2B = {
     // ============================================
     // CATÁLOGO DE MEDICAMENTOS (modelo institucional)
     // ============================================
-    async getInstitucion()                { return this.get('/api/b2b/institucion'); },
     async getCatalogo()                   { return this.get('/api/b2b/catalogo'); },
     async getCatalogoStockBajo()          { return this.get('/api/b2b/catalogo/stock-bajo'); },
     async createCatalogoItem(data)        { return this.post('/api/b2b/catalogo', data); },
