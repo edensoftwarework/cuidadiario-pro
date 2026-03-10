@@ -391,10 +391,10 @@ function renderSintomas(lista) {
     const el = document.getElementById('sintomasContent');
     if (!el) return;
     const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModal('modalSintoma')">+ Registrar</button></div>`;
-    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">🤒</div><h3>Sin síntomas registrados</h3></div>`; return; }
+    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">🩺</div><h3>Sin s\u00edntomas registrados</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(s => `
         <div class="item-row">
-            <div class="item-icon badge-orange">🤒</div>
+            <div class="item-icon badge-orange">�</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">

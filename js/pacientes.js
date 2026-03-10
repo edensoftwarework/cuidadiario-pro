@@ -50,7 +50,7 @@ function renderPacientes(lista) {
     if (!grid) return;
     if (lista.length === 0) {
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-            <div class="empty-icon">🧓</div>
+            <div class="empty-icon">👤</div>
             <h3>No hay pacientes</h3>
             <p>Agregá el primer paciente haciendo clic en "Nuevo Paciente"</p>
         </div>`;
@@ -60,7 +60,7 @@ function renderPacientes(lista) {
         const edad = calcEdad(p.fecha_nacimiento);
         return `
         <div class="paciente-card" onclick="window.location.href='paciente.html?id=${p.id}'">
-            <div class="paciente-card-avatar">🧓</div>
+            <div class="paciente-card-avatar">👤</div>
             <div class="paciente-card-body">
                 <div class="paciente-card-name">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                 <div class="paciente-card-meta">

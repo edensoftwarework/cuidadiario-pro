@@ -43,16 +43,26 @@ function renderResumen(resumen) {
     setVal('statPacientes', resumen.pacientes_activos ?? 0);
     setVal('statTomasHoy', resumen.tomas_hoy ?? 0);
     setVal('statTareasHoy', resumen.tareas_completadas_hoy ?? 0);
-    // Staff breakdown
-    let totalStaff = 0, cuidadores = 0;
+    // Staff breakdown by role
+    let totalStaff = 0;
+    const roleLabels = {
+        admin_institucion: ['Admin', 'Admins'],
+        cuidador_staff:    ['Personal', 'Personal'],
+        familiar:          ['Familiar', 'Familiares'],
+        medico:            ['M\u00e9dico', 'M\u00e9dicos']
+    };
+    const breakdown = [];
     if (Array.isArray(resumen.staff)) {
         resumen.staff.forEach(s => {
-            totalStaff += parseInt(s.total);
-            if (s.rol === 'cuidador_staff') cuidadores = parseInt(s.total);
+            const n = parseInt(s.total);
+            totalStaff += n;
+            const labels = roleLabels[s.rol];
+            if (labels && n > 0) breakdown.push(`${n}\u00a0${n === 1 ? labels[0] : labels[1]}`);
         });
     }
     setVal('statStaff', totalStaff);
-    setVal('statCuidadores', cuidadores);
+    const bdEl = document.getElementById('staffBreakdown');
+    if (bdEl) bdEl.textContent = breakdown.join(' \u00b7 ') || '\u2014';
 }
 
 function setVal(id, val) {
@@ -83,12 +93,12 @@ function renderSintomasRecientes(sintomas) {
     const container = document.getElementById('sintomasRecientes');
     if (!container) return;
     if (!sintomas || sintomas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🤒</div><p>Sin síntomas registrados en las últimas 24h</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🩺</div><p>Sin s\u00edntomas registrados en las \u00faltimas 24h</p></div>`;
         return;
     }
     container.innerHTML = sintomas.map(s => `
         <div class="item-row">
-            <div class="item-icon badge-orange">🤒</div>
+            <div class="item-icon badge-orange">🩺</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(s.paciente_nombre)} ${escapeHtml(s.paciente_apellido || '')}</div>
                 <div class="item-subtitle">${escapeHtml(s.descripcion)}</div>

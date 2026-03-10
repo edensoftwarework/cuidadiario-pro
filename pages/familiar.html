@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguimiento familiar — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR (simplificado para familiar) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Mi seguimiento</span>
+            <a href="familiar.html" class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label">Mi familiar</span></a>
+            <span class="nav-section-label">Mi cuenta</span>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">F</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">Seguimiento familiar</div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <!-- Banner de acceso familiar -->
+            <div style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border:1px solid #BFDBFE;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+                <div style="font-size:1.8rem">👨‍👩‍👧</div>
+                <div>
+                    <div style="font-weight:700;color:#1E40AF;font-size:.95rem" id="familiarBienvenida">Bienvenido/a</div>
+                    <div style="color:#3B82F6;font-size:.82rem">Acceso de solo lectura — podés consultar la información de tu familiar vinculado a esta institución.</div>
+                </div>
+                <span style="margin-left:auto;background:#DBEAFE;color:#1E40AF;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap">Solo lectura</span>
+            </div>
+
+            <!-- Loader -->
+            <div class="page-loader" id="familiarLoader">
+                <div class="spinner spinner-dark"></div>
+                <p>Cargando información...</p>
+            </div>
+
+            <!-- Conteo -->
+            <div id="familiarCount" style="font-size:.88rem;color:var(--text-secondary);margin-bottom:16px;display:none"></div>
+
+            <!-- Grid de pacientes -->
+            <div id="familiarGrid"></div>
+
+            <!-- Empty state -->
+            <div class="empty-state" id="familiarEmpty" style="display:none">
+                <div class="empty-icon">👤</div>
+                <div class="empty-title">Sin familiares vinculados</div>
+                <div class="empty-desc">No tenés pacientes asignados a tu cuenta. Contactá al administrador de la institución.</div>
+                <div style="margin-top:20px" id="familiarContactoInst"></div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/familiar.js"></script>
+</body>
+</html>

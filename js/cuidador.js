@@ -65,7 +65,7 @@ function renderMisPacientes(lista) {
         return `
         <div class="card" style="overflow:visible">
             <div style="background:linear-gradient(135deg,var(--pro-primary-dark),var(--pro-primary));padding:16px;display:flex;align-items:center;gap:12px;border-radius:10px 10px 0 0">
-                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem">🧓</div>
+                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff">${(p.nombre||'P').charAt(0).toUpperCase()}</div>
                 <div>
                     <div style="color:#fff;font-weight:700;font-size:1rem">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                     <div style="color:rgba(255,255,255,0.75);font-size:0.78rem">
@@ -81,7 +81,7 @@ function renderMisPacientes(lista) {
                     <a href="paciente.html?id=${p.id}&tab=tareas"      class="btn btn-sm btn-secondary" style="flex:1">✅ Tareas</a>
                 </div>
                 <div class="d-flex gap-8 flex-wrap mt-8">
-                    <a href="paciente.html?id=${p.id}&tab=sintomas"    class="btn btn-sm btn-secondary" style="flex:1">🤒 Síntomas</a>
+                    <a href="paciente.html?id=${p.id}&tab=sintomas"    class="btn btn-sm btn-secondary" style="flex:1">🩺 S\u00edntomas</a>
                     <a href="paciente.html?id=${p.id}&tab=signos"      class="btn btn-sm btn-secondary" style="flex:1">❤️ Signos</a>
                 </div>
                 <a href="paciente.html?id=${p.id}" class="btn btn-primary btn-sm btn-block mt-12">Ver ficha completa →</a>

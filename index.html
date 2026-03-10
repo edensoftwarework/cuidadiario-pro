@@ -66,7 +66,8 @@
     // Redirect if already logged in
     if (API_B2B.isAuth()) {
         const u = API_B2B.getUser();
-        if (u?.rol === 'cuidador_staff' || u?.rol === 'familiar') window.location.href = 'pages/cuidador.html';
+        if (u?.rol === 'cuidador_staff' || u?.rol === 'medico') window.location.href = 'pages/cuidador.html';
+        else if (u?.rol === 'familiar') window.location.href = 'pages/familiar.html';
         else window.location.href = 'pages/dashboard.html';
     }
 
@@ -88,8 +89,10 @@
         try {
             const data = await API_B2B.login(f.email.value.trim(), f.password.value);
             const user = data.user;
-            if (user?.rol === 'cuidador_staff' || user?.rol === 'familiar') {
+            if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
                 window.location.href = 'pages/cuidador.html';
+            } else if (user?.rol === 'familiar') {
+                window.location.href = 'pages/familiar.html';
             } else {
                 window.location.href = 'pages/dashboard.html';
             }
