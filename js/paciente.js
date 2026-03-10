@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Familiar: replace nav with minimal options
         const nav = document.querySelector('.sidebar-nav');
         if (nav) nav.innerHTML = `
-            <a href="familiar.html" class="nav-item"><span class="nav-icon">👁️</span><span class="nav-label">Mi familiar</span></a>
+            <a href="familiar.html" class="nav-item"><span class="nav-icon">�</span><span class="nav-label">Mi familiar</span></a>
             <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>`;
         const topbarLink = document.querySelector('.topbar-title a');
         if (topbarLink) { topbarLink.href = 'familiar.html'; topbarLink.textContent = '← Mi familiar'; }

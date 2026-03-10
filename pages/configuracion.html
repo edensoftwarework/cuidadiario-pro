@@ -163,17 +163,6 @@
                     </div>
                 </div>
 
-                <!-- Catálogo de medicamentos (solo admin, solo modelo institucional) -->
-                <div class="card admin-only" id="catalogoCard" style="display:none">
-                    <div class="card-header">
-                        <h3 class="card-title">💊 Catálogo institucional activo</h3>
-                        <a href="catalogo.html" class="btn btn-sm btn-primary">💊 Ir al Catálogo</a>
-                    </div>
-                    <div class="card-body">
-                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de medicamentos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
-                    </div>
-                </div>
-
                 <!-- Notificaciones -->
                 <div class="card">
                     <div class="card-header">
@@ -234,6 +223,17 @@
                             </div>
                             <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Seguro que deseás desactivar la institución? Todos los accesos serán bloqueados.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Catálogo de medicamentos (solo admin, solo modelo institucional) -->
+                <div class="card admin-only" id="catalogoCard" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">💊 Catálogo institucional activo</h3>
+                        <a href="catalogo.html" class="btn btn-sm btn-primary">💊 Ir al Catálogo</a>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de medicamentos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
                     </div>
                 </div>
 

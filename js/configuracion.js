@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    configuracion.js — Lógica de la página de configuración B2B
    CuidaDiario PRO
    ============================================================ */
@@ -26,7 +26,7 @@ async function initConfiguracion() {
     if (user.rol === 'familiar') {
         const nav = document.querySelector('.sidebar-nav');
         if (nav) nav.innerHTML = `
-            <a href="familiar.html" class="nav-item"><span class="nav-icon">👁️</span><span class="nav-label">Mi familiar</span></a>
+            <a href="familiar.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Mi familiar</span></a>
             <a href="configuracion.html" class="nav-item active"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>`;
     }
 

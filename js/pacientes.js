@@ -17,6 +17,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadStaff();
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
     }
+    // Staff y médicos: agregar enlace "Mis residentes" (cuidador.html) antes del enlace Pacientes
+    if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
+        const nav = document.querySelector('.sidebar-nav');
+        const pacientesLink = nav?.querySelector('a[href="pacientes.html"]');
+        if (pacientesLink && nav) {
+            const li = document.createElement('a');
+            li.href = 'cuidador.html';
+            li.className = 'nav-item';
+            li.innerHTML = '<span class="nav-icon">🗂️</span><span class="nav-label">Mis residentes</span>';
+            pacientesLink.insertAdjacentElement('beforebegin', li);
+        }
+    }
     initModalForm();
 });
 
