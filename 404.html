@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página no encontrada — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="stylesheet" href="css/styles-b2b.css">
+    <style>
+        body { background: var(--bg-page, #EEF2FF); display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        .notfound-card { background:#fff; border-radius:16px; padding:48px 40px; text-align:center; max-width:420px; width:100%; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+        .notfound-emoji { font-size:4rem; margin-bottom:16px; display:block; }
+        .notfound-code { font-size:5rem; font-weight:900; color:var(--pro-primary,#1565C0); line-height:1; margin-bottom:8px; }
+        .notfound-title { font-size:1.2rem; font-weight:700; color:var(--pro-primary-dark,#0D2B6B); margin-bottom:12px; }
+        .notfound-msg { font-size:.9rem; color:var(--text-secondary,#6B7280); line-height:1.6; margin-bottom:28px; }
+        .notfound-logo { font-size:.82rem; color:var(--text-secondary,#6B7280); margin-top:24px; }
+        .notfound-logo strong { color:var(--pro-primary,#1565C0); }
+        #countdown { font-weight:700; color:var(--pro-primary,#1565C0); }
+    </style>
+</head>
+<body>
+<div class="notfound-card">
+    <span class="notfound-emoji">🏥</span>
+    <div class="notfound-code">404</div>
+    <div class="notfound-title">Página no encontrada</div>
+    <p class="notfound-msg">La página que buscás no existe o fue movida. Serás redirigido al inicio en <span id="countdown">5</span> segundos.</p>
+    <a href="/index.html" class="btn btn-primary">Ir al inicio ahora</a>
+    <div class="notfound-logo"><strong>CuidaDiario PRO</strong> — Gestión institucional de pacientes</div>
+</div>
+
+<script>
+    let n = 5;
+    const el = document.getElementById('countdown');
+    const timer = setInterval(() => {
+        n--;
+        if (el) el.textContent = n;
+        if (n <= 0) { clearInterval(timer); window.location.href = '/index.html'; }
+    }, 1000);
+</script>
+</body>
+</html>
