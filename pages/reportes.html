@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item active admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">📋 Reportes</div>
+            <div class="topbar-actions">
+                <button class="btn btn-secondary" id="btnPrint" onclick="window.print()" style="display:none">🖨️ Imprimir / PDF</button>
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Filtros -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header">
+                    <h3 class="card-title">🔍 Generar reporte</h3>
+                </div>
+                <div class="card-body">
+                    <form id="formReporte" onsubmit="generarReporte(event)">
+                        <div class="form-grid form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Paciente *</label>
+                                <select id="reportePacienteId" class="form-control" required>
+                                    <option value="">— Seleccionar paciente —</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Desde</label>
+                                <input type="date" id="reporteDesde" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hasta</label>
+                                <input type="date" id="reporteHasta" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-grid form-grid-4" style="margin-top:8px">
+                            <label class="form-check"><input type="checkbox" name="incMedicamentos" checked><span>Medicamentos</span></label>
+                            <label class="form-check"><input type="checkbox" name="incCitas" checked><span>Citas</span></label>
+                            <label class="form-check"><input type="checkbox" name="incSintomas" checked><span>Síntomas</span></label>
+                            <label class="form-check"><input type="checkbox" name="incSignos" checked><span>Signos vitales</span></label>
+                            <label class="form-check"><input type="checkbox" name="incTareas" checked><span>Tareas</span></label>
+                            <label class="form-check"><input type="checkbox" name="incNotas" checked><span>Notas internas</span></label>
+                        </div>
+                        <div style="margin-top:16px">
+                            <button type="submit" class="btn btn-primary">📋 Generar reporte</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loader -->
+            <div class="page-loader" id="reporteLoader" style="display:none">
+                <div class="spinner spinner-dark"></div>
+                <p>Generando reporte...</p>
+            </div>
+
+            <!-- Reporte generado -->
+            <div id="reporteContainer" style="display:none">
+
+                <!-- Cabecera del reporte -->
+                <div class="card report-header" id="reportePacienteHeader"></div>
+
+                <!-- Medicamentos y tomas -->
+                <div class="card report-section" id="reporteMedicamentos" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">💊 Medicamentos y registro de tomas</h3>
+                    </div>
+                    <div class="card-body" id="reporteMedicamentosBody"></div>
+                </div>
+
+                <!-- Citas -->
+                <div class="card report-section" id="reporteCitas" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">📅 Historial de citas</h3>
+                    </div>
+                    <div class="card-body" id="reporteCitasBody"></div>
+                </div>
+
+                <!-- Síntomas -->
+                <div class="card report-section" id="reporteSintomas" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">🤒 Síntomas registrados</h3>
+                    </div>
+                    <div class="card-body" id="reporteSintomasBody"></div>
+                </div>
+
+                <!-- Signos vitales -->
+                <div class="card report-section" id="reporteSignos" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">❤️ Signos vitales</h3>
+                    </div>
+                    <div class="card-body" id="reporteSignosBody"></div>
+                </div>
+
+                <!-- Tareas -->
+                <div class="card report-section" id="reporteTareas" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">✅ Registro de tareas</h3>
+                    </div>
+                    <div class="card-body" id="reporteTareasBody"></div>
+                </div>
+
+                <!-- Notas -->
+                <div class="card report-section" id="reporteNotas" style="display:none">
+                    <div class="card-header">
+                        <h3 class="card-title">📝 Notas internas</h3>
+                    </div>
+                    <div class="card-body" id="reporteNotasBody"></div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/reportes.js"></script>
+</body>
+</html>

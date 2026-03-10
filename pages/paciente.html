@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha del Paciente — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">
+                <a href="pacientes.html" style="color:var(--pro-primary);text-decoration:none;font-size:.85rem">← Pacientes</a>
+                <span style="margin:0 8px;color:var(--border-color)">/</span>
+                Ficha del paciente
+            </div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Cabecera del paciente -->
+            <div class="paciente-header" id="pacienteHeader">
+                <div class="page-loader"><div class="spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff"></div></div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="card" style="margin-top:20px">
+                <div style="padding:0 20px;border-bottom:2px solid var(--border-color)">
+                    <div class="tabs">
+                        <button class="tab-btn" data-tab="datos">👤 Datos</button>
+                        <button class="tab-btn" data-tab="medicamentos">💊 Medicamentos</button>
+                        <button class="tab-btn" data-tab="citas">📅 Citas</button>
+                        <button class="tab-btn" data-tab="tareas">✅ Tareas</button>
+                        <button class="tab-btn" data-tab="sintomas">🤒 Síntomas</button>
+                        <button class="tab-btn" data-tab="signos">❤️ Signos vitales</button>
+                        <button class="tab-btn" data-tab="contactos">📞 Contactos</button>
+                        <button class="tab-btn" data-tab="notas">📝 Notas</button>
+                    </div>
+                </div>
+                <div style="padding:0 20px 20px">
+                    <div class="tab-content" id="tab-datos"><div id="datosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-medicamentos"><div id="medsContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-citas"><div id="citasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-tareas"><div id="tareasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-sintomas"><div id="sintomasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-signos"><div id="signosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-contactos"><div id="contactosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-notas"><div id="notasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ============ MODALES ============ -->
+
+<!-- Medicamento -->
+<div class="modal-overlay" id="modalMed">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalMedTitle">Medicamento</span><button class="modal-close" onclick="closeModal('modalMed')">✕</button></div>
+    <div class="modal-body"><form id="formMed">
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Nombre *</label><input type="text" name="mNombre" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Dosis</label><input type="text" name="mDosis" class="form-control" placeholder="Ej: 500mg"></div>
+            <div class="form-group"><label class="form-label">Frecuencia</label><input type="text" name="mFrecuencia" class="form-control" placeholder="Ej: Cada 8hs"></div>
+            <div class="form-group"><label class="form-label">Horarios custom</label><input type="text" name="mHorarios" class="form-control" placeholder="Ej: 8:00, 14:00, 20:00"></div>
+            <div class="form-group form-col-2"><label class="form-label">Instrucciones especiales</label><textarea name="mInstrucciones" class="form-control" rows="2"></textarea></div>
+            <div class="form-group"><label class="form-label">Stock actual</label><input type="number" name="mStock" class="form-control" min="0" placeholder="Unidades"></div>
+        </div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalMed')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Registrar toma -->
+<div class="modal-overlay" id="modalToma">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">✅ Registrar toma</span><button class="modal-close" onclick="closeModal('modalToma')">✕</button></div>
+    <div class="modal-body">
+        <div class="alert alert-info mb-16"><span class="alert-icon">💊</span><span id="tomaInfo"></span></div>
+        <input type="hidden" id="tomaMedId">
+        <form id="formToma">
+            <div class="form-group"><label class="form-label">Notas opcionales</label><textarea name="tomaNotas" class="form-control" rows="2" placeholder="Ej: paciente rechazó dosis inicial, se repitió..."></textarea></div>
+            <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalToma')">Cancelar</button><button type="submit" class="btn btn-success">Confirmar toma ✅</button></div>
+        </form>
+    </div></div>
+</div>
+
+<!-- Cita -->
+<div class="modal-overlay" id="modalCita">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalCitaTitle">Cita</span><button class="modal-close" onclick="closeModal('modalCita')">✕</button></div>
+    <div class="modal-body"><form id="formCita">
+        <div class="form-grid">
+            <div class="form-group form-col-2"><label class="form-label">Título *</label><input type="text" name="cTitulo" class="form-control" required placeholder="Ej: Consulta cardiología"></div>
+            <div class="form-group"><label class="form-label">Fecha y hora *</label><input type="datetime-local" name="cFecha" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Estado</label>
+                <select name="cEstado" class="form-control"><option value="pendiente">Pendiente</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option></select></div>
+            <div class="form-group"><label class="form-label">Especialidad</label><input type="text" name="cEspecialidad" class="form-control" placeholder="Cardiología, Neurología..."></div>
+            <div class="form-group"><label class="form-label">Médico</label><input type="text" name="cMedico" class="form-control" placeholder="Dr. Apellido"></div>
+            <div class="form-group form-col-2"><label class="form-label">Lugar</label><input type="text" name="cLugar" class="form-control" placeholder="Hospital, consultorio..."></div>
+            <div class="form-group form-col-2"><label class="form-label">Descripción</label><textarea name="cDescripcion" class="form-control" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalCita')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Tarea -->
+<div class="modal-overlay" id="modalTarea">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalTareaTitle">Tarea</span><button class="modal-close" onclick="closeModal('modalTarea')">✕</button></div>
+    <div class="modal-body"><form id="formTarea">
+        <div class="form-grid">
+            <div class="form-group form-col-2"><label class="form-label">Título *</label><input type="text" name="tTitulo" class="form-control" required placeholder="Ej: Baño e higiene personal"></div>
+            <div class="form-group"><label class="form-label">Categoría</label>
+                <select name="tCategoria" class="form-control"><option value="">—</option><option value="higiene">Higiene</option><option value="alimentacion">Alimentación</option><option value="medicacion">Medicación</option><option value="movilidad">Movilidad / Fisio</option><option value="recreacion">Recreación</option><option value="otro">Otro</option></select></div>
+            <div class="form-group"><label class="form-label">Frecuencia</label><input type="text" name="tFrecuencia" class="form-control" placeholder="Diaria, Lunes y Viernes..."></div>
+            <div class="form-group"><label class="form-label">Horario</label><input type="time" name="tHora" class="form-control"></div>
+            <div class="form-group form-col-2"><label class="form-label">Descripción</label><textarea name="tDescripcion" class="form-control" rows="2" placeholder="Instrucciones detalladas..."></textarea></div>
+        </div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalTarea')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Completar tarea -->
+<div class="modal-overlay" id="modalCompletarTarea">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">✅ Completar tarea</span><button class="modal-close" onclick="closeModal('modalCompletarTarea')">✕</button></div>
+    <div class="modal-body">
+        <div class="alert alert-success mb-16"><span class="alert-icon">✅</span><span id="tareaInfo"></span></div>
+        <input type="hidden" id="tareaTareaId">
+        <form id="formCompletarTarea">
+            <div class="form-group"><label class="form-label">Observaciones (opcional)</label><textarea name="tareaNotas" class="form-control" rows="2" placeholder="Novedades, observaciones..."></textarea></div>
+            <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalCompletarTarea')">Cancelar</button><button type="submit" class="btn btn-success">Marcar como completada</button></div>
+        </form>
+    </div></div>
+</div>
+
+<!-- Síntoma -->
+<div class="modal-overlay" id="modalSintoma">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">🤒 Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')">✕</button></div>
+    <div class="modal-body"><form id="formSintoma">
+        <div class="form-group"><label class="form-label">Descripción *</label><textarea name="sDesc" class="form-control" rows="3" required placeholder="Ej: Dolor de cabeza, fiebre 38.5°C..."></textarea></div>
+        <div class="form-group"><label class="form-label">Intensidad (1-10)</label><input type="range" name="sIntensidad" class="form-control" min="1" max="10" style="padding:6px 0"><div class="form-hint">1 = leve · 10 = muy intenso</div></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalSintoma')">Cancelar</button><button type="submit" class="btn btn-warning">Registrar síntoma</button></div>
+    </form></div></div>
+</div>
+
+<!-- Signo vital -->
+<div class="modal-overlay" id="modalSigno">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">❤️ Registrar signo vital</span><button class="modal-close" onclick="closeModal('modalSigno')">✕</button></div>
+    <div class="modal-body"><form id="formSigno">
+        <div class="form-group"><label class="form-label">Tipo *</label>
+            <select name="gTipo" id="gTipo" class="form-control" required onchange="onSignoTipoChange(this)">
+                <option value="">— Seleccionar —</option>
+                <option value="presion_arterial">🩸 Presión arterial</option>
+                <option value="frecuencia_cardiaca">❤️ Frecuencia cardíaca</option>
+                <option value="temperatura">🌡️ Temperatura</option>
+                <option value="saturacion_oxigeno">💨 Saturación de O₂</option>
+                <option value="glucosa">🩸 Glucosa</option>
+                <option value="peso">⚖️ Peso</option>
+                <option value="talla">📏 Talla</option>
+            </select>
+        </div>
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Valor *</label><input type="text" name="gValor" class="form-control" required placeholder="Ej: 120/80"></div>
+            <div class="form-group"><label class="form-label">Unidad</label><input type="text" name="gUnidad" id="gUnidad" class="form-control" placeholder="mmHg, °C, %..."></div>
+        </div>
+        <div class="form-group"><label class="form-label">Notas</label><input type="text" name="gNotas" class="form-control" placeholder="Observaciones opcionales"></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalSigno')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Contacto -->
+<div class="modal-overlay" id="modalContacto">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalContactoTitle">Contacto de emergencia</span><button class="modal-close" onclick="closeModal('modalContacto')">✕</button></div>
+    <div class="modal-body"><form id="formContacto">
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Nombre *</label><input type="text" name="cNombre" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Relación</label><input type="text" name="cRelacion" class="form-control" placeholder="Hijo, hija, cónyuge..."></div>
+            <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" name="cTel" class="form-control" placeholder="+54 11 1234-5678"></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" name="cEmail" class="form-control"></div>
+        </div>
+        <div class="form-group"><label class="form-check"><input type="checkbox" name="cPrincipal"><span>Contacto principal</span></label></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalContacto')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Nota interna -->
+<div class="modal-overlay" id="modalNota">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalNotaTitle">Nota interna</span><button class="modal-close" onclick="closeModal('modalNota')">✕</button></div>
+    <div class="modal-body"><form id="formNota">
+        <div class="form-group"><label class="form-label">Título</label><input type="text" name="nTitulo" class="form-control" placeholder="Título de la nota..."></div>
+        <div class="form-group"><label class="form-label">Contenido</label><textarea name="nContenido" class="form-control" rows="4" placeholder="Escribí la nota aquí..."></textarea></div>
+        <div class="form-group"><label class="form-check" style="cursor:pointer"><input type="checkbox" name="nUrgente"><span class="urgente-flag">🚨 Marcar como urgente (se mostrará en el dashboard)</span></label></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalNota')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar nota</button></div>
+    </form></div></div>
+</div>
+
+<!-- Editar paciente (desde tab Datos) -->
+<div class="modal-overlay" id="modalEditPaciente">
+    <div class="modal modal-lg"><div class="modal-header"><span class="modal-title">✏️ Editar datos del paciente</span><button class="modal-close" onclick="closeModal('modalEditPaciente')">✕</button></div>
+    <div class="modal-body"><form id="formEditPaciente">
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Nombre *</label><input type="text" name="pNombre" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Apellido</label><input type="text" name="pApellido" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Fecha de nacimiento</label><input type="date" name="pFechaNac" class="form-control"></div>
+            <div class="form-group"><label class="form-label">DNI</label><input type="text" name="pDni" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Habitación</label><input type="text" name="pHabitacion" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Diagnóstico</label><input type="text" name="pDiagnostico" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Obra social</label><input type="text" name="pObraSocial" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Nº afiliado</label><input type="text" name="pNumAfiliado" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Contacto familiar</label><input type="text" name="pContactoFamiliarNombre" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Tel. familiar</label><input type="tel" name="pContactoFamiliarTel" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Médico de cabecera</label><input type="text" name="pMedicoCabecera" class="form-control" placeholder="Nombre del médico tratante"></div>
+            <div class="form-group"><label class="form-label">Fecha de ingreso</label><input type="date" name="pFechaIngreso" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Fecha de egreso</label><input type="date" name="pFechaEgreso" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Motivo de egreso</label><input type="text" name="pMotivoEgreso" class="form-control" placeholder="Alta, fallecimiento, traslado…"></div>
+        </div>
+        <div class="form-group"><label class="form-label">⚠️ Alergias y contraindicaciones</label><textarea name="pAlergias" class="form-control alergias-input" rows="2" placeholder="Penicilina, aspirina, látex…"></textarea></div>
+        <div class="form-group"><label class="form-label">Antecedentes clínicos</label><textarea name="pAntecedentes" class="form-control" rows="3" placeholder="HTA, DBT, EPOC, cirugías previas…"></textarea></div>
+        <div class="form-group"><label class="form-label">Notas de ingreso</label><textarea name="pNotas" class="form-control" rows="3"></textarea></div>
+        <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEditPaciente')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div>
+    </form></div></div>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/paciente.js"></script>
+</body>
+</html>

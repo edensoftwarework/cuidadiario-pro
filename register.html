@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Institución — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="stylesheet" href="css/styles-b2b.css">
+</head>
+<body>
+<div class="auth-bg">
+    <div class="auth-card" style="max-width:560px">
+        <div class="auth-logo">
+            <span class="logo-emoji">🏥</span>
+            <h1>CuidaDiario <span>PRO</span></h1>
+            <p>Registrá tu institución y empezá gratis</p>
+        </div>
+
+        <div id="alertMsg"></div>
+
+        <form id="registerForm" autocomplete="off">
+            <div style="background:#F0F4FF;border-radius:8px;padding:14px;margin-bottom:20px;font-size:.85rem;color:var(--pro-primary-dark)">
+                📋 <strong>Paso 1/1:</strong> Completá los datos de tu institución y del administrador principal.
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group form-col-2">
+                    <label class="form-label">Nombre de la institución *</label>
+                    <input type="text" name="nombre_institucion" class="form-control" placeholder="Ej: Geriátrico San José, Hogar Los Pinos, Centro Esperanza..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tipo de institución *</label>
+                    <select name="tipo_institucion" class="form-control" required>
+                        <option value="">— Seleccionar tipo —</option>
+                        <option value="geriatrico">Geriátrico / Residencia de adultos mayores</option>
+                        <option value="discapacidad">Centro de día / Hogar para personas con discapacidad</option>
+                        <option value="salud_mental">Centro de salud mental / Psiquiátrico privado</option>
+                        <option value="rehabilitacion">Centro de rehabilitación (motora, adictología)</option>
+                        <option value="oncologia">Centro oncológico / Clínica de infusiones</option>
+                        <option value="dialisis">Centro de diálisis</option>
+                        <option value="hogar_convivencial">Hogar convivencial / Casa de medio camino</option>
+                        <option value="pediatrico_especial">Centro pediátrico de cuidados especiales</option>
+                        <option value="cuidado_domiciliario">Empresa de cuidado domiciliario</option>
+                        <option value="clinica">Clínica / Centro médico ambulatorio</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Teléfono (opcional)</label>
+                    <input type="tel" name="telefono" class="form-control" placeholder="+54 11 1234-5678">
+                </div>
+            </div>
+
+            <hr class="sep">
+            <p class="fw-bold mb-8" style="font-size:.88rem;color:var(--text-secondary)">👤 DATOS DEL ADMINISTRADOR</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Nombre completo *</label>
+                    <input type="text" name="nombre_admin" class="form-control" placeholder="Tu nombre completo" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" name="email" class="form-control" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contraseña *</label>
+                    <input type="password" name="password" class="form-control" placeholder="Mín. 8 caracteres" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirmar contraseña *</label>
+                    <input type="password" name="password2" class="form-control" placeholder="Repetir contraseña" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="terminos" required>
+                    <span>Acepto los <a href="#" style="color:var(--pro-primary)">términos y condiciones</a> de CuidaDiario PRO</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="registerBtn">
+                Crear cuenta institucional
+            </button>
+            <div class="text-center mt-12">
+                <span class="auth-link" onclick="window.location.href='index.html'">← Ya tengo cuenta, iniciar sesión</span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/api-b2b.js"></script>
+<script>
+    if (API_B2B.isAuth()) window.location.href = 'pages/dashboard.html';
+
+    function showAlert(msg, type = 'danger') {
+        document.getElementById('alertMsg').innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${type === 'danger' ? '❌' : '✅'}</span>${msg}</div>`;
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = e.target;
+        if (f.password.value !== f.password2.value) { showAlert('Las contraseñas no coinciden'); return; }
+        if (f.password.value.length < 8) { showAlert('La contraseña debe tener al menos 8 caracteres'); return; }
+        const btn = document.getElementById('registerBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Creando cuenta...';
+        try {
+            await API_B2B.register({
+                nombre_institucion: f.nombre_institucion.value.trim(),
+                tipo_institucion: f.tipo_institucion.value,
+                nombre_admin: f.nombre_admin.value.trim(),
+                email: f.email.value.trim(),
+                password: f.password.value,
+            });
+            showAlert('¡Cuenta creada! Redirigiendo...', 'success');
+            setTimeout(() => window.location.href = 'pages/dashboard.html', 1200);
+        } catch (err) {
+            showAlert(err.message);
+            btn.disabled = false;
+            btn.innerHTML = 'Crear cuenta institucional';
+        }
+    });
+</script>
+</body>
+</html>

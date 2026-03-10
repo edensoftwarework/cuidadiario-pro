@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" title="Contraer menú">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="pacientes.html" class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Pacientes</span>
+            </a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Staff</span>
+            </a>
+            <a href="reportes.html" class="nav-item admin-only">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Reportes</span>
+            </a>
+            <a href="configuracion.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Configuración</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()">
+                <span>🚪</span><span>Cerrar sesión</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title" id="topbarTitle">Dashboard</div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+                <a href="pacientes.html" class="btn btn-primary btn-sm">+ Paciente</a>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Loader -->
+            <div id="dashboardLoader" class="page-loader">
+                <div class="spinner spinner-dark"></div> Cargando dashboard...
+            </div>
+
+            <!-- Content -->
+            <div id="dashboardContent" style="display:none">
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">🧓</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statPacientes">—</div>
+                            <div class="stat-label">Pacientes activos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">💊</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statTomasHoy">—</div>
+                            <div class="stat-label">Tomas registradas hoy</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statTareasHoy">—</div>
+                            <div class="stat-label">Tareas completadas hoy</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon teal">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statStaff">—</div>
+                            <div class="stat-label">Staff total (<span id="statCuidadores">—</span> cuidadores)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div class="grid-2">
+                    <!-- Citas próximas -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📅 Citas próximas (7 días)</span>
+                            <a href="pacientes.html" class="btn btn-sm btn-secondary">Ver todos</a>
+                        </div>
+                        <div class="card-body" id="citasProximas" style="padding:0 20px">
+                            <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Notas urgentes -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title" style="color:var(--pro-danger)">🚨 Notas urgentes</span>
+                        </div>
+                        <div class="card-body" id="notasUrgentes" style="padding:0 20px">
+                            <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Síntomas recientes -->
+                <div class="card mt-20">
+                    <div class="card-header">
+                        <span class="card-title">🤒 Síntomas registrados últimas 24h</span>
+                    </div>
+                    <div class="card-body" id="sintomasRecientes" style="padding:0 20px">
+                        <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                    </div>
+                </div>
+
+                <!-- Cumpleaños hoy -->
+                <div class="card mt-20">
+                    <div class="card-header">
+                        <span class="card-title">🎂 Cumpleaños hoy</span>
+                    </div>
+                    <div class="card-body" id="cumpleanosHoy" style="padding:0 20px">
+                        <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                    </div>
+                </div>
+
+                <!-- Stock bajo de medicamentos -->
+                <div class="card mt-20">
+                    <div class="card-header">
+                        <span class="card-title" style="color:var(--pro-warning)">⚠️ Medicamentos con stock bajo</span>
+                        <span class="badge badge-warning">Stock &lt; 5</span>
+                    </div>
+                    <div class="card-body" id="stockBajo" style="padding:0 20px">
+                        <div class="page-loader"><div class="spinner spinner-dark"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/dashboard.js"></script>
+</body>
+</html>

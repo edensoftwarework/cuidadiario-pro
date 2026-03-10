@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacientes — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+    <style>
+        #pacientesGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 14px; }
+    </style>
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">Pacientes
+                <span class="topbar-subtitle" id="pacientesCount" style="font-size:.8rem;margin-left:8px;background:var(--bg-page);padding:2px 8px;border-radius:12px;font-weight:700"></span>
+            </div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+                <button class="btn btn-primary btn-sm admin-only" onclick="openNuevoPaciente()">+ Nuevo Paciente</button>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchPacientes" placeholder="Buscar por nombre, diagnóstico...">
+                </div>
+                <div class="filter-group">
+                    <select id="filterHabitacion" class="filter-select">
+                        <option value="">Todas las habitaciones</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="loadPacientes()">🔄 Actualizar</button>
+            </div>
+
+            <div id="pacientesLoader" class="page-loader">
+                <div class="spinner spinner-dark"></div> Cargando pacientes...
+            </div>
+            <div id="pacientesGrid"></div>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL: Nuevo / Editar paciente -->
+<div class="modal-overlay" id="modalPaciente">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <span class="modal-title" id="modalPacienteTitle">Nuevo Paciente</span>
+            <button class="modal-close" onclick="closeModal('modalPaciente')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formPaciente">
+                <p class="fw-bold mb-8" style="font-size:.82rem;color:var(--text-secondary)">DATOS PERSONALES</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" name="pNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Apellido</label>
+                        <input type="text" name="pApellido" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha de nacimiento</label>
+                        <input type="date" name="pFechaNac" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">DNI</label>
+                        <input type="text" name="pDni" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Habitación</label>
+                        <input type="text" name="pHabitacion" class="form-control" placeholder="Ej: 12A">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Diagnóstico principal</label>
+                        <input type="text" name="pDiagnostico" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Obra social</label>
+                        <input type="text" name="pObraSocial" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nº afiliado</label>
+                        <input type="text" name="pNumAfiliado" class="form-control">
+                    </div>
+                </div>
+                <hr class="sep">
+                <p class="fw-bold mb-8" style="font-size:.82rem;color:var(--text-secondary)">CONTACTO FAMILIAR</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del familiar</label>
+                        <input type="text" name="pContactoFamiliarNombre" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono del familiar</label>
+                        <input type="tel" name="pContactoFamiliarTel" class="form-control">
+                    </div>
+                </div>
+                <hr class="sep">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de ingreso</label>
+                        <input type="date" name="pFechaIngreso" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notas de ingreso</label>
+                    <textarea name="pNotas" class="form-control" rows="3" placeholder="Observaciones iniciales, alergias, condiciones especiales..."></textarea>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:10px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalPaciente')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar paciente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/pacientes.js"></script>
+</body>
+</html>

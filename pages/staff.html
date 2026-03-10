@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label">Administración</span>
+            <a href="staff.html" class="nav-item"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">Personal del staff <span class="topbar-subtitle" id="staffCount" style="font-size:.8rem;margin-left:8px;background:var(--bg-page);padding:2px 8px;border-radius:12px;font-weight:700"></span></div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+                <button class="btn btn-primary btn-sm" onclick="openNuevoStaff()">+ Nuevo staff</button>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Staff table -->
+            <div class="card mb-20">
+                <div class="card-header">
+                    <span class="card-title">👥 Miembros del equipo</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Desde</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTbody">
+                            <tr><td colspan="5" class="text-center text-muted" style="padding:30px"><div class="spinner spinner-dark"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Asignaciones -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🔗 Asignaciones personal → residente</span>
+                    <button class="btn btn-primary btn-sm" onclick="openNuevaAsignacion()">+ Nueva asignación</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Paciente / Residente</th><th>Responsable</th><th>Desde</th><th></th></tr>
+                        </thead>
+                        <tbody id="asignTbody">
+                            <tr><td colspan="4" class="text-center text-muted" style="padding:20px"><div class="spinner spinner-dark"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL: Staff -->
+<div class="modal-overlay" id="modalStaff">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="modalStaffTitle">Nuevo Staff</span>
+            <button class="modal-close" onclick="closeModal('modalStaff')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formStaff">
+                <div class="form-group">
+                    <label class="form-label">Nombre completo *</label>
+                    <input type="text" name="sNombre" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" name="sEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rol *</label>
+                    <select name="sRol" class="form-control" required>
+                        <option value="cuidador_staff">Personal / Operativo</option>
+                        <option value="medico">Médico</option>
+                        <option value="familiar">Familiar (solo lectura)</option>
+                        <option value="admin_institucion">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-group" id="staffPasswordGroup">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" name="sPassword" class="form-control" placeholder="Dejar vacío para no cambiar (en edición)">
+                    <div class="form-hint">Al crear, la contraseña es obligatoria.</div>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:10px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalStaff')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Asignación -->
+<div class="modal-overlay" id="modalAsignacion">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">Nueva Asignación</span>
+            <button class="modal-close" onclick="closeModal('modalAsignacion')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formAsignacion">
+                <div class="form-group">
+                    <label class="form-label">Paciente *</label>
+                    <select name="asigPaciente" id="asigPaciente" class="form-control" required>
+                        <option value="">— Seleccionar paciente —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Responsable *</label>
+                    <select name="asigCuidador" id="asigCuidador" class="form-control" required>
+                        <option value="">— Seleccionar cuidador —</option>
+                    </select>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:10px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalAsignacion')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear asignación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/staff.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pacientes — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">Mis residentes / pacientes asignados</div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <!-- Info del cuidador -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-body" style="display:flex;align-items:center;gap:16px">
+                    <div style="width:52px;height:52px;border-radius:50%;background:var(--pro-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:700" id="cuidadorAvatar">C</div>
+                    <div>
+                        <div style="font-weight:600;font-size:1.1rem" id="cuidadorNombre">—</div>
+                        <div style="color:var(--text-secondary);font-size:.85rem" id="cuidadorSubtitle">Cargando turno...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loader inicial -->
+            <div class="page-loader" id="cuidadorLoader">
+                <div class="spinner spinner-dark"></div>
+                <p>Cargando tus pacientes...</p>
+            </div>
+
+            <!-- Conteo -->
+            <div id="cuidadorCount" style="font-size:.9rem;color:var(--text-secondary);margin-bottom:16px;display:none"></div>
+
+            <!-- Grid de pacientes -->
+            <div class="pacientes-grid" id="cuidadorGrid"></div>
+
+            <!-- Empty state -->
+            <div class="empty-state" id="cuidadorEmpty" style="display:none">
+                <div class="empty-icon">🧓</div>
+                <div class="empty-title">No tenés pacientes asignados</div>
+                <div class="empty-desc">Consultá con el administrador de tu institución para que te asignen pacientes.</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/cuidador.js"></script>
+</body>
+</html>

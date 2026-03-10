@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+</head>
+<body>
+<div class="pro-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏥</span>
+                <span class="logo-text">CuidaDiario</span>
+                <span class="logo-badge">PRO</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        </div>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Principal</span>
+            <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+            <a href="pacientes.html" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Pacientes</span></a>
+            <span class="nav-section-label admin-only">Administración</span>
+            <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
+            <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
+            <a href="configuracion.html" class="nav-item active"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">Cargando...</div>
+                    <div class="sidebar-user-role" id="sidebarUserRole"></div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="API_B2B.logout()"><span>🚪</span><span>Cerrar sesión</span></button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+        <div class="topbar">
+            <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
+            <div class="topbar-title">⚙️ Configuración</div>
+            <div class="topbar-actions">
+                <span class="topbar-institucion" id="topbarInstitucion">—</span>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <div class="settings-grid">
+
+                <!-- Perfil personal -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👤 Mi perfil</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="formPerfil" onsubmit="guardarPerfil(event)">
+                            <div class="form-group">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" name="nombre" id="perfilNombre" class="form-control" placeholder="Tu nombre completo">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" id="perfilEmail" class="form-control" placeholder="tu@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Rol</label>
+                                <input type="text" id="perfilRol" class="form-control" disabled>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Guardar perfil</button>
+                        </form>
+
+                        <hr style="margin:24px 0;border-color:var(--border-color)">
+
+                        <h4 style="margin-bottom:16px;font-weight:600">🔑 Cambiar contraseña</h4>
+                        <form id="formPassword" onsubmit="cambiarPassword(event)">
+                            <div class="form-group">
+                                <label class="form-label">Contraseña actual</label>
+                                <input type="password" name="passwordActual" class="form-control" placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nueva contraseña</label>
+                                <input type="password" name="passwordNueva" id="passNueva" class="form-control" placeholder="••••••••" minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Confirmar contraseña</label>
+                                <input type="password" name="passwordConfirm" class="form-control" placeholder="••••••••" minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Cambiar contraseña</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Institución (solo admin) -->
+                <div class="card admin-only">
+                    <div class="card-header">
+                        <h3 class="card-title">🏥 Datos de la institución</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="formInstitucion" onsubmit="guardarInstitucion(event)">
+                            <div class="form-group">
+                                <label class="form-label">Nombre de la institución</label>
+                                <input type="text" name="nombre" id="instNombre" class="form-control" placeholder="Nombre oficial">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo</label>
+                                <select name="tipo" id="instTipo" class="form-control">
+                                    <option value="geriatrico">Geriátrico</option>
+                                    <option value="residencia">Residencia</option>
+                                    <option value="cuidado_domiciliario">Cuidado domiciliario</option>
+                                    <option value="clinica">Clínica</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" name="telefono" id="instTelefono" class="form-control" placeholder="+54 11 1234-5678">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email de contacto</label>
+                                <input type="email" name="email" id="instEmail" class="form-control" placeholder="contacto@institucion.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dirección</label>
+                                <input type="text" name="direccion" id="instDireccion" class="form-control" placeholder="Calle, número, ciudad">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Guardar institución</button>
+                        </form>
+
+                        <hr style="margin:24px 0;border-color:var(--border-color)">
+
+                        <div class="settings-info-block">
+                            <h4 style="font-weight:600;margin-bottom:8px">📊 Estado del plan</h4>
+                            <div class="plan-badge">
+                                <span class="badge badge-primary" style="font-size:.9rem;padding:6px 14px">Plan PRO activo ✅</span>
+                            </div>
+                            <p style="margin-top:12px;font-size:.85rem;color:var(--text-secondary)">
+                                CuidaDiario PRO incluye pacientes ilimitados, reportes exportables y soporte prioritario.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notificaciones -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔔 Notificaciones</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="toggle-list">
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Síntomas urgentes</div>
+                                    <div class="toggle-desc">Alerta cuando se registra un síntoma intenso</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" checked id="notifSintomas"><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Notas urgentes</div>
+                                    <div class="toggle-desc">Alerta cuando se agrega una nota marcada como urgente</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" checked id="notifNotas"><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Tareas sin completar</div>
+                                    <div class="toggle-desc">Recordatorio de tareas pendientes del día</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="notifTareas"><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Stock bajo de medicamentos</div>
+                                    <div class="toggle-desc">Alerta cuando el stock queda por debajo de 5 unidades</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" checked id="notifStock"><span class="switch-slider"></span></label>
+                            </label>
+                        </div>
+                        <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="showToast('Preferencias guardadas','success')">Guardar preferencias</button>
+                    </div>
+                </div>
+
+                <!-- Zona de peligro -->
+                <div class="card admin-only">
+                    <div class="card-header">
+                        <h3 class="card-title" style="color:var(--danger)">⚠️ Zona de peligro</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="danger-zone">
+                            <div>
+                                <div style="font-weight:600;margin-bottom:4px">Exportar todos los datos</div>
+                                <div style="font-size:.85rem;color:var(--text-secondary)">Descargá un backup completo de todos los datos de la institución en formato JSON.</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="exportarDatos()">📦 Exportar</button>
+                        </div>
+                        <div class="danger-zone" style="margin-top:16px">
+                            <div>
+                                <div style="font-weight:600;margin-bottom:4px;color:var(--danger)">Desactivar institución</div>
+                                <div style="font-size:.85rem;color:var(--text-secondary)">Esta acción desactiva el acceso de todos los usuarios. Es reversible contactando soporte.</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Seguro que deseás desactivar la institución? Todos los accesos serán bloqueados.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/configuracion.js"></script>
+</body>
+</html>

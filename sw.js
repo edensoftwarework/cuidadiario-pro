@@ -1,0 +1,145 @@
+/* ============================================================
+   sw.js — Service Worker para CuidaDiario PRO
+   Estrategia:
+   - Cache-first para assets estáticos (CSS, JS, fuentes)
+   - Network-first para llamadas API (fallback a cache si hay)
+   - Stale-while-revalidate para páginas HTML
+   ============================================================ */
+
+const CACHE_NAME = 'cuidadiario-pro-v1';
+const CACHE_NAME_API = 'cuidadiario-pro-api-v1';
+
+const STATIC_ASSETS = [
+    './',
+    './index.html',
+    './register.html',
+    './reset-password.html',
+    './pages/dashboard.html',
+    './pages/pacientes.html',
+    './pages/paciente.html',
+    './pages/staff.html',
+    './pages/cuidador.html',
+    './pages/reportes.html',
+    './pages/configuracion.html',
+    './css/styles-b2b.css',
+    './js/api-b2b.js',
+    './js/utils-b2b.js',
+    './js/dashboard.js',
+    './js/pacientes.js',
+    './js/paciente.js',
+    './js/staff.js',
+    './js/cuidador.js',
+    './js/reportes.js',
+    './js/configuracion.js',
+    './manifest.json'
+];
+
+// Instalación — cachear assets estáticos
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => cache.addAll(STATIC_ASSETS.map(url => new Request(url, { cache: 'reload' }))))
+            .then(() => self.skipWaiting())
+            .catch(err => console.warn('[SW] Error en install:', err))
+    );
+});
+
+// Activación — limpiar caches viejas
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(
+                keys
+                    .filter(k => k !== CACHE_NAME && k !== CACHE_NAME_API)
+                    .map(k => caches.delete(k))
+            )
+        ).then(() => self.clients.claim())
+    );
+});
+
+// Fetch — estrategia por tipo de recurso
+self.addEventListener('fetch', (event) => {
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // Ignorar requests que no sean GET
+    if (request.method !== 'GET') return;
+
+    // Ignorar requests de extensiones de browser
+    if (!url.protocol.startsWith('http')) return;
+
+    // API calls → Network-first con fallback a cache
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(networkFirstWithCache(request, CACHE_NAME_API));
+        return;
+    }
+
+    // Recursos del Railway backend (mismo dominio que la API)
+    if (url.hostname.includes('railway') || url.hostname.includes('render')) {
+        event.respondWith(networkFirstWithCache(request, CACHE_NAME_API));
+        return;
+    }
+
+    // Assets estáticos → Cache-first
+    if (url.pathname.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$/)) {
+        event.respondWith(cacheFirst(request));
+        return;
+    }
+
+    // Páginas HTML → Stale-while-revalidate
+    event.respondWith(staleWhileRevalidate(request));
+});
+
+// === Estrategias de caché ===
+
+async function cacheFirst(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return new Response('Asset no disponible offline', { status: 503 });
+    }
+}
+
+async function networkFirstWithCache(request, cacheName) {
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response(JSON.stringify({ error: 'Sin conexión' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+async function staleWhileRevalidate(request) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+
+    const fetchPromise = fetch(request).then(response => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+    }).catch(() => null);
+
+    return cached || fetchPromise || new Response('Página no disponible offline', { status: 503 });
+}
+
+// Escuchar mensajes del cliente (para forzar update)
+self.addEventListener('message', (event) => {
+    if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
