@@ -143,12 +143,12 @@ function populateSidebarUser() {
 function formatDate(isoString, options) {
     if (!isoString) return '—';
     try {
-        // Date-only strings (YYYY-MM-DD) parse as UTC midnight and can show the previous day
-        // in Western Hemisphere timezones. Appending T12:00:00 keeps us safely within the same day.
-        const s = /^\d{4}-\d{2}-\d{2}$/.test(String(isoString))
-            ? isoString + 'T12:00:00'
-            : isoString;
-        return new Date(s).toLocaleDateString('es-AR', options || { day:'2-digit', month:'2-digit', year:'numeric' });
+        // Always extract YYYY-MM-DD and anchor to local noon to prevent any
+        // timezone shift, regardless of whether the backend returns a date-only
+        // string or a full ISO timestamp with Z or +00:00 suffix.
+        const datePart = String(isoString).slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return String(isoString);
+        return new Date(datePart + 'T12:00:00').toLocaleDateString('es-AR', options || { day:'2-digit', month:'2-digit', year:'numeric' });
     } catch { return isoString; }
 }
 function formatDateTime(isoString) {
@@ -171,7 +171,8 @@ function calcEdad(fechaNacimiento) {
     return edad;
 }
 function today() {
-    return new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
 }
 function todayDatetimeLocal() {
     const now = new Date();

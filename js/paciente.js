@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * paciente.js — Ficha completa del paciente con todas las secciones
  * by EDEN SoftWork
  */
@@ -9,6 +9,7 @@ let _isAdmin = false;
 let _isReadOnly = false;
 let _stockModelo = 'familiar'; // 'familiar' | 'institucion'
 let _catalogo = [];            // catalog items when stockModelo === 'institucion'
+let _isEgresado = false;       // true when patient has a discharge date
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
@@ -81,6 +82,19 @@ async function loadPaciente() {
         const lista = await API_B2B.getPacientes();
         _paciente = lista.find(p => p.id === _pacienteId);
         if (!_paciente) { showToast('Paciente no encontrado', 'error'); return; }
+        _isEgresado = !!_paciente.fecha_egreso;
+        if (_isEgresado) {
+            let notice = document.getElementById('egresoNotice');
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.id = 'egresoNotice';
+                notice.className = 'alert alert-warning';
+                notice.style.marginTop = '12px';
+                const hdr = document.getElementById('pacienteHeader');
+                if (hdr) hdr.insertAdjacentElement('afterend', notice);
+            }
+            notice.innerHTML = `<span class="alert-icon">⚠️</span><strong>Paciente dado de alta el ${formatDate(_paciente.fecha_egreso)}</strong>${_paciente.motivo_egreso ? ` — ${escapeHtml(_paciente.motivo_egreso)}` : ''}. La ficha está en modo solo lectura.`;
+        }
         renderPacienteHeader(_paciente);
         renderDatosTab(_paciente);
     } catch (err) {
@@ -189,7 +203,7 @@ async function loadMedicamentos() {
 function renderMedicamentos(lista) {
     const el = document.getElementById('medsContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `
         <div class="d-flex justify-between align-center mb-16">
             <span class="text-muted">${lista.length} medicamento${lista.length !== 1 ? 's' : ''}</span>
             <button class="btn btn-primary btn-sm" onclick="openModalMed()">+ Agregar</button>
@@ -214,7 +228,7 @@ function renderMedicamentos(lista) {
                 </div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${m.id},'${escapeHtml(m.nombre)}')">✅ Toma</button>` : ''}
+                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${m.id},'${escapeHtml(m.nombre)}')">✅ Toma</button>` : ''}
                 ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${m.id})">✏️</button>
                 <button class="btn btn-sm btn-danger btn-icon" onclick="deleteMed(${m.id})">🗑</button>` : ''}
             </div>
@@ -370,7 +384,7 @@ async function loadCitas() {
 function renderCitas(lista) {
     const el = document.getElementById('citasContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} cita${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalCita()">+ Agregar</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} cita${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalCita()">+ Agregar</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📅</div><h3>Sin citas registradas</h3></div>`; return; }
     const estadoColor = { pendiente: 'badge-orange', realizada: 'badge-green', cancelada: 'badge-red' };
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(c => `
@@ -429,7 +443,7 @@ async function loadTareas() {
 function renderTareas(lista) {
     const el = document.getElementById('tareasContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} tarea${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalTarea()">+ Agregar</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} tarea${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalTarea()">+ Agregar</button></div>`;
     const catColors = { higiene: 'badge-teal', alimentacion: 'badge-orange', medicacion: 'badge-purple', movilidad: 'badge-blue', recreacion: 'badge-green', otro: 'badge-gray' };
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">✅</div><h3>Sin tareas de cuidado</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(t => `
@@ -445,8 +459,8 @@ function renderTareas(lista) {
                 </div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-success" onclick="completarTarea(${t.id},'${escapeHtml(t.titulo)}')">✅ Completar</button>
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${t.id})">✏️</button>
+                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="completarTarea(${t.id},'${escapeHtml(t.titulo)}')">✅ Completar</button>` : ''}
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${t.id})">✏️</button>
                 <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${t.id})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
@@ -510,7 +524,7 @@ async function loadSintomas() {
 function renderSintomas(lista) {
     const el = document.getElementById('sintomasContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModalSintoma()">+ Registrar</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModalSintoma()">+ Registrar</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">🩺</div><h3>Sin s\u00edntomas registrados</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(s => `
         <div class="item-row">
@@ -573,7 +587,7 @@ const SIGNOS_TIPOS = [ { id: 'presion_arterial', label: 'Presión arterial', uni
 function renderSignos(lista) {
     const el = document.getElementById('signosContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} registro${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModal('modalSigno')">+ Registrar</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} registro${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModal('modalSigno')">+ Registrar</button></div>`;
 
     // Latest per type
     const ultimoPorTipo = {};
@@ -639,7 +653,7 @@ async function loadContactos() {
 function renderContactos(lista) {
     const el = document.getElementById('contactosContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} contacto${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalContacto()">+ Agregar</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} contacto${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalContacto()">+ Agregar</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📞</div><h3>Sin contactos de emergencia</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(c => `
         <div class="item-row" ${c.es_principal ? 'style="border-left:3px solid var(--pro-success-light)"' : ''}>
@@ -698,7 +712,7 @@ async function loadNotas() {
 function renderNotas(lista) {
     const el = document.getElementById('notasContent');
     if (!el) return;
-    const toolbar = _isReadOnly ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} nota${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalNota()">+ Agregar nota</button></div>`;
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} nota${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalNota()">+ Agregar nota</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📝</div><h3>Sin notas internas</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(n => `
         <div class="item-row" ${n.urgente ? 'style="border-left:3px solid var(--pro-danger)"' : ''}>
