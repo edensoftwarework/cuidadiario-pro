@@ -5,6 +5,7 @@
 
 let _allPacientes = [];
 let _staffList = [];
+let _currentTab  = 'activos'; // 'activos' | 'egresados' | 'todos'
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
@@ -36,7 +37,8 @@ async function loadPacientes() {
     showLoader(true);
     try {
         _allPacientes = await API_B2B.getPacientes();
-        renderPacientes(_allPacientes);
+        populateHabitacionFilter();
+        applyFilters();
     } catch (err) {
         showToast('Error al cargar pacientes: ' + err.message, 'error');
     } finally {
@@ -97,12 +99,38 @@ function initSearch() {
 }
 
 function applyFilters() {
-    const q = (document.getElementById('searchPacientes')?.value || '').toLowerCase();
+    const q   = (document.getElementById('searchPacientes')?.value || '').toLowerCase();
     const hab = document.getElementById('filterHabitacion')?.value || '';
     let result = _allPacientes;
-    if (q) result = result.filter(p => `${p.nombre} ${p.apellido || ''} ${p.diagnostico || ''}`.toLowerCase().includes(q));
+    if (_currentTab === 'activos')   result = result.filter(p => !p.fecha_egreso);
+    if (_currentTab === 'egresados') result = result.filter(p =>  p.fecha_egreso);
+    if (q)   result = result.filter(p => `${p.nombre} ${p.apellido || ''} ${p.diagnostico || ''}`.toLowerCase().includes(q));
     if (hab) result = result.filter(p => p.habitacion === hab);
     renderPacientes(result);
+}
+
+function setTab(tab) {
+    _currentTab = tab;
+    document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+    // Filtro habitación no aplica en vista de egresados (ya no tienen habitación)
+    const habFilter = document.getElementById('filterHabitacion');
+    if (habFilter) habFilter.style.display = (tab === 'egresados') ? 'none' : '';
+    applyFilters();
+}
+
+function populateHabitacionFilter() {
+    const sel = document.getElementById('filterHabitacion');
+    if (!sel) return;
+    const current = sel.value;
+    const habs = [...new Set(_allPacientes.filter(p => p.habitacion && !p.fecha_egreso).map(p => p.habitacion))].sort();
+    sel.innerHTML = '<option value="">Todas las habitaciones</option>';
+    habs.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h;
+        opt.textContent = 'Hab. ' + h;
+        if (h === current) opt.selected = true;
+        sel.appendChild(opt);
+    });
 }
 
 // ========== MODAL NUEVO PACIENTE ==========
@@ -139,6 +167,8 @@ function openEditPaciente(id, event) {
     f.pContactoFamiliarTel.value = p.contacto_familiar_tel || '';
     f.pFechaIngreso.value = p.fecha_ingreso ? p.fecha_ingreso.slice(0,10) : '';
     f.pNotas.value = p.notas_ingreso || '';
+    if (f.pMedicoCabecera) f.pMedicoCabecera.value = p.medico_cabecera || '';
+    if (f.pAlergias) f.pAlergias.value = p.alergias || '';
     openModal('modalPaciente');
 }
 
@@ -160,6 +190,8 @@ async function handleSavePaciente(e) {
         contacto_familiar_tel: f.pContactoFamiliarTel.value.trim(),
         fecha_ingreso: f.pFechaIngreso.value || null,
         notas_ingreso: f.pNotas.value.trim(),
+        medico_cabecera: f.pMedicoCabecera ? f.pMedicoCabecera.value.trim() || null : undefined,
+        alergias: f.pAlergias ? f.pAlergias.value.trim() || null : undefined,
     };
     try {
         if (_editingPacienteId) {

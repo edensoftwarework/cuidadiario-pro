@@ -67,38 +67,57 @@ function renderFamiliares(lista) {
     const grid = document.getElementById('familiarGrid');
     if (!grid) return;
 
-    grid.innerHTML = lista.map(p => {
+    const activos   = lista.filter(p => !p.fecha_egreso);
+    const egresados = lista.filter(p =>  p.fecha_egreso);
+
+    // Actualizar contador: solo activos son relevantes en el día a día
+    const countEl = document.getElementById('familiarCount');
+    if (countEl) {
+        countEl.style.display = 'block';
+        countEl.textContent = `${activos.length} familiar${activos.length !== 1 ? 'es' : ''} vinculado${activos.length !== 1 ? 's' : ''}`;
+    }
+
+    const renderCard = (p) => {
         const edad = calcEdad(p.fecha_nacimiento);
+        const isEgresado = !!p.fecha_egreso;
         const edadStr = edad !== null ? `${edad} años` : '';
         const habitacionStr = p.habitacion ? `· Habitación ${escapeHtml(p.habitacion)}` : '';
+        const headerBg = isEgresado
+            ? 'background:linear-gradient(135deg,#6b7280,#9ca3af)'
+            : 'background:linear-gradient(135deg,var(--pro-primary-dark,#0D2B6B),var(--pro-primary,#1565C0))';
 
         return `
-        <div class="card" style="margin-bottom:20px;overflow:visible">
-
+        <div class="card" style="margin-bottom:20px;overflow:visible${isEgresado ? ';opacity:.72' : ''}">
             <!-- Header del paciente -->
-            <div style="background:linear-gradient(135deg,var(--pro-primary-dark,#0D2B6B),var(--pro-primary,#1565C0));padding:20px 20px 16px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:14px">
+            <div style="${headerBg};padding:20px 20px 16px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:14px">
                 <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#fff;flex-shrink:0">
-                    ${(p.nombre || 'P').charAt(0).toUpperCase()}
+                    ${isEgresado ? '🚪' : (p.nombre || 'P').charAt(0).toUpperCase()}
                 </div>
                 <div style="flex:1;min-width:0">
                     <div style="color:#fff;font-weight:700;font-size:1.05rem">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
-                    <div style="color:rgba(255,255,255,0.72);font-size:.8rem;margin-top:2px">${edadStr} ${habitacionStr}</div>
+                    <div style="color:rgba(255,255,255,0.72);font-size:.8rem;margin-top:2px">${edadStr} ${isEgresado ? '' : habitacionStr}</div>
                 </div>
-                <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap">Solo lectura</span>
+                <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap">${isEgresado ? 'Egresado' : 'Solo lectura'}</span>
             </div>
 
             <!-- Cuerpo -->
             <div class="card-body" style="padding:18px 20px">
+                ${isEgresado ? `
+                <div style="padding:10px 14px;background:#F3F4F6;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1rem">📋</span>
+                    <div>
+                        <div style="font-size:.72rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase">Egresado el</div>
+                        <div style="font-size:.9rem;font-weight:600">${formatDate(p.fecha_egreso)}</div>
+                    </div>
+                </div>` : ''}
 
-                <!-- Diagnóstico -->
                 ${p.diagnostico ? `
                 <div style="margin-bottom:12px">
                     <span style="font-size:.72rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em">Diagnóstico</span>
-                    <div style="margin-top:4px"><span class="badge badge-blue">${escapeHtml(p.diagnostico)}</span></div>
+                    <div style="margin-top:4px"><span class="badge badge-${isEgresado ? 'gray' : 'blue'}">${escapeHtml(p.diagnostico)}</span></div>
                 </div>` : ''}
 
-                <!-- Médico de cabecera -->
-                ${p.medico_cabecera ? `
+                ${!isEgresado && p.medico_cabecera ? `
                 <div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-page,#EEF2FF);border-radius:8px;display:flex;align-items:center;gap:10px">
                     <span style="font-size:1.1rem">🩺</span>
                     <div>
@@ -107,8 +126,7 @@ function renderFamiliares(lista) {
                     </div>
                 </div>` : ''}
 
-                <!-- Alergias (destacado) -->
-                ${p.alergias ? `
+                ${!isEgresado && p.alergias ? `
                 <div style="margin-bottom:12px;padding:10px 14px;background:#FEF2F2;border-left:3px solid var(--pro-danger,#EF4444);border-radius:0 8px 8px 0;display:flex;gap:10px;align-items:flex-start">
                     <span style="font-size:1rem;margin-top:1px">⚠️</span>
                     <div>
@@ -117,13 +135,11 @@ function renderFamiliares(lista) {
                     </div>
                 </div>` : ''}
 
-                <!-- Fechas -->
+                ${!isEgresado ? `
                 <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
                     ${p.fecha_ingreso ? `<div style="font-size:.8rem;color:var(--text-secondary)">📋 Ingreso: <strong>${formatDate(p.fecha_ingreso)}</strong></div>` : ''}
                     ${p.fecha_nacimiento ? `<div style="font-size:.8rem;color:var(--text-secondary)">🎂 Nacimiento: <strong>${formatDate(p.fecha_nacimiento)}</strong></div>` : ''}
                 </div>
-
-                <!-- Botones de acceso de solo lectura -->
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
                     <a href="paciente.html?id=${p.id}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">
                         💊 Medicación
@@ -142,10 +158,30 @@ function renderFamiliares(lista) {
                 </div>
                 <a href="paciente.html?id=${p.id}" class="btn btn-primary btn-sm btn-block" style="margin-top:10px">
                     Ver ficha completa →
-                </a>
+                </a>` : `
+                <a href="paciente.html?id=${p.id}" class="btn btn-secondary btn-sm btn-block" style="margin-top:10px">
+                    📋 Ver historial del paciente
+                </a>`}
             </div>
         </div>`;
-    }).join('');
+    };
+
+    let html = activos.map(renderCard).join('');
+
+    if (egresados.length > 0) {
+        html += `
+        <div class="egresados-section">
+            <div class="egresados-section-toggle" onclick="toggleEgresadosSection(this)">
+                <span class="toggle-arrow">▶</span>
+                <span>Familiares / pacientes egresados (${egresados.length})</span>
+            </div>
+            <div class="egresados-section-body" id="egresadosBody" style="display:none">
+                ${egresados.map(renderCard).join('')}
+            </div>
+        </div>`;
+    }
+
+    grid.innerHTML = html || `<div class="empty-state"><div class="empty-icon">👤</div><h3>Sin familiares vinculados activos</h3></div>`;
 }
 
 function mostrarContactoInstitucion() {

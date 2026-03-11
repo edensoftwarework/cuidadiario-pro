@@ -10,7 +10,7 @@ let _reporteData = null;
 
 async function initReportes() {
     requireAuth();
-    requireRole('admin_institucion', 'medico');
+    requireRole('admin_institucion', 'medico', 'cuidador_staff');
     initSidebar();
     populateSidebarUser();
 
@@ -27,12 +27,27 @@ async function initReportes() {
         const res = await API_B2B.getPacientes();
         _pacientes = Array.isArray(res) ? res : [];
         const sel = document.getElementById('reportePacienteId');
-        _pacientes.forEach(p => {
+        const pacActivos   = _pacientes.filter(p => !p.fecha_egreso);
+        const pacEgresados = _pacientes.filter(p =>  p.fecha_egreso);
+        // Pacientes activos primero (uso más frecuente)
+        pacActivos.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = `${p.nombre}${p.apellido ? ' ' + p.apellido : ''}${p.habitacion ? ' — Hab. ' + p.habitacion : ''}`;
             sel.appendChild(opt);
         });
+        // Egresados en grupo separado (para informes de egreso / auditoría)
+        if (pacEgresados.length > 0) {
+            const grp = document.createElement('optgroup');
+            grp.label = '— Pacientes egresados —';
+            pacEgresados.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.nombre}${p.apellido ? ' ' + p.apellido : ''} — Egresado ${p.fecha_egreso ? formatDate(p.fecha_egreso) : ''}`;
+                grp.appendChild(opt);
+            });
+            sel.appendChild(grp);
+        }
     } catch (e) {
         showToast('Error al cargar pacientes', 'error');
     }

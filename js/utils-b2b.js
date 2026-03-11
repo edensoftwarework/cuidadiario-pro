@@ -134,6 +134,12 @@ function populateSidebarUser() {
     // Hide admin-only nav items for non-admin
     if (user.rol !== 'admin_institucion') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        // Médicos y personal cuidador también pueden acceder a Reportes (informes clínicos)
+        if (user.rol === 'medico' || user.rol === 'cuidador_staff') {
+            document.querySelectorAll('.sidebar-nav a[href="reportes.html"]').forEach(el => {
+                el.style.display = '';
+            });
+        }
     }
 }
 
@@ -211,6 +217,17 @@ function tipoSignoBadge(tipo) {
     };
     const [icon, cls] = map[tipo] || ['📊', 'badge-gray'];
     return { icon, cls };
+}
+
+// ============================================
+// EGRESADOS SECTION TOGGLE (shared utility)
+// ============================================
+function toggleEgresadosSection(toggleEl) {
+    const body = document.getElementById('egresadosBody');
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    toggleEl.classList.toggle('open', !isOpen);
 }
 
 // ============================================
