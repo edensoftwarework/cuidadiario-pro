@@ -41,6 +41,7 @@ async function initConfiguracion() {
         loadPermisos();
     }
     loadNotifPrefs();
+    loadSharedMode();
 }
 
 function formatRol(rol) {
@@ -218,6 +219,36 @@ function guardarNotifPrefs() {
     });
     localStorage.setItem('cd_notif_prefs', JSON.stringify(prefs));
     showToast('Preferencias de notificaciones guardadas ✅', 'success');
+}
+
+// ============================================
+// MODO ESTACIÓN COMPARTIDA
+// ============================================
+function loadSharedMode() {
+    const enabled = !!localStorage.getItem('cd_shared_mode');
+    const toggle = document.getElementById('sharedModeToggle');
+    const info   = document.getElementById('sharedModeInfo');
+    if (toggle) toggle.checked = enabled;
+    if (info)   info.style.display = enabled ? '' : 'none';
+}
+
+function toggleSharedMode(enabled) {
+    const info = document.getElementById('sharedModeInfo');
+    if (enabled) {
+        localStorage.setItem('cd_shared_mode', '1');
+        if (info) info.style.display = '';
+        // Si no hay nadie activo, abrir el selector enseguida
+        if (!sessionStorage.getItem('cd_active_worker')) {
+            setTimeout(() => openWorkerSwitcher(), 350);
+        }
+        showToast('Modo estación compartida activado ✅', 'success');
+    } else {
+        localStorage.removeItem('cd_shared_mode');
+        sessionStorage.removeItem('cd_active_worker');
+        if (info) info.style.display = 'none';
+        document.getElementById('workerChip')?.remove();
+        showToast('Modo estación compartida desactivado', 'info');
+    }
 }
 // ============================================
 // PERMISOS DEL EQUIPO (configurable por admin)

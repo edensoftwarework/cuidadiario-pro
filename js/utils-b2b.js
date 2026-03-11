@@ -141,6 +141,8 @@ function populateSidebarUser() {
             });
         }
     }
+    // Shared station mode: inject worker chip if the feature is enabled
+    initSharedStationUI();
 }
 
 // ============================================
@@ -293,4 +295,134 @@ function confirmDialog(message, onConfirm) {
     okBtn.replaceWith(newBtn);
     newBtn.addEventListener('click', () => { closeModal('confirmModal'); onConfirm(); });
     openModal('confirmModal');
+}
+
+// ============================================
+// MODO ESTACIÓN COMPARTIDA
+// Permite a un único dispositivo ser usado por todo el equipo
+// sin necesidad de múltiples logins/logouts. Cada persona selecciona
+// su nombre antes de registrar; la sesión JWT es siempre la del admin.
+// ============================================
+
+/**
+ * Devuelve el nombre que se usará como "registrador" en los registros clínicos.
+ * Si el modo estación está ON y hay un trabajador activo → ese nombre.
+ * Si no → el nombre del usuario JWT logueado.
+ */
+function getRegistrador() {
+    if (localStorage.getItem('cd_shared_mode')) {
+        const w = sessionStorage.getItem('cd_active_worker');
+        if (w) return w;
+    }
+    return API_B2B.getUser()?.nombre || '';
+}
+
+/** Guarda quién está trabajando ahora en este dispositivo */
+function setActiveWorker(nombre) {
+    sessionStorage.setItem('cd_active_worker', nombre);
+    // Mantener lista de personas recientes (max 8) en localStorage
+    try {
+        const recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+        const filtrados = recientes.filter(n => n !== nombre);
+        filtrados.unshift(nombre);
+        localStorage.setItem('cd_workers_recientes', JSON.stringify(filtrados.slice(0, 8)));
+    } catch {}
+    _actualizarWorkerChip();
+    closeModal('workerSwitcherModal');
+    showToast(`Registrando como: ${nombre}`, 'success', 2000);
+}
+
+function _actualizarWorkerChip() {
+    const chip = document.getElementById('workerChip');
+    if (!chip) return;
+    const nombre = sessionStorage.getItem('cd_active_worker') || API_B2B.getUser()?.nombre || '?';
+    const inicial = nombre.charAt(0).toUpperCase();
+    chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span>${escapeHtml(nombre)}`;
+    chip.title = `Registrando como: ${nombre}\nTocá para cambiar`;
+}
+
+/** Inyecta el chip en el topbar y añade los estilos CSS necesarios */
+function initSharedStationUI() {
+    if (!localStorage.getItem('cd_shared_mode')) return;
+    // Inyectar CSS una sola vez
+    if (!document.getElementById('sharedModeCSS')) {
+        const style = document.createElement('style');
+        style.id = 'sharedModeCSS';
+        style.textContent = [
+            '.worker-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}',
+            '.worker-btn{display:flex;align-items:center;gap:8px;padding:9px 14px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--bg-card);cursor:pointer;font-size:.88rem;font-weight:600;flex-basis:calc(50% - 4px);min-width:0;transition:border-color .15s}',
+            '.worker-btn:hover{border-color:var(--pro-primary)}',
+            '.worker-btn.active{border-color:var(--pro-primary);background:#EEF2FF;color:var(--pro-primary)}',
+            '.worker-btn-av{width:30px;height:30px;border-radius:50%;background:var(--pro-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}',
+        ].join('');
+        document.head.appendChild(style);
+    }
+    // Inyectar chip en topbar
+    const topbarActions = document.querySelector('.topbar-actions');
+    if (topbarActions && !document.getElementById('workerChip')) {
+        const chip = document.createElement('button');
+        chip.id = 'workerChip';
+        chip.className = 'btn btn-secondary btn-sm';
+        chip.style.cssText = 'font-size:.78rem;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px';
+        chip.onclick = openWorkerSwitcher;
+        topbarActions.insertBefore(chip, topbarActions.firstChild);
+    }
+    _actualizarWorkerChip();
+}
+
+/** Abre el modal para seleccionar quién está trabajando ahora */
+function openWorkerSwitcher() {
+    const recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+    const currentWorker = sessionStorage.getItem('cd_active_worker') || '';
+    const jwtNombre = API_B2B.getUser()?.nombre || '';
+
+    let modal = document.getElementById('workerSwitcherModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'workerSwitcherModal';
+        modal.className = 'modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    const recBtns = recientes.map(n => {
+        const active = n === currentWorker ? ' active' : '';
+        return `<button class="worker-btn${active}" onclick="setActiveWorker(${JSON.stringify(n)})">
+            <span class="worker-btn-av">${n.charAt(0).toUpperCase()}</span>${escapeHtml(n)}
+        </button>`;
+    }).join('');
+
+    modal.innerHTML = `
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <span class="modal-title">&#x1F465; &#xBF;Qui&#xE9;n est&#xE1; registrando?</span>
+                <button class="modal-close" onclick="closeModal('workerSwitcherModal')">&#x2715;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">Seleccion&#xE1; qui&#xE9;n va a registrar las acciones. No se necesita contrase&#xF1;a.</p>
+                ${recientes.length ? `<div class="worker-grid">${recBtns}</div>` : ''}
+                <div class="form-group mt-12">
+                    <label class="form-label">Agregar nombre</label>
+                    <div class="d-flex gap-8">
+                        <input type="text" id="workerNuevoInput" class="form-control" placeholder="Nombre del personal..."
+                            onkeydown="if(event.key==='Enter'){_agregarNuevoWorker();event.preventDefault();}">
+                        <button class="btn btn-primary btn-sm" onclick="_agregarNuevoWorker()">&#x2713;</button>
+                    </div>
+                </div>
+                ${jwtNombre && jwtNombre !== currentWorker
+                    ? `<button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px"
+                        onclick="setActiveWorker(${JSON.stringify(jwtNombre)})">
+                        &#x1F511; Soy ${escapeHtml(jwtNombre)} (cuenta principal)
+                    </button>`
+                    : ''}
+            </div>
+        </div>`;
+    openModal('workerSwitcherModal');
+    setTimeout(() => document.getElementById('workerNuevoInput')?.focus(), 80);
+}
+
+function _agregarNuevoWorker() {
+    const input = document.getElementById('workerNuevoInput');
+    const nombre = input?.value?.trim();
+    if (!nombre) { showToast('Ingres&#xE1; un nombre', 'warning'); return; }
+    setActiveWorker(nombre);
 }

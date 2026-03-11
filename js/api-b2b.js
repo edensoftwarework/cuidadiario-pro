@@ -107,7 +107,7 @@ const API_B2B = {
     async createMedicamento(data)         { return this.post('/api/b2b/medicamentos', data); },
     async updateMedicamento(id, data)     { return this.patch(`/api/b2b/medicamentos/${id}`, data); },
     async deleteMedicamento(id)           { return this.del(`/api/b2b/medicamentos/${id}`); },
-    async registrarToma(id, notas)        { return this.post(`/api/b2b/medicamentos/${id}/toma`, { notas }); },
+    async registrarToma(id, notas, quien) { return this.post(`/api/b2b/medicamentos/${id}/toma`, { notas, _quien: quien || '' }); },
     async getHistorialMeds(paciente_id)   { return this.get(`/api/b2b/medicamentos/historial?paciente_id=${paciente_id}`); },
 
     // ============================================
@@ -134,7 +134,7 @@ const API_B2B = {
     async createTarea(data)       { return this.post('/api/b2b/tareas', data); },
     async updateTarea(id, data)   { return this.patch(`/api/b2b/tareas/${id}`, data); },
     async deleteTarea(id)         { return this.del(`/api/b2b/tareas/${id}`); },
-    async completarTarea(id, notas) { return this.post(`/api/b2b/tareas/${id}/completar`, { notas }); },
+    async completarTarea(id, notas, quien) { return this.post(`/api/b2b/tareas/${id}/completar`, { notas, _quien: quien || '' }); },
     async getHistorialTareas(pid) { return this.get(`/api/b2b/tareas/historial?paciente_id=${pid}`); },
 
     // ============================================

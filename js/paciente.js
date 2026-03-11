@@ -458,7 +458,7 @@ async function handleSaveToma(e) {
     btn.disabled = true;
     const id = parseInt(document.getElementById('tomaMedId').value);
     try {
-        await API_B2B.registrarToma(id, f.tomaNotas.value.trim());
+        await API_B2B.registrarToma(id, f.tomaNotas.value.trim(), getRegistrador());
         showToast('Toma registrada ✅', 'success');
         closeModal('modalToma');
         await loadMedicamentos(); // refresh stock display
@@ -642,7 +642,7 @@ async function handleCompletarTarea(e) {
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     const id = parseInt(document.getElementById('tareaTareaId').value);
     try {
-        await API_B2B.completarTarea(id, f.tareaNotas.value.trim());
+        await API_B2B.completarTarea(id, f.tareaNotas.value.trim(), getRegistrador());
         showToast('Tarea completada ✅', 'success');
         closeModal('modalCompletarTarea');
     } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
@@ -700,7 +700,7 @@ function openModalSintoma(id) {
 async function handleSaveSintoma(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const data = { paciente_id: _pacienteId, descripcion: f.sDesc.value.trim(), intensidad: f.sIntensidad.value ? parseInt(f.sIntensidad.value) : null };
+    const data = { paciente_id: _pacienteId, descripcion: f.sDesc.value.trim(), intensidad: f.sIntensidad.value ? parseInt(f.sIntensidad.value) : null, _quien: getRegistrador() };
     try {
         if (_editingSintomaId) { await API_B2B.updateSintoma(_editingSintomaId, data); showToast('S\u00edntoma actualizado', 'success'); }
         else { await API_B2B.createSintoma(data); showToast('S\u00edntoma registrado', 'success'); }
@@ -765,7 +765,7 @@ async function handleSaveSigno(e) {
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     const tipo = f.gTipo.value;
     const tipoData = SIGNOS_TIPOS.find(t => t.id === tipo);
-    const data = { paciente_id: _pacienteId, tipo, valor: f.gValor.value.trim(), unidad: tipoData?.unidad || f.gUnidad.value.trim(), notas: f.gNotas.value.trim() };
+    const data = { paciente_id: _pacienteId, tipo, valor: f.gValor.value.trim(), unidad: tipoData?.unidad || f.gUnidad.value.trim(), notas: f.gNotas.value.trim(), _quien: getRegistrador() };
     try { await API_B2B.createSigno(data); showToast('Signo vital registrado', 'success'); closeModal('modalSigno'); f.reset(); await loadSignos(); }
     catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
@@ -887,7 +887,7 @@ function openModalNota(id) {
 async function handleSaveNota(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const data = { paciente_id: _pacienteId, titulo: f.nTitulo.value.trim(), contenido: f.nContenido.value.trim(), urgente: f.nUrgente.checked };
+    const data = { paciente_id: _pacienteId, titulo: f.nTitulo.value.trim(), contenido: f.nContenido.value.trim(), urgente: f.nUrgente.checked, _quien: getRegistrador() };
     try {
         if (_editingNotaId) { await API_B2B.updateNota(_editingNotaId, data); showToast('Nota actualizada', 'success'); }
         else { await API_B2B.createNota(data); showToast('Nota guardada', 'success'); }

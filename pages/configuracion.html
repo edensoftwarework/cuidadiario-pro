@@ -163,6 +163,32 @@
                     </div>
                 </div>
 
+                <!-- Modo Estación Compartida (visible a todos) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#x1F5A5;&#xFE0F; Modo Estación Compartida</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="toggle-list">
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Activar modo estación compartida</div>
+                                    <div class="toggle-desc">Una sola computadora o tablet para todo el equipo. Cada persona elige su nombre antes de registrar, sin cerrar ni abrir sesión.</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="sharedModeToggle" onchange="toggleSharedMode(this.checked)"><span class="switch-slider"></span></label>
+                            </label>
+                        </div>
+                        <div id="sharedModeInfo" style="display:none;margin-top:16px;padding:12px 14px;background:var(--bg-page);border-radius:8px;border-left:3px solid var(--pro-primary)">
+                            <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">
+                                <strong>&#x2705; Modo activo</strong> &mdash; Aparece un chip con el nombre de quien registra en la barra superior de cada página.<br>
+                                Cualquier miembro del equipo toca el chip y selecciona su nombre. Sin contraseña.<br>
+                                <span style="font-size:.78rem;opacity:.75">La selección se borra al cerrar el navegador. El login del administrador permanece activo siempre.</span>
+                            </p>
+                            <button class="btn btn-primary btn-sm" onclick="openWorkerSwitcher()">&#x1F465; Seleccionar quién registra ahora</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Notificaciones -->
                 <div class="card">
                     <div class="card-header">
