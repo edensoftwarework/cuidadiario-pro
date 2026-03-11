@@ -75,21 +75,30 @@ function renderPacientes(lista) {
     }
     grid.innerHTML = lista.map(p => {
         const edad = calcEdad(p.fecha_nacimiento);
+        const isEgresado = !!p.fecha_egreso;
+        const editBtn = !isEgresado && canDo('editar_paciente')
+            ? `<button class="btn btn-sm btn-secondary btn-icon" title="Editar paciente" onclick="openEditPaciente(${p.id}, event)">✏️</button>`
+            : '';
         return `
-        <div class="paciente-card" onclick="window.location.href='paciente.html?id=${p.id}'">
-            <div class="paciente-card-avatar">👤</div>
+        <div class="paciente-card${isEgresado ? ' egresado' : ''}" onclick="window.location.href='paciente.html?id=${p.id}'">
+            <div class="paciente-card-avatar">${isEgresado ? '🚪' : '👤'}</div>
             <div class="paciente-card-body">
                 <div class="paciente-card-name">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                 <div class="paciente-card-meta">
                     ${edad !== null ? edad + ' años' : ''}
-                    ${p.habitacion ? ' · Hab. ' + escapeHtml(p.habitacion) : ''}
+                    ${!isEgresado && p.habitacion ? ' · Hab. ' + escapeHtml(p.habitacion) : ''}
+                    ${isEgresado ? ' · Alta: ' + formatDate(p.fecha_egreso) : ''}
                 </div>
                 <div class="paciente-card-tags">
+                    ${isEgresado ? '<span class="badge badge-red">🚪 Egresado</span>' : ''}
                     ${p.diagnostico ? `<span class="badge badge-blue">${escapeHtml(p.diagnostico)}</span>` : ''}
-                    ${p.obra_social ? `<span class="badge badge-teal">${escapeHtml(p.obra_social)}</span>` : ''}
+                    ${!isEgresado && p.obra_social ? `<span class="badge badge-teal">${escapeHtml(p.obra_social)}</span>` : ''}
                 </div>
             </div>
-            <span class="paciente-card-action">›</span>
+            <div class="d-flex align-center gap-4" onclick="event.stopPropagation()">
+                ${editBtn}
+                <span class="paciente-card-action" style="pointer-events:none">›</span>
+            </div>
         </div>`;
     }).join('');
 }

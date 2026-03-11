@@ -88,6 +88,7 @@ const API_B2B = {
     // PACIENTES
     // ============================================
     async getPacientes()          { return this.get('/api/b2b/pacientes'); },
+    async getPaciente(id)         { return this.get(`/api/b2b/pacientes/${id}`); },
     async createPaciente(data)    { return this.post('/api/b2b/pacientes', data); },
     async updatePaciente(id, d)   { return this.patch(`/api/b2b/pacientes/${id}`, d); },
     async deletePaciente(id)      { return this.del(`/api/b2b/pacientes/${id}`); },

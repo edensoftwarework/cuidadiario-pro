@@ -79,8 +79,7 @@ function initTabs(defaultTab) {
 // ============================================
 async function loadPaciente() {
     try {
-        const lista = await API_B2B.getPacientes();
-        _paciente = lista.find(p => p.id === _pacienteId);
+        _paciente = await API_B2B.getPaciente(_pacienteId);
         if (!_paciente) { showToast('Paciente no encontrado', 'error'); return; }
         _isEgresado = !!_paciente.fecha_egreso;
         if (_isEgresado) {

@@ -168,7 +168,7 @@ async function reactivarStaff(id) {
 function openNuevaAsignacion() {
     const pacSelect = document.getElementById('asigPaciente');
     const cuidSelect = document.getElementById('asigCuidador');
-    if (pacSelect) pacSelect.innerHTML = '<option value="">— Seleccionar paciente —</option>' + _pacientesList.map(p => `<option value="${p.id}">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</option>`).join('');
+    if (pacSelect) pacSelect.innerHTML = '<option value="">— Seleccionar paciente —</option>' + _pacientesList.filter(p => !p.fecha_egreso).map(p => `<option value="${p.id}">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}${p.habitacion ? ' · Hab. ' + p.habitacion : ''}</option>`).join('');
     if (cuidSelect) cuidSelect.innerHTML = '<option value="">— Seleccionar cuidador —</option>' + _staffList.filter(s => s.activo).map(s => `<option value="${s.id}">${escapeHtml(s.nombre)} (${s.rol})</option>`).join('');
     document.getElementById('formAsignacion').reset();
     openModal('modalAsignacion');
