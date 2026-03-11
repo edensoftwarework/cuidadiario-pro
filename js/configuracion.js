@@ -39,6 +39,7 @@ async function initConfiguracion() {
     if (isAdmin) {
         cargarInstitucion();
     }
+    loadNotifPrefs();
 }
 
 function formatRol(rol) {
@@ -188,6 +189,31 @@ async function guardarInstitucion(e) {
 function onStockModeloChange(val) {
     const card = document.getElementById('catalogoCard');
     if (card) card.style.display = val === 'institucion' ? '' : 'none';
+}
+
+// ============================================
+// NOTIFICACIONES — persistencia local
+// ============================================
+const NOTIF_IDS = ['notifSintomas', 'notifNotas', 'notifTareas', 'notifStock'];
+
+function loadNotifPrefs() {
+    try {
+        const prefs = JSON.parse(localStorage.getItem('cd_notif_prefs') || '{}');
+        NOTIF_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && id in prefs) el.checked = prefs[id];
+        });
+    } catch {}
+}
+
+function guardarNotifPrefs() {
+    const prefs = {};
+    NOTIF_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) prefs[id] = el.checked;
+    });
+    localStorage.setItem('cd_notif_prefs', JSON.stringify(prefs));
+    showToast('Preferencias de notificaciones guardadas ✅', 'success');
 }
 
 async function exportarDatos() {

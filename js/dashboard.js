@@ -13,7 +13,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadDashboard() {
     const user = API_B2B.getUser();
     const titleEl = document.getElementById('topbarTitle');
-    if (titleEl) titleEl.textContent = `Buenos días, ${(user?.nombre || '').split(' ')[0]} 👋`;
+    if (titleEl) {
+        const h = new Date().getHours();
+        const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+        titleEl.textContent = `${saludo}, ${(user?.nombre || '').split(' ')[0]} 👋`;
+    }
 
     showDashboardLoading(true);
     try {

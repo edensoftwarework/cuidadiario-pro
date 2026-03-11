@@ -28,9 +28,16 @@ const API_B2B = {
     // ---------- Error handler ----------
     async handle(res) {
         if (res.status === 401) {
-            this.removeToken();
-            window.location.href = '../index.html';
-            throw new Error('Sesión expirada');
+            if (this.getToken()) {
+                // Sesión expirada mientras estaba autenticado — redirigir al login
+                this.removeToken();
+                const inPages = window.location.pathname.includes('/pages/');
+                window.location.href = (inPages ? '../' : '') + 'index.html?expired=1';
+            }
+            // Login fallido o credenciales inválidas — mostrar mensaje del backend
+            let msg = 'Email o contraseña incorrectos. Verificá tus datos.';
+            try { const e = await res.json(); msg = e.error || msg; } catch {}
+            throw new Error(msg);
         }
         if (!res.ok) {
             let msg = `Error ${res.status}`;
@@ -40,11 +47,17 @@ const API_B2B = {
         return res.json();
     },
 
-    async get(path)         { return this.handle(await fetch(`${this.BASE_URL}${path}`, { headers: this.headers() })); },
-    async post(path, body)  { return this.handle(await fetch(`${this.BASE_URL}${path}`, { method:'POST',   headers: this.headers(), body: JSON.stringify(body) })); },
-    async patch(path, body) { return this.handle(await fetch(`${this.BASE_URL}${path}`, { method:'PATCH',  headers: this.headers(), body: JSON.stringify(body) })); },
-    async del(path)         { return this.handle(await fetch(`${this.BASE_URL}${path}`, { method:'DELETE', headers: this.headers() })); },
-    async postNoAuth(path, body) { return this.handle(await fetch(`${this.BASE_URL}${path}`, { method:'POST', headers: this.headers(false), body: JSON.stringify(body) })); },
+    // ---------- Network-safe fetch wrapper ----------
+    async _fetch(url, opts) {
+        try { return await fetch(url, opts); }
+        catch { throw new Error('Sin conexión. Verificá tu internet e intentá nuevamente.'); }
+    },
+
+    async get(path)         { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() })); },
+    async post(path, body)  { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST',   headers: this.headers(), body: JSON.stringify(body) })); },
+    async patch(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'PATCH',  headers: this.headers(), body: JSON.stringify(body) })); },
+    async del(path)         { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'DELETE', headers: this.headers() })); },
+    async postNoAuth(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST', headers: this.headers(false), body: JSON.stringify(body) })); },
 
     // ============================================
     // AUTH

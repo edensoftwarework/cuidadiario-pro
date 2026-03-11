@@ -25,7 +25,15 @@ function showToast(msg, type = 'info', duration = 3500) {
 // ============================================
 // MODAL HELPERS
 // ============================================
-function openModal(id)  { const m = document.getElementById(id); if (m) m.classList.add('active'); }
+function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('active');
+    setTimeout(() => {
+        const first = m.querySelector('input:not([type=hidden]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+        if (first) first.focus();
+    }, 60);
+}
 function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
 function closeAllModals() { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); }
 
