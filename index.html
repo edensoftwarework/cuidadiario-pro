@@ -103,6 +103,8 @@
                 window.location.href = 'pages/cuidador.html';
             } else if (user?.rol === 'familiar') {
                 window.location.href = 'pages/familiar.html';
+            } else if (user?.rol === 'admin_institucion' && user?.onboarding_done === false) {
+                window.location.href = 'pages/onboarding.html';
             } else {
                 window.location.href = 'pages/dashboard.html';
             }

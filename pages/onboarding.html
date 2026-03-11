@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración inicial — CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="stylesheet" href="../css/styles-b2b.css">
+    <style>
+        /* ====== ONBOARDING WIZARD ====== */
+        body { background: var(--bg-page); }
+        .onb-bg {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+        .onb-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.12);
+            width: 100%;
+            max-width: 560px;
+            overflow: hidden;
+        }
+        /* Progress bar */
+        .onb-progress-wrap {
+            background: var(--bg-page);
+            padding: 0;
+            height: 6px;
+        }
+        .onb-progress-bar {
+            height: 6px;
+            background: var(--pro-primary);
+            transition: width .4s ease;
+            border-radius: 0 4px 4px 0;
+        }
+        /* Header */
+        .onb-header {
+            padding: 28px 32px 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .onb-step-badge {
+            width: 40px; height: 40px;
+            background: var(--pro-primary);
+            color: #fff;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .onb-step-title { font-size: 1.12rem; font-weight: 700; color: var(--text-primary); }
+        .onb-step-subtitle { font-size: .83rem; color: var(--text-secondary); margin-top: 2px; }
+        /* Body */
+        .onb-body { padding: 20px 32px 28px; }
+        /* Footer */
+        .onb-footer {
+            padding: 0 32px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .onb-skip { font-size: .82rem; color: var(--text-secondary); cursor: pointer; text-decoration: underline; }
+        .onb-skip:hover { color: var(--text-primary); }
+        /* Step panels */
+        .onb-step { display: none; }
+        .onb-step.active { display: block; }
+        /* Option cards (stock model, shared mode) */
+        .onb-options { display: grid; gap: 12px; }
+        .onb-option {
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: border-color .15s, background .15s;
+            position: relative;
+        }
+        .onb-option:hover { border-color: var(--pro-primary); }
+        .onb-option.selected {
+            border-color: var(--pro-primary);
+            background: #EEF2FF;
+        }
+        .onb-option .opt-icon { font-size: 1.5rem; margin-bottom: 6px; }
+        .onb-option .opt-title { font-weight: 700; font-size: .95rem; margin-bottom: 3px; }
+        .onb-option .opt-desc { font-size: .8rem; color: var(--text-secondary); line-height: 1.45; }
+        .onb-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        /* Summary */
+        .onb-summary { list-style: none; padding: 0; margin: 0; }
+        .onb-summary li {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 10px 0; border-bottom: 1px solid var(--border-color);
+        }
+        .onb-summary li:last-child { border-bottom: none; }
+        .onb-summary .sum-label { font-size: .8rem; color: var(--text-secondary); }
+        .onb-summary .sum-value { font-size: .92rem; font-weight: 600; }
+        /* Alert */
+        #onbAlert { margin-bottom: 12px; }
+        /* Responsive */
+        @media (max-width: 480px) {
+            .onb-header, .onb-body, .onb-footer { padding-left: 20px; padding-right: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="onb-bg">
+
+    <!-- Branding -->
+    <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.4rem;line-height:1">🏥</div>
+        <div style="font-weight:800;font-size:1.1rem;margin-top:6px">CuidaDiario <span style="color:var(--pro-primary)">PRO</span></div>
+        <div style="font-size:.8rem;color:var(--text-secondary);margin-top:2px">Configuración inicial de tu institución</div>
+    </div>
+
+    <div class="onb-card">
+
+        <!-- Progress bar -->
+        <div class="onb-progress-wrap">
+            <div class="onb-progress-bar" id="onbProgressBar" style="width:25%"></div>
+        </div>
+
+        <!-- Alert -->
+        <div id="onbAlert" style="padding:0 32px;margin-top:12px"></div>
+
+        <!-- ========== STEP 1: Datos de la institución ========== -->
+        <div class="onb-step active" id="onbStep1">
+            <div class="onb-header">
+                <div class="onb-step-badge">1</div>
+                <div>
+                    <div class="onb-step-title">Tu institución</div>
+                    <div class="onb-step-subtitle">Completá los datos básicos para empezar</div>
+                </div>
+            </div>
+            <div class="onb-body">
+                <div class="form-group">
+                    <label class="form-label">Nombre de la institución <span style="color:var(--pro-danger)">*</span></label>
+                    <input type="text" id="onbNombre" class="form-control" placeholder="Ej: Residencia San José" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tipo de institución</label>
+                    <select id="onbTipo" class="form-control">
+                        <option value="">— Seleccioná —</option>
+                        <option value="residencia_adultos_mayores">Residencia de adultos mayores</option>
+                        <option value="clinica_rehabilitacion">Clínica de rehabilitación</option>
+                        <option value="hogar_cuidados">Hogar de cuidados</option>
+                        <option value="hospital">Hospital / Sanatorio</option>
+                        <option value="centro_dia">Centro de día</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Teléfono de contacto</label>
+                    <input type="tel" id="onbTelefono" class="form-control" placeholder="+54 11 0000-0000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dirección</label>
+                    <input type="text" id="onbDireccion" class="form-control" placeholder="Av. Siempreviva 742, Buenos Aires">
+                </div>
+            </div>
+            <div class="onb-footer">
+                <span></span>
+                <button class="btn btn-primary" onclick="onbNext(1)">Siguiente →</button>
+            </div>
+        </div>
+
+        <!-- ========== STEP 2: Modelo de stock ========== -->
+        <div class="onb-step" id="onbStep2">
+            <div class="onb-header">
+                <div class="onb-step-badge">2</div>
+                <div>
+                    <div class="onb-step-title">Medicamentos</div>
+                    <div class="onb-step-subtitle">¿Cómo se gestiona el stock de medicamentos?</div>
+                </div>
+            </div>
+            <div class="onb-body">
+                <div class="onb-options">
+                    <label class="onb-option selected" id="optInstitucion">
+                        <input type="radio" name="stockModelo" value="institucional" checked>
+                        <div class="opt-icon">🏥</div>
+                        <div class="opt-title">Stock institucional</div>
+                        <div class="opt-desc">La institución controla un stock general de medicamentos. Ideal para residencias y hogares donde el establecimiento provee los medicamentos a todos los residentes.</div>
+                    </label>
+                    <label class="onb-option" id="optFamiliar">
+                        <input type="radio" name="stockModelo" value="familiar">
+                        <div class="opt-icon">👨‍👩‍👧</div>
+                        <div class="opt-title">Stock por familiar / paciente</div>
+                        <div class="opt-desc">Cada paciente trae sus propios medicamentos. La familia provee y la institución registra los consumos. Ideal para clínicas de día o centros de rehabilitación.</div>
+                    </label>
+                </div>
+            </div>
+            <div class="onb-footer">
+                <button class="btn btn-secondary" onclick="onbBack(2)">← Atrás</button>
+                <button class="btn btn-primary" onclick="onbNext(2)">Siguiente →</button>
+            </div>
+        </div>
+
+        <!-- ========== STEP 3: Modo de operación ========== -->
+        <div class="onb-step" id="onbStep3">
+            <div class="onb-header">
+                <div class="onb-step-badge">3</div>
+                <div>
+                    <div class="onb-step-title">Modo de operación</div>
+                    <div class="onb-step-subtitle">¿Cómo van a trabajar en este dispositivo?</div>
+                </div>
+            </div>
+            <div class="onb-body">
+                <div class="onb-options">
+                    <label class="onb-option selected" id="optIndividual">
+                        <input type="radio" name="modoOp" value="individual" checked>
+                        <div class="opt-icon">👤</div>
+                        <div class="opt-title">Acceso individual</div>
+                        <div class="opt-desc">Cada cuidador tiene su propia cuenta y contraseña. Más seguro. Recomendado cuando cada persona trabaja en su propio dispositivo.</div>
+                    </label>
+                    <label class="onb-option" id="optCompartida">
+                        <input type="radio" name="modoOp" value="compartida">
+                        <div class="opt-icon">🖥️</div>
+                        <div class="opt-title">Estación compartida</div>
+                        <div class="opt-desc">Un dispositivo compartido entre múltiples cuidadores. Cada uno elige su nombre antes de registrar sin necesidad de contraseña. Ideal para tablets de guardia o estaciones de enfermería.</div>
+                    </label>
+                </div>
+            </div>
+            <div class="onb-footer">
+                <button class="btn btn-secondary" onclick="onbBack(3)">← Atrás</button>
+                <button class="btn btn-primary" onclick="onbNext(3)">Siguiente →</button>
+            </div>
+        </div>
+
+        <!-- ========== STEP 4: Confirmación ========== -->
+        <div class="onb-step" id="onbStep4">
+            <div class="onb-header">
+                <div class="onb-step-badge">✓</div>
+                <div>
+                    <div class="onb-step-title">¡Todo listo!</div>
+                    <div class="onb-step-subtitle">Revisá la configuración y confirmá</div>
+                </div>
+            </div>
+            <div class="onb-body">
+                <ul class="onb-summary" id="onbSummary"></ul>
+                <p class="text-muted" style="font-size:.8rem;margin-top:12px">
+                    Podés cambiar todo esto luego desde <strong>Configuración → ⚙️</strong> en el menú.
+                </p>
+            </div>
+            <div class="onb-footer">
+                <button class="btn btn-secondary" onclick="onbBack(4)">← Atrás</button>
+                <button class="btn btn-primary" id="onbFinishBtn" onclick="onbFinish()">
+                    Ir al panel →
+                </button>
+            </div>
+        </div>
+
+    </div><!-- /.onb-card -->
+
+    <p style="margin-top:18px;font-size:.78rem;color:var(--text-secondary)">
+        ¿Necesitás ayuda? <a href="mailto:soporte@edensoftwork.com" style="color:var(--pro-primary)">Contactanos</a>
+    </p>
+</div>
+
+<script src="../js/api-b2b.js"></script>
+<script src="../js/utils-b2b.js"></script>
+<script src="../js/onboarding.js"></script>
+</body>
+</html>

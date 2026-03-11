@@ -129,7 +129,7 @@
                 password: f.password.value,
             });
             showAlert('¡Cuenta creada! Redirigiendo...', 'success');
-            setTimeout(() => window.location.href = 'pages/dashboard.html', 1200);
+            setTimeout(() => window.location.href = 'pages/onboarding.html', 1200);
         } catch (err) {
             showAlert(err.message);
             btn.disabled = false;

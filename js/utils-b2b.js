@@ -333,15 +333,31 @@ function setActiveWorker(nombre) {
 }
 
 function _actualizarWorkerChip() {
-    const chip = document.getElementById('workerChip');
-    if (!chip) return;
     const nombre = sessionStorage.getItem('cd_active_worker') || API_B2B.getUser()?.nombre || '?';
-    const inicial = nombre.charAt(0).toUpperCase();
-    chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span>${escapeHtml(nombre)}`;
-    chip.title = `Registrando como: ${nombre}\nTocá para cambiar`;
+    const inicial = escapeHtml(nombre.charAt(0).toUpperCase());
+    const nombreHtml = escapeHtml(nombre);
+
+    // Topbar chip
+    const chip = document.getElementById('workerChip');
+    if (chip) {
+        chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nombreHtml}</span>`;
+        chip.title = `Registrando como: ${nombre}\nTocá para cambiar`;
+    }
+
+    // Sidebar widget
+    const widget = document.getElementById('sidebarWorkerWidget');
+    if (widget) {
+        widget.innerHTML = `
+            <div class="sidebar-worker-av">${inicial}</div>
+            <div class="sidebar-worker-info">
+                <div class="sidebar-worker-label">Registrando como</div>
+                <div class="sidebar-worker-name">${nombreHtml}</div>
+            </div>
+            <span class="sidebar-worker-change">cambiar</span>`;
+    }
 }
 
-/** Inyecta el chip en el topbar y añade los estilos CSS necesarios */
+/** Inyecta el chip en el topbar Y en el sidebar, añade los estilos CSS necesarios */
 function initSharedStationUI() {
     if (!localStorage.getItem('cd_shared_mode')) return;
     // Inyectar CSS una sola vez
@@ -354,27 +370,58 @@ function initSharedStationUI() {
             '.worker-btn:hover{border-color:var(--pro-primary)}',
             '.worker-btn.active{border-color:var(--pro-primary);background:#EEF2FF;color:var(--pro-primary)}',
             '.worker-btn-av{width:30px;height:30px;border-radius:50%;background:var(--pro-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}',
+            // Sidebar worker widget
+            '.sidebar-worker{padding:8px 14px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s;border-radius:0 0 12px 12px}',
+            '.sidebar-worker:hover{background:var(--bg-page)}',
+            '.sidebar-worker-av{width:28px;height:28px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
+            '.sidebar-worker-info{flex:1;min-width:0}',
+            '.sidebar-worker-label{font-size:.68rem;color:var(--text-secondary);line-height:1}',
+            '.sidebar-worker-name{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.sidebar-worker-change{font-size:.68rem;color:var(--pro-primary);flex-shrink:0}',
+            '.collapsed .sidebar-worker-info,.collapsed .sidebar-worker-change,.collapsed .sidebar-worker-label{display:none}',
         ].join('');
         document.head.appendChild(style);
     }
-    // Inyectar chip en topbar
+    // Chip en el topbar (compacto)
     const topbarActions = document.querySelector('.topbar-actions');
     if (topbarActions && !document.getElementById('workerChip')) {
         const chip = document.createElement('button');
         chip.id = 'workerChip';
         chip.className = 'btn btn-secondary btn-sm';
-        chip.style.cssText = 'font-size:.78rem;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px';
-        chip.onclick = openWorkerSwitcher;
+        chip.style.cssText = 'font-size:.78rem;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;max-width:160px;overflow:hidden';
+        chip.title = 'Cambiar quién registra';
+        chip.addEventListener('click', openWorkerSwitcher);
         topbarActions.insertBefore(chip, topbarActions.firstChild);
+    }
+    // Widget en el sidebar footer (más visible, siempre accesible)
+    const sidebarFooter = document.querySelector('.sidebar-footer');
+    if (sidebarFooter && !document.getElementById('sidebarWorkerWidget')) {
+        const widget = document.createElement('div');
+        widget.id = 'sidebarWorkerWidget';
+        widget.className = 'sidebar-worker';
+        widget.title = 'Cambiar quién está registrando';
+        widget.addEventListener('click', openWorkerSwitcher);
+        sidebarFooter.insertAdjacentElement('afterbegin', widget);
     }
     _actualizarWorkerChip();
 }
 
 /** Abre el modal para seleccionar quién está trabajando ahora */
-function openWorkerSwitcher() {
-    const recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+async function openWorkerSwitcher() {
     const currentWorker = sessionStorage.getItem('cd_active_worker') || '';
     const jwtNombre = API_B2B.getUser()?.nombre || '';
+
+    // Unificar: recientes locales + staff activo de la DB
+    let recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+    try {
+        const staffList = await API_B2B.getStaff();
+        staffList.filter(s => s.activo).forEach(s => {
+            if (!recientes.includes(s.nombre)) recientes.push(s.nombre);
+        });
+        localStorage.setItem('cd_workers_recientes', JSON.stringify(recientes.slice(0, 12)));
+    } catch (_) { /* sin staff disponible, continuar con recientes */ }
+    // Asegurar que el admin siempre aparezca
+    if (jwtNombre && !recientes.includes(jwtNombre)) recientes.unshift(jwtNombre);
 
     let modal = document.getElementById('workerSwitcherModal');
     if (!modal) {
@@ -384,45 +431,53 @@ function openWorkerSwitcher() {
         document.body.appendChild(modal);
     }
 
+    // IMPORTANTE: NO usar onclick inline con nombres — se usan data-worker + addEventListener
     const recBtns = recientes.map(n => {
         const active = n === currentWorker ? ' active' : '';
-        return `<button class="worker-btn${active}" onclick="setActiveWorker(${JSON.stringify(n)})">
-            <span class="worker-btn-av">${n.charAt(0).toUpperCase()}</span>${escapeHtml(n)}
+        return `<button class="worker-btn${active}" data-worker="${escapeHtml(n)}">
+            <span class="worker-btn-av">${escapeHtml(n.charAt(0).toUpperCase())}</span>
+            <span>${escapeHtml(n)}</span>
         </button>`;
     }).join('');
 
     modal.innerHTML = `
         <div class="modal modal-sm">
             <div class="modal-header">
-                <span class="modal-title">&#x1F465; &#xBF;Qui&#xE9;n est&#xE1; registrando?</span>
-                <button class="modal-close" onclick="closeModal('workerSwitcherModal')">&#x2715;</button>
+                <span class="modal-title">👥 ¿Quién está registrando?</span>
+                <button class="modal-close" id="workerModalClose">✕</button>
             </div>
             <div class="modal-body">
-                <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">Seleccion&#xE1; qui&#xE9;n va a registrar las acciones. No se necesita contrase&#xF1;a.</p>
+                <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">
+                    Seleccioná quién va a registrar las acciones. Sin contraseña.
+                </p>
                 ${recientes.length ? `<div class="worker-grid">${recBtns}</div>` : ''}
-                <div class="form-group mt-12">
-                    <label class="form-label">Agregar nombre</label>
+                <div class="form-group" style="margin-top:12px">
+                    <label class="form-label">Agregar persona no listada</label>
                     <div class="d-flex gap-8">
-                        <input type="text" id="workerNuevoInput" class="form-control" placeholder="Nombre del personal..."
-                            onkeydown="if(event.key==='Enter'){_agregarNuevoWorker();event.preventDefault();}">
-                        <button class="btn btn-primary btn-sm" onclick="_agregarNuevoWorker()">&#x2713;</button>
+                        <input type="text" id="workerNuevoInput" class="form-control" placeholder="Nombre...">
+                        <button class="btn btn-primary btn-sm" id="workerAddBtn">✓</button>
                     </div>
                 </div>
-                ${jwtNombre && jwtNombre !== currentWorker
-                    ? `<button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px"
-                        onclick="setActiveWorker(${JSON.stringify(jwtNombre)})">
-                        &#x1F511; Soy ${escapeHtml(jwtNombre)} (cuenta principal)
-                    </button>`
-                    : ''}
             </div>
         </div>`;
+
+    // Listeners sin inline JS — sin riesgo de SyntaxError por nombres con comillas/caracteres especiales
+    modal.querySelector('#workerModalClose').addEventListener('click', () => closeModal('workerSwitcherModal'));
+    modal.querySelectorAll('[data-worker]').forEach(btn => {
+        btn.addEventListener('click', () => setActiveWorker(btn.dataset.worker));
+    });
+    const nuevoInput = modal.querySelector('#workerNuevoInput');
+    modal.querySelector('#workerAddBtn').addEventListener('click', () => {
+        const nombre = nuevoInput?.value?.trim();
+        if (!nombre) { showToast('Ingresá un nombre', 'warning'); return; }
+        setActiveWorker(nombre);
+    });
+    if (nuevoInput) nuevoInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); modal.querySelector('#workerAddBtn').click(); }
+    });
+
     openModal('workerSwitcherModal');
-    setTimeout(() => document.getElementById('workerNuevoInput')?.focus(), 80);
+    setTimeout(() => nuevoInput?.focus(), 80);
 }
 
-function _agregarNuevoWorker() {
-    const input = document.getElementById('workerNuevoInput');
-    const nombre = input?.value?.trim();
-    if (!nombre) { showToast('Ingres&#xE1; un nombre', 'warning'); return; }
-    setActiveWorker(nombre);
-}
+function _agregarNuevoWorker() { /* legacy — ya no se usa */ }

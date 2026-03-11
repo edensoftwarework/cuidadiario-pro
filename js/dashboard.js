@@ -5,6 +5,12 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
+    // Redirigir si el onboarding no fue completado
+    const _u = API_B2B.getUser();
+    if (_u?.rol === 'admin_institucion' && _u?.onboarding_done === false) {
+        window.location.href = 'onboarding.html';
+        return;
+    }
     initSidebar();
     populateSidebarUser();
     await loadDashboard();
