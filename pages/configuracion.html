@@ -203,6 +203,68 @@
                     </div>
                 </div>
 
+                <!-- Permisos del equipo (solo admin) -->
+                <div class="card admin-only">
+                    <div class="card-header">
+                        <h3 class="card-title">🔐 Permisos del equipo</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px">Define qué puede hacer cada rol. Los permisos se guardan localmente en este dispositivo.</p>
+
+                        <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🩺 Médico / Profesional</p>
+                        <div class="toggle-list" style="margin-bottom:20px">
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede crear nuevos pacientes</div>
+                                    <div class="toggle-desc">Permite al médico registrar nuevos ingresos</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_medico_crear_paciente" checked><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede editar datos de pacientes</div>
+                                    <div class="toggle-desc">Permite modificar datos clínicos y personales</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_medico_editar_paciente" checked><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
+                                    <div class="toggle-desc">Permite al médico registrar el egreso definitivo</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_medico_dar_alta" checked><span class="switch-slider"></span></label>
+                            </label>
+                        </div>
+
+                        <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">👤 Personal / Operativo</p>
+                        <div class="toggle-list">
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede crear nuevos pacientes</div>
+                                    <div class="toggle-desc">Permite al personal registrar nuevos ingresos</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_paciente" checked><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede editar datos de pacientes</div>
+                                    <div class="toggle-desc">Permite modificar datos del residente</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_editar_paciente" checked><span class="switch-slider"></span></label>
+                            </label>
+                            <label class="toggle-item">
+                                <div>
+                                    <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
+                                    <div class="toggle-desc">Desactivado por defecto — suele ser una acción médica o administrativa</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_dar_alta"><span class="switch-slider"></span></label>
+                            </label>
+                        </div>
+
+                        <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:18px" onclick="guardarPermisos()">🔐 Guardar permisos</button>
+                    </div>
+                </div>
+
                 <!-- Zona de peligro -->
                 <div class="card admin-only">
                     <div class="card-header">

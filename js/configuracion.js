@@ -38,6 +38,7 @@ async function initConfiguracion() {
     // Cargar datos de institución (solo admin)
     if (isAdmin) {
         cargarInstitucion();
+        loadPermisos();
     }
     loadNotifPrefs();
 }
@@ -71,6 +72,9 @@ async function cargarInstitucion() {
             const tb = document.getElementById('topbarInstitucion');
             if (tb) tb.textContent = inst.nombre;
         }
+
+        // Cargar permisos desde la DB (campo permisos_equipo de la institución)
+        _loadPermisosFromObj(inst.permisos_equipo || {});
     } catch (e) {
         // silencioso — puede fallar en roles no admin
     }
@@ -215,7 +219,75 @@ function guardarNotifPrefs() {
     localStorage.setItem('cd_notif_prefs', JSON.stringify(prefs));
     showToast('Preferencias de notificaciones guardadas ✅', 'success');
 }
+// ============================================
+// PERMISOS DEL EQUIPO (configurable por admin)
+// ============================================
+const PERM_KEYS = [
+    'medico_crear_paciente',
+    'medico_editar_paciente',
+    'medico_dar_alta',
+    'cuidador_staff_crear_paciente',
+    'cuidador_staff_editar_paciente',
+    'cuidador_staff_dar_alta',
+];
 
+const PERM_DEFAULTS = {
+    medico_crear_paciente:           true,
+    medico_editar_paciente:          true,
+    medico_dar_alta:                 true,
+    cuidador_staff_crear_paciente:   true,
+    cuidador_staff_editar_paciente:  true,
+    cuidador_staff_dar_alta:         false,
+};
+
+function _loadPermisosFromObj(perms) {
+    PERM_KEYS.forEach(k => {
+        const el = document.getElementById('perm_' + k);
+        if (!el) return;
+        el.checked = k in perms ? !!perms[k] : (PERM_DEFAULTS[k] ?? false);
+    });
+}
+
+function loadPermisos() {
+    // Attempt to load from the user object (populated on login with institucion_permisos)
+    try {
+        const user = JSON.parse(localStorage.getItem('cd_pro_user') || '{}');
+        if (user.institucion_permisos && Object.keys(user.institucion_permisos).length > 0) {
+            _loadPermisosFromObj(user.institucion_permisos);
+            return;
+        }
+    } catch {}
+    // Fallback: legacy localStorage config
+    try {
+        const stored = JSON.parse(localStorage.getItem('cd_perm_config') || '{}');
+        _loadPermisosFromObj(stored);
+    } catch {}
+}
+
+async function guardarPermisos() {
+    const out = {};
+    PERM_KEYS.forEach(k => {
+        const el = document.getElementById('perm_' + k);
+        if (el) out[k] = el.checked;
+    });
+    const btn = document.getElementById('btnGuardarPermisos');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+    try {
+        // Persistir en la DB para que todos los usuarios de la institución reciban los permisos
+        await API_B2B.patch('/api/b2b/institucion', { permisos_equipo: out });
+        // Actualizar el objeto user local para que canDo() se actualice sin re-login
+        const user = JSON.parse(localStorage.getItem('cd_pro_user') || '{}');
+        user.institucion_permisos = out;
+        localStorage.setItem('cd_pro_user', JSON.stringify(user));
+        // También actualizar localStorage legacy por si acaso
+        localStorage.setItem('cd_perm_config', JSON.stringify(out));
+        showToast('Permisos del equipo guardados \u2705', 'success');
+    } catch (err) {
+        showToast(err.message || 'Error al guardar permisos', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '\uD83D\uDD10 Guardar permisos'; }
+    }
+}
 async function exportarDatos() {
     showToast('Generando reporte... puede tardar unos segundos.', 'info');
     try {

@@ -181,6 +181,30 @@ const API_B2B = {
         if (params.hasta) url += `&hasta=${encodeURIComponent(params.hasta)}`;
         return this.get(url);
     },
+
+    // ============================================
+    // DOCUMENTOS ADJUNTOS
+    // ============================================
+    async getDocumentos(paciente_id)  { return this.get(`/api/b2b/documentos?paciente_id=${paciente_id}`); },
+    async uploadDocumento(data)       { return this.post('/api/b2b/documentos', data); },
+    async deleteDocumento(id)         { return this.del(`/api/b2b/documentos/${id}`); },
+    // Descarga con auth header → blob → dispara descarga en el navegador
+    async downloadDocumento(id, nombre_archivo) {
+        const url = `${this.BASE_URL}/api/b2b/documentos/${id}/download`;
+        const res = await this._fetch(url, { headers: this.headers() });
+        if (!res.ok) {
+            let msg = `Error ${res.status}`;
+            try { const e = await res.json(); msg = e.error || msg; } catch {}
+            throw new Error(msg);
+        }
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nombre_archivo || 'documento';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    },
 };
 
 // ============================================

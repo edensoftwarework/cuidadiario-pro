@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadStaff();
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
     }
+    // Mostrar botón Nuevo Paciente según permisos
+    const btnNuevo = document.getElementById('btnNuevoPaciente');
+    if (btnNuevo) btnNuevo.style.display = canDo('crear_paciente') ? '' : 'none';
     // Staff y médicos: agregar enlace "Mis residentes" (cuidador.html) antes del enlace Pacientes
     if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
         const nav = document.querySelector('.sidebar-nav');
@@ -169,6 +172,7 @@ function openEditPaciente(id, event) {
     f.pNotas.value = p.notas_ingreso || '';
     if (f.pMedicoCabecera) f.pMedicoCabecera.value = p.medico_cabecera || '';
     if (f.pAlergias) f.pAlergias.value = p.alergias || '';
+    if (f.pAntecedentes) f.pAntecedentes.value = p.antecedentes || '';
     openModal('modalPaciente');
 }
 
@@ -192,6 +196,7 @@ async function handleSavePaciente(e) {
         notas_ingreso: f.pNotas.value.trim(),
         medico_cabecera: f.pMedicoCabecera ? f.pMedicoCabecera.value.trim() || null : undefined,
         alergias: f.pAlergias ? f.pAlergias.value.trim() || null : undefined,
+        antecedentes: f.pAntecedentes ? f.pAntecedentes.value.trim() || null : undefined,
     };
     try {
         if (_editingPacienteId) {

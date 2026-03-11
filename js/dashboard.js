@@ -21,31 +21,8 @@ async function loadDashboard() {
 
     showDashboardLoading(true);
     try {
-        // Cargar dashboard y lista de pacientes en paralelo para filtrar egresados
-        const [data, allPacientes] = await Promise.all([
-            API_B2B.getDashboard(),
-            API_B2B.getPacientes().catch(() => [])
-        ]);
-
-        // Construir set de IDs de pacientes egresados
-        const egresadosIds = new Set(
-            allPacientes.filter(p => p.fecha_egreso).map(p => p.id)
-        );
-
-        // Filtrar registros de pacientes egresados en todos los widgets del dashboard
-        if (egresadosIds.size > 0) {
-            if (data.citas_proximas)
-                data.citas_proximas = data.citas_proximas.filter(c => !egresadosIds.has(c.paciente_id));
-            if (data.sintomas_recientes)
-                data.sintomas_recientes = data.sintomas_recientes.filter(s => !egresadosIds.has(s.paciente_id));
-            if (data.notas_urgentes)
-                data.notas_urgentes = data.notas_urgentes.filter(n => !egresadosIds.has(n.paciente_id));
-            if (data.cumpleanos_hoy)
-                data.cumpleanos_hoy = data.cumpleanos_hoy.filter(p => !egresadosIds.has(p.id));
-            // Recalcular residentes activos (el backend puede contabilizar egresados)
-            if (data.resumen)
-                data.resumen.pacientes_activos = allPacientes.filter(p => !p.fecha_egreso).length;
-        }
+        // El backend ya filtra pacientes egresados en SQL — solo una llamada necesaria
+        const data = await API_B2B.getDashboard();
 
         renderResumen(data.resumen);
         renderCitasProximas(data.citas_proximas);
@@ -53,6 +30,9 @@ async function loadDashboard() {
         renderNotasUrgentes(data.notas_urgentes);
         renderCumpleanosHoy(data.cumpleanos_hoy);
         renderStockBajo(data.stock_bajo);
+        // Topbar: show +Paciente button only if the user can create patients
+        const btnTopbar = document.getElementById('btnTopbarNuevoPaciente');
+        if (btnTopbar && !canDo('crear_paciente')) btnTopbar.style.display = 'none';
     } catch (err) {
         showToast('Error al cargar el dashboard: ' + err.message, 'error');
     } finally {

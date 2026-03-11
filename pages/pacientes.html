@@ -55,7 +55,7 @@
             </div>
             <div class="topbar-actions">
                 <span class="topbar-institucion" id="topbarInstitucion">—</span>
-                <button class="btn btn-primary btn-sm admin-only" onclick="openNuevoPaciente()">+ Nuevo Paciente</button>
+                <button class="btn btn-primary btn-sm" id="btnNuevoPaciente" style="display:none" onclick="openNuevoPaciente()">+ Nuevo Paciente</button>
             </div>
         </div>
 
@@ -160,7 +160,11 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Notas de ingreso</label>
-                    <textarea name="pNotas" class="form-control" rows="3" placeholder="Observaciones iniciales, alergias, condiciones especiales..."></textarea>
+                    <textarea name="pNotas" class="form-control" rows="2" placeholder="Observaciones iniciales, condiciones especiales..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🏥 Antecedentes clínicos</label>
+                    <textarea name="pAntecedentes" class="form-control" rows="3" placeholder="Enfermedades previas, cirugías, tratamientos crónicos..."></textarea>
                 </div>
                 <div class="modal-footer" style="padding:0;margin-top:10px">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modalPaciente')">Cancelar</button>

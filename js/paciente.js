@@ -125,7 +125,7 @@ function renderPacienteHeader(p) {
             </div>
             <div class="d-flex gap-8 align-center flex-wrap">
                 ${p.fecha_egreso ? `<span class="badge badge-red" style="font-size:.8rem;padding:6px 12px">🚪 Alta: ${formatDate(p.fecha_egreso)} — ${escapeHtml(p.motivo_egreso || '')}</span>` : ''}
-                ${!_isReadOnly && !p.fecha_egreso ? `<button class="btn btn-sm btn-warning" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
+                ${canDo('dar_alta') && !p.fecha_egreso ? `<button class="btn btn-sm btn-warning" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
             </div>
         </div>`;
 }
@@ -137,7 +137,7 @@ function renderDatosTab(p) {
         <div class="grid-2">
             <div class="card">
                 <div class="card-header"><span class="card-title">👤 Datos Personales</span>
-                    ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">✏️ Editar</button>` : ''}
+                    ${canDo('editar_paciente') && !_isEgresado ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">✏️ Editar</button>` : ''}
                 </div>
                 <div class="card-body">
                     ${row('Nombre completo', `${p.apellido || ''} ${p.nombre}`)}
@@ -186,7 +186,147 @@ async function loadAllData() {
         loadSignos(),
         loadContactos(),
         loadNotas(),
+        loadDocumentos(),
     ]);
+}
+
+// ============================================
+// DOCUMENTOS ADJUNTOS
+// ============================================
+let _documentos = [];
+
+async function loadDocumentos() {
+    const el = document.getElementById('documentosContent');
+    if (!el) return;
+    try {
+        _documentos = await API_B2B.getDocumentos(_pacienteId);
+        renderDocumentos(_documentos);
+    } catch (err) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">📎</div><h3>Error al cargar documentos</h3></div>`;
+    }
+}
+
+function renderDocumentos(lista) {
+    const el = document.getElementById('documentosContent');
+    if (!el) return;
+
+    const canUpload = !_isReadOnly && !_isEgresado;
+    const toolbar = canUpload ? `
+        <div class="d-flex justify-between align-center mb-16">
+            <span class="text-muted">${lista.length} documento${lista.length !== 1 ? 's' : ''}</span>
+            <label class="btn btn-primary btn-sm" style="cursor:pointer">
+                📂 Subir archivo
+                <input type="file" id="inputDocumento" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" style="display:none" onchange="handleDocumentoUpload(this)">
+            </label>
+        </div>` : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} documento${lista.length !== 1 ? 's' : ''}</span></div>`;
+
+    if (lista.length === 0) {
+        el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📎</div><h3>Sin documentos adjuntos</h3><p class="text-muted">Podés subir archivos PDF, Word, Excel o imágenes (máx. 5 MB).</p></div>`;
+        return;
+    }
+
+    const rows = lista.map(d => {
+        const icon = _docIcon(d.tipo_mime, d.nombre_archivo);
+        const size = _formatBytes(d.tamanio_bytes);
+        const canDel = _isAdmin || d.subido_nombre === API_B2B.getUser()?.nombre;
+        return `
+        <div class="item-row" id="doc-row-${d.id}">
+            <div class="item-icon badge-blue" style="font-size:1.2rem;min-width:40px;height:40px;display:flex;align-items:center;justify-content:center">${icon}</div>
+            <div class="item-body">
+                <div class="item-title">${escapeHtml(d.nombre_archivo)}</div>
+                <div class="item-subtitle">${size} · Subido por ${escapeHtml(d.subido_nombre || '—')} · ${formatDate(d.created_at)}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn btn-sm btn-secondary" onclick="API_B2B.downloadDocumento(${d.id}, '${escapeHtml(d.nombre_archivo).replace(/'/g, "\\'")}')">&#x2B07;&#xFE0F; Descargar</button>
+                ${canDel ? `<button class="btn btn-sm btn-danger" onclick="eliminarDocumento(${d.id})">&#x1F5D1;</button>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = toolbar + `<div class="item-list">${rows}</div>`;
+}
+
+function _docIcon(mime, nombre) {
+    const ext = (nombre || '').split('.').pop().toLowerCase();
+    if (mime === 'application/pdf' || ext === 'pdf') return '📄';
+    if (mime === 'application/msword' || ext === 'doc') return '📃';
+    if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || ext === 'docx') return '📃';
+    if (mime?.includes('spreadsheet') || ext === 'xls' || ext === 'xlsx') return '📊';
+    if (mime?.startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+    return '📎';
+}
+
+function _formatBytes(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function handleDocumentoUpload(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('El archivo supera el límite de 5 MB', 'error');
+        input.value = '';
+        return;
+    }
+    const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+    ];
+    if (!allowedTypes.includes(file.type)) {
+        showToast('Formato no permitido. Usá PDF, Word, Excel, imagen o TXT.', 'warning');
+        input.value = '';
+        return;
+    }
+    const btn = input.closest('label');
+    if (btn) btn.textContent = 'Subiendo...';
+    try {
+        const b64 = await _fileToBase64(file);
+        await API_B2B.uploadDocumento({
+            paciente_id: _pacienteId,
+            nombre_archivo: file.name,
+            tipo_mime: file.type,
+            datos: b64,
+        });
+        showToast('Documento subido ✅', 'success');
+        await loadDocumentos();
+    } catch (err) {
+        showToast(err.message || 'Error al subir el documento', 'error');
+        await loadDocumentos(); // re-render toolbar
+    }
+    input.value = '';
+}
+
+function _fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            // result is data:[mime];base64,[data] — strip the prefix
+            const b64 = reader.result.split(',')[1];
+            resolve(b64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+async function eliminarDocumento(id) {
+    confirmDialog('¿Eliminar este documento? Esta acción no se puede deshacer.', async () => {
+        try {
+            await API_B2B.deleteDocumento(id);
+            showToast('Documento eliminado', 'success');
+            await loadDocumentos();
+        } catch (err) {
+            showToast(err.message || 'Error al eliminar', 'error');
+        }
+    });
 }
 
 // ============================================

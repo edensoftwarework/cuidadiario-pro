@@ -231,6 +231,40 @@ function toggleEgresadosSection(toggleEl) {
 }
 
 // ============================================
+// PERMISSIONS — role-based + admin-configurable
+// ============================================
+// Default permissions reflect real-world practice in care institutions:
+//   medico: can create/edit patients and give discharge
+//   cuidador_staff: can create/edit patients but NOT give discharge
+//   admin: always allowed; familiar: never allowed (read-only)
+const _PERM_DEFAULTS = {
+    crear_paciente:    { medico: true,  cuidador_staff: true  },
+    editar_paciente:   { medico: true,  cuidador_staff: true  },
+    dar_alta:          { medico: true,  cuidador_staff: false },
+    eliminar_paciente: { medico: false, cuidador_staff: false },
+};
+
+function canDo(action) {
+    const user = API_B2B.getUser();
+    if (!user) return false;
+    if (user.rol === 'admin_institucion') return true;
+    if (user.rol === 'familiar') return false;
+    // Primero: permisos configurados por el admin en la DB (viajan en el objeto user tras el login)
+    try {
+        const perms = user.institucion_permisos || {};
+        const key = `${user.rol}_${action}`;
+        if (key in perms) return !!perms[key];
+    } catch {}
+    // Fallback: localStorage (compatibilidad con sesiones antiguas)
+    try {
+        const stored = JSON.parse(localStorage.getItem('cd_perm_config') || '{}');
+        const key = `${user.rol}_${action}`;
+        if (key in stored) return !!stored[key];
+    } catch {}
+    return _PERM_DEFAULTS[action]?.[user.rol] ?? false;
+}
+
+// ============================================
 // CONFIRM DIALOG (custom)
 // ============================================
 function confirmDialog(message, onConfirm) {
