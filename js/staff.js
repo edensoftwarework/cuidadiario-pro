@@ -130,10 +130,12 @@ async function handleSaveStaff(e) {
     if (f.sPassword.value) data.password = f.sPassword.value;
     try {
         if (_editingStaffId) {
+            if (data.password && data.password.length < 8) { showToast('La contraseña debe tener al menos 8 caracteres', 'warning'); btn.disabled = false; return; }
             await API_B2B.updateStaff(_editingStaffId, data);
             showToast('Staff actualizado', 'success');
         } else {
             if (!data.password) { showToast('La contraseña es requerida para nuevo staff', 'error'); btn.disabled = false; return; }
+            if (data.password.length < 8) { showToast('La contraseña debe tener al menos 8 caracteres', 'warning'); btn.disabled = false; return; }
             await API_B2B.createStaff(data);
             showToast('Staff creado', 'success');
         }

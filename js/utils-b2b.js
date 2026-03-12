@@ -450,13 +450,14 @@ async function openWorkerSwitcher() {
                 <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">
                     Seleccioná quién va a registrar las acciones. Sin contraseña.
                 </p>
-                ${recientes.length ? `<div class="worker-grid">${recBtns}</div>` : ''}
-                <div class="form-group" style="margin-top:12px">
-                    <label class="form-label">Agregar persona no listada</label>
-                    <div class="d-flex gap-8">
-                        <input type="text" id="workerNuevoInput" class="form-control" placeholder="Nombre...">
-                        <button class="btn btn-primary btn-sm" id="workerAddBtn">✓</button>
-                    </div>
+                ${recientes.length ? `<div class="worker-grid">${recBtns}</div>` : '<p class="text-muted" style="font-size:.82rem">Todavía no hay miembros del staff cargados.</p>'}
+                <div style="border-top:1px solid var(--border-color);margin-top:12px;padding-top:12px">
+                    <p style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">
+                        ¿La persona no aparece en la lista? Primero agregala como miembro del staff.
+                    </p>
+                    <a href="staff.html" class="btn btn-secondary btn-sm" style="width:100%;text-align:center;display:block">
+                        + Ir a gestión de staff
+                    </a>
                 </div>
             </div>
         </div>`;
@@ -466,18 +467,8 @@ async function openWorkerSwitcher() {
     modal.querySelectorAll('[data-worker]').forEach(btn => {
         btn.addEventListener('click', () => setActiveWorker(btn.dataset.worker));
     });
-    const nuevoInput = modal.querySelector('#workerNuevoInput');
-    modal.querySelector('#workerAddBtn').addEventListener('click', () => {
-        const nombre = nuevoInput?.value?.trim();
-        if (!nombre) { showToast('Ingresá un nombre', 'warning'); return; }
-        setActiveWorker(nombre);
-    });
-    if (nuevoInput) nuevoInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); modal.querySelector('#workerAddBtn').click(); }
-    });
 
     openModal('workerSwitcherModal');
-    setTimeout(() => nuevoInput?.focus(), 80);
 }
 
 function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
