@@ -131,8 +131,8 @@ async function cambiarPassword(e) {
         showToast('Las contraseñas no coinciden', 'error');
         return;
     }
-    if (passwordNueva.length < 6) {
-        showToast('La contraseña debe tener al menos 6 caracteres', 'warning');
+    if (passwordNueva.length < 8) {
+        showToast('La contraseña debe tener al menos 8 caracteres', 'warning');
         return;
     }
 

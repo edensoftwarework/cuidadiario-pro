@@ -5,9 +5,9 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
-    // Redirigir si el onboarding no fue completado
+    // Redirigir si el onboarding no fue completado (onboarding_done puede ser false o undefined)
     const _u = API_B2B.getUser();
-    if (_u?.rol === 'admin_institucion' && _u?.onboarding_done === false) {
+    if (_u?.rol === 'admin_institucion' && !_u?.onboarding_done) {
         window.location.href = 'onboarding.html';
         return;
     }

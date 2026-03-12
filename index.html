@@ -71,6 +71,7 @@
         const u = API_B2B.getUser();
         if (u?.rol === 'cuidador_staff' || u?.rol === 'medico') window.location.href = 'pages/cuidador.html';
         else if (u?.rol === 'familiar') window.location.href = 'pages/familiar.html';
+        else if (u?.rol === 'admin_institucion' && !u?.onboarding_done) window.location.href = 'pages/onboarding.html';
         else window.location.href = 'pages/dashboard.html';
     }
 

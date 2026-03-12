@@ -6,15 +6,12 @@
 
 // ── Estado del wizard ──
 let _currentStep = 1;
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
-// Datos recopilados
+// Datos recopilados en el wizard
+// (nombre, tipo, teléfono ya se guardaron en el registro)
 const _onbData = {
-    nombre: '',
-    tipo: '',
-    telefono: '',
-    direccion: '',
-    stock_modelo: 'institucional',
+    stock_modelo: 'institucion',
     modo_compartida: false
 };
 
@@ -32,12 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user?.onboarding_done === true) {
         window.location.href = 'dashboard.html';
         return;
-    }
-
-    // Prellenar con el nombre de la institución que ya está guardado (si existe)
-    if (user?.institucion_nombre) {
-        const el = document.getElementById('onbNombre');
-        if (el) el.value = user.institucion_nombre;
     }
 
     // Listeners de las option-cards (stock model)
@@ -72,21 +63,9 @@ function _setupOptionCards(radioName, cardIds, onChange) {
 // ── Navegación ──
 function onbNext(fromStep) {
     if (fromStep === 1) {
-        const nombre = document.getElementById('onbNombre')?.value?.trim();
-        if (!nombre) {
-            _showAlert('El nombre de la institución es obligatorio.', 'danger');
-            document.getElementById('onbNombre')?.focus();
-            return;
-        }
-        _onbData.nombre     = nombre;
-        _onbData.tipo       = document.getElementById('onbTipo')?.value || '';
-        _onbData.telefono   = document.getElementById('onbTelefono')?.value?.trim() || '';
-        _onbData.direccion  = document.getElementById('onbDireccion')?.value?.trim() || '';
+        _onbData.stock_modelo = document.querySelector('input[name="stockModelo"]:checked')?.value || 'institucion';
     }
     if (fromStep === 2) {
-        _onbData.stock_modelo = document.querySelector('input[name="stockModelo"]:checked')?.value || 'institucional';
-    }
-    if (fromStep === 3) {
         _onbData.modo_compartida = (document.querySelector('input[name="modoOp"]:checked')?.value || 'individual') === 'compartida';
         _buildSummary();
     }
@@ -112,33 +91,22 @@ function _updateProgress() {
     if (bar) bar.style.width = `${(_currentStep / TOTAL_STEPS) * 100}%`;
 }
 
-// ── Resumen del paso 4 ──
+// ── Resumen del paso 3 ──
 function _buildSummary() {
-    const tipoLabel = {
-        residencia_adultos_mayores: 'Residencia de adultos mayores',
-        clinica_rehabilitacion: 'Clínica de rehabilitación',
-        hogar_cuidados: 'Hogar de cuidados',
-        hospital: 'Hospital / Sanatorio',
-        centro_dia: 'Centro de día',
-        otro: 'Otro',
-        '': 'No especificado'
-    };
     const stockLabel = {
-        institucional: '🏥 Stock institucional (la institución provee)',
+        institucion: '🏥 Stock institucional (la institución provee)',
         familiar: '👨‍👩‍👧 Stock por paciente (la familia provee)'
     };
     const modoLabel = _onbData.modo_compartida
         ? '🖥️ Estación compartida (se activará al finalizar)'
         : '👤 Acceso individual por cuenta';
 
+    const instNombre = API_B2B.getUser()?.institucion_nombre || 'Tu institución';
     const items = [
-        { icon: '🏥', label: 'Institución', value: _onbData.nombre },
-        { icon: '📋', label: 'Tipo', value: tipoLabel[_onbData.tipo] || 'No especificado' },
+        { icon: '🏥', label: 'Institución', value: instNombre },
         { icon: '💊', label: 'Medicamentos', value: stockLabel[_onbData.stock_modelo] || _onbData.stock_modelo },
         { icon: '🖥️', label: 'Modo de trabajo', value: modoLabel }
     ];
-    if (_onbData.telefono) items.push({ icon: '📞', label: 'Teléfono', value: _onbData.telefono });
-    if (_onbData.direccion) items.push({ icon: '📍', label: 'Dirección', value: _onbData.direccion });
 
     const el = document.getElementById('onbSummary');
     if (el) {
@@ -159,21 +127,16 @@ async function onbFinish() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Guardando...'; }
 
     try {
-        // Guardar configuración en el backend
+        // Guardar configuración en el backend (nombre/tipo/tel ya guardados en el registro)
         await API_B2B.updateInstitucion({
-            nombre:         _onbData.nombre,
-            tipo:           _onbData.tipo || undefined,
-            telefono:       _onbData.telefono || undefined,
-            direccion:      _onbData.direccion || undefined,
-            stock_modelo:   _onbData.stock_modelo,
+            stock_modelo:    _onbData.stock_modelo,
             onboarding_done: true
         });
 
         // Actualizar el objeto usuario en localStorage
         const user = API_B2B.getUser();
         if (user) {
-            user.onboarding_done        = true;
-            user.institucion_nombre     = _onbData.nombre;
+            user.onboarding_done = true;
             API_B2B.setUser(user);
         }
 

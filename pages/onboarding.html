@@ -122,66 +122,34 @@
 
         <!-- Progress bar -->
         <div class="onb-progress-wrap">
-            <div class="onb-progress-bar" id="onbProgressBar" style="width:25%"></div>
+            <div class="onb-progress-bar" id="onbProgressBar" style="width:33%"></div>
+        </div>
+
+        <!-- Welcome banner (visible right after registration) -->
+        <div style="padding:12px 28px;display:flex;align-items:center;gap:10px;background:#EEF2FF;border-bottom:1px solid #C7D2FE">
+            <span style="font-size:1.4rem">🎉</span>
+            <div>
+                <div style="font-weight:700;font-size:.88rem;color:#1E40AF">¡Institución creada con éxito!</div>
+                <div style="font-size:.76rem;color:#4338CA">Elegí 2 configuraciones clave antes de ir al panel</div>
+            </div>
         </div>
 
         <!-- Alert -->
-        <div id="onbAlert" style="padding:0 32px;margin-top:12px"></div>
+        <div id="onbAlert" style="padding:0 28px;margin-top:10px"></div>
 
-        <!-- ========== STEP 1: Datos de la institución ========== -->
+        <!-- ========== STEP 1: Modelo de stock ========== -->
         <div class="onb-step active" id="onbStep1">
             <div class="onb-header">
                 <div class="onb-step-badge">1</div>
                 <div>
-                    <div class="onb-step-title">Tu institución</div>
-                    <div class="onb-step-subtitle">Completá los datos básicos para empezar</div>
-                </div>
-            </div>
-            <div class="onb-body">
-                <div class="form-group">
-                    <label class="form-label">Nombre de la institución <span style="color:var(--pro-danger)">*</span></label>
-                    <input type="text" id="onbNombre" class="form-control" placeholder="Ej: Residencia San José" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tipo de institución</label>
-                    <select id="onbTipo" class="form-control">
-                        <option value="">— Seleccioná —</option>
-                        <option value="residencia_adultos_mayores">Residencia de adultos mayores</option>
-                        <option value="clinica_rehabilitacion">Clínica de rehabilitación</option>
-                        <option value="hogar_cuidados">Hogar de cuidados</option>
-                        <option value="hospital">Hospital / Sanatorio</option>
-                        <option value="centro_dia">Centro de día</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Teléfono de contacto</label>
-                    <input type="tel" id="onbTelefono" class="form-control" placeholder="+54 11 0000-0000">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Dirección</label>
-                    <input type="text" id="onbDireccion" class="form-control" placeholder="Av. Siempreviva 742, Buenos Aires">
-                </div>
-            </div>
-            <div class="onb-footer">
-                <span></span>
-                <button class="btn btn-primary" onclick="onbNext(1)">Siguiente →</button>
-            </div>
-        </div>
-
-        <!-- ========== STEP 2: Modelo de stock ========== -->
-        <div class="onb-step" id="onbStep2">
-            <div class="onb-header">
-                <div class="onb-step-badge">2</div>
-                <div>
                     <div class="onb-step-title">Medicamentos</div>
-                    <div class="onb-step-subtitle">¿Cómo se gestiona el stock de medicamentos?</div>
+                    <div class="onb-step-subtitle">¿Cómo se gestiona el stock?</div>
                 </div>
             </div>
             <div class="onb-body">
                 <div class="onb-options">
                     <label class="onb-option selected" id="optInstitucion">
-                        <input type="radio" name="stockModelo" value="institucional" checked>
+                        <input type="radio" name="stockModelo" value="institucion" checked>
                         <div class="opt-icon">🏥</div>
                         <div class="opt-title">Stock institucional</div>
                         <div class="opt-desc">La institución controla un stock general de medicamentos. Ideal para residencias y hogares donde el establecimiento provee los medicamentos a todos los residentes.</div>
@@ -195,18 +163,18 @@
                 </div>
             </div>
             <div class="onb-footer">
-                <button class="btn btn-secondary" onclick="onbBack(2)">← Atrás</button>
-                <button class="btn btn-primary" onclick="onbNext(2)">Siguiente →</button>
+                <span></span>
+                <button class="btn btn-primary" onclick="onbNext(1)">Siguiente →</button>
             </div>
         </div>
 
-        <!-- ========== STEP 3: Modo de operación ========== -->
-        <div class="onb-step" id="onbStep3">
+        <!-- ========== STEP 2: Modo de operación ========== -->
+        <div class="onb-step" id="onbStep2">
             <div class="onb-header">
-                <div class="onb-step-badge">3</div>
+                <div class="onb-step-badge">2</div>
                 <div>
                     <div class="onb-step-title">Modo de operación</div>
-                    <div class="onb-step-subtitle">¿Cómo van a trabajar en este dispositivo?</div>
+                    <div class="onb-step-subtitle">¿Cómo va a trabajar el equipo en este dispositivo?</div>
                 </div>
             </div>
             <div class="onb-body">
@@ -226,13 +194,13 @@
                 </div>
             </div>
             <div class="onb-footer">
-                <button class="btn btn-secondary" onclick="onbBack(3)">← Atrás</button>
-                <button class="btn btn-primary" onclick="onbNext(3)">Siguiente →</button>
+                <button class="btn btn-secondary" onclick="onbBack(2)">← Atrás</button>
+                <button class="btn btn-primary" onclick="onbNext(2)">Siguiente →</button>
             </div>
         </div>
 
-        <!-- ========== STEP 4: Confirmación ========== -->
-        <div class="onb-step" id="onbStep4">
+        <!-- ========== STEP 3: Confirmación ========== -->
+        <div class="onb-step" id="onbStep3">
             <div class="onb-header">
                 <div class="onb-step-badge">✓</div>
                 <div>
@@ -247,7 +215,7 @@
                 </p>
             </div>
             <div class="onb-footer">
-                <button class="btn btn-secondary" onclick="onbBack(4)">← Atrás</button>
+                <button class="btn btn-secondary" onclick="onbBack(3)">← Atrás</button>
                 <button class="btn btn-primary" id="onbFinishBtn" onclick="onbFinish()">
                     Ir al panel →
                 </button>

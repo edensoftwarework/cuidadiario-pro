@@ -127,6 +127,7 @@
                 nombre_admin: f.nombre_admin.value.trim(),
                 email: f.email.value.trim(),
                 password: f.password.value,
+                telefono: f.telefono?.value?.trim() || undefined,
             });
             showAlert('¡Cuenta creada! Redirigiendo...', 'success');
             setTimeout(() => window.location.href = 'pages/onboarding.html', 1200);
