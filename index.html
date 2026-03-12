@@ -100,6 +100,18 @@
         try {
             const data = await API_B2B.login(f.email.value.trim(), f.password.value);
             const user = data.user;
+
+            // En modo estación compartida, solo admins y familiares pueden usar email/contraseña
+            if (localStorage.getItem('cd_shared_mode') === '1') {
+                if (user.rol === 'cuidador_staff' || user.rol === 'medico') {
+                    await API_B2B.logout();
+                    showAlert('En modo estación compartida, el acceso con contraseña está reservado para administradores y familiares. Usá el selector de turno en la barra superior para identificarte.', 'warning');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Iniciar sesión';
+                    return;
+                }
+            }
+
             if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
                 window.location.href = 'pages/cuidador.html';
             } else if (user?.rol === 'familiar') {

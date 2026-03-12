@@ -127,7 +127,7 @@
 
         <!-- Welcome banner (visible right after registration) -->
         <div style="padding:12px 28px;display:flex;align-items:center;gap:10px;background:#EEF2FF;border-bottom:1px solid #C7D2FE">
-            <span style="font-size:1.4rem">🎉</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#1E40AF;border-radius:50%;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
             <div>
                 <div style="font-weight:700;font-size:.88rem;color:#1E40AF">¡Institución creada con éxito!</div>
                 <div style="font-size:.76rem;color:#4338CA">Elegí 2 configuraciones clave antes de ir al panel</div>
@@ -152,13 +152,25 @@
                         <input type="radio" name="stockModelo" value="institucion" checked>
                         <div class="opt-icon">🏥</div>
                         <div class="opt-title">Stock institucional</div>
-                        <div class="opt-desc">La institución controla un stock general de medicamentos. Ideal para residencias y hogares donde el establecimiento provee los medicamentos a todos los residentes.</div>
+                        <div class="opt-desc">La institución gestiona un inventario centralizado de medicamentos y lo distribuye a cada residente.</div>
+                        <details style="margin-top:6px">
+                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
+                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
+                                Ideal para residencias y hogares donde el establecimiento compra y provee los medicamentos. La farmacia de la institución carga el stock y el sistema lo descuenta automáticamente con cada toma registrada. Un único catálogo para todos los pacientes.
+                            </div>
+                        </details>
                     </label>
                     <label class="onb-option" id="optFamiliar">
                         <input type="radio" name="stockModelo" value="familiar">
                         <div class="opt-icon">👨‍👩‍👧</div>
-                        <div class="opt-title">Stock por familiar / paciente</div>
-                        <div class="opt-desc">Cada paciente trae sus propios medicamentos. La familia provee y la institución registra los consumos. Ideal para clínicas de día o centros de rehabilitación.</div>
+                        <div class="opt-title">Stock por paciente / familiar</div>
+                        <div class="opt-desc">La familia de cada paciente provee los medicamentos. El personal solo registra las tomas y el stock individual.</div>
+                        <details style="margin-top:6px">
+                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
+                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
+                                Ideal para centros de día, rehabilitación o clínicas donde cada paciente trae sus propios medicamentos. Cada paciente tiene su propio inventario. Los familiares pueden consultar el stock de su ser querido en modo lectura.
+                            </div>
+                        </details>
                     </label>
                 </div>
             </div>
@@ -179,17 +191,29 @@
             </div>
             <div class="onb-body">
                 <div class="onb-options">
-                    <label class="onb-option selected" id="optIndividual">
-                        <input type="radio" name="modoOp" value="individual" checked>
-                        <div class="opt-icon">👤</div>
-                        <div class="opt-title">Acceso individual</div>
-                        <div class="opt-desc">Cada cuidador tiene su propia cuenta y contraseña. Más seguro. Recomendado cuando cada persona trabaja en su propio dispositivo.</div>
-                    </label>
-                    <label class="onb-option" id="optCompartida">
-                        <input type="radio" name="modoOp" value="compartida">
+                    <label class="onb-option selected" id="optCompartida">
+                        <input type="radio" name="modoOp" value="compartida" checked>
                         <div class="opt-icon">🖥️</div>
                         <div class="opt-title">Estación compartida</div>
-                        <div class="opt-desc">Un dispositivo compartido entre múltiples cuidadores. Cada uno elige su nombre antes de registrar sin necesidad de contraseña. Ideal para tablets de guardia o estaciones de enfermería.</div>
+                        <div class="opt-desc">Un dispositivo compartido entre todo el equipo. Cada cuidador elige su nombre antes de registrar, sin contraseña. El administrador mantiene su sesión activa siempre.</div>
+                        <details style="margin-top:6px">
+                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
+                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
+                                Ideal para tablets de guardia, estaciones de enfermería o cualquier dispositivo compartido en sala. El chip de &ldquo;quién registra&rdquo; aparece en la barra superior. No es necesario que cada empleado tenga su propio usuario — el acceso con contraseña queda reservado para administradores y familiares.
+                            </div>
+                        </details>
+                    </label>
+                    <label class="onb-option" id="optIndividual">
+                        <input type="radio" name="modoOp" value="individual">
+                        <div class="opt-icon">👤</div>
+                        <div class="opt-title">Acceso individual</div>
+                        <div class="opt-desc">Cada miembro del equipo inicia sesión con su propio email y contraseña. La actividad queda registrada por usuario.</div>
+                        <details style="margin-top:6px">
+                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
+                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
+                                Recomendado cuando cada persona trabaja desde su propio dispositivo o cuando se necesita trazabilidad estricta de quién realizó cada registro. Requiere que cada empleado tenga su usuario dado de alta en el sistema.
+                            </div>
+                        </details>
                     </label>
                 </div>
             </div>

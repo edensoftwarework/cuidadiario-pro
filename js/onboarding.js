@@ -12,7 +12,7 @@ const TOTAL_STEPS = 3;
 // (nombre, tipo, teléfono ya se guardaron en el registro)
 const _onbData = {
     stock_modelo: 'institucion',
-    modo_compartida: false
+    modo_compartida: true
 };
 
 // ── Init ──
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _onbData.stock_modelo = val;
     });
     // Listeners de las option-cards (modo operación)
-    _setupOptionCards('modoOp', ['optIndividual', 'optCompartida'], (val) => {
+    _setupOptionCards('modoOp', ['optCompartida', 'optIndividual'], (val) => {
         _onbData.modo_compartida = val === 'compartida';
     });
 
