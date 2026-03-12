@@ -83,7 +83,9 @@
 
     function showAlert(msg, type = 'danger') {
         const icons = { danger: '❌', success: '✅', warning: '⚠️', info: 'ℹ️' };
-        document.getElementById('alertMsg').innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || '❌'}</span>${msg}</div>`;
+        const el = document.getElementById('alertMsg');
+        el.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || '❌'}</span>${msg}</div>`;
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     function clearAlert() { document.getElementById('alertMsg').innerHTML = ''; }
     function showForgot() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('forgotForm').classList.remove('hidden'); clearAlert(); }
@@ -104,9 +106,9 @@
             // En modo estación compartida, solo admins y familiares pueden usar email/contraseña
             if (localStorage.getItem('cd_shared_mode') === '1') {
                 if (user.rol === 'cuidador_staff' || user.rol === 'medico') {
-                    await API_B2B.logout();
-                    showAlert('Esta institución usa el modo Estación Compartida. En este modo, el personal operativo no inicia sesión con contraseña. Pedíle al administrador que active el panel y te seleccione como la persona que está registrando en este turno.', 'warning');
-                    btn.disabled = false;
+                    API_B2B.removeToken(); // limpiar sesión sin redirigir
+                    showAlert('Esta institución usa el modo Estación Compartida. En este modo, el personal operativo no inicia sesión con contraseña. Pedíle al administrador que active el panel y te seleccione como la persona que está registrando en este turno.', 'warning');                    // Limpiar contraseña para evitar que el navegador la recomplete sin que el usuario lo note
+                    document.getElementById('loginPass').value = '';                    btn.disabled = false;
                     btn.innerHTML = 'Iniciar sesión';
                     return;
                 }

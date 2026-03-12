@@ -151,7 +151,7 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Creando cuenta...';
         try {
-            await API_B2B.register({
+            const result = await API_B2B.register({
                 nombre_institucion: f.nombre_institucion.value.trim(),
                 tipo_institucion: f.tipo_institucion.value,
                 nombre_admin: f.nombre_admin.value.trim(),
@@ -159,12 +159,45 @@
                 password: f.password.value,
                 telefono: telefono || undefined,
             });
-            if (isTestEmail(email)) {
-                showAlert('¡Cuenta creada! Redirigiendo...', 'success');
-            } else {
-                showAlert(`¡Cuenta creada con éxito! Te enviamos un email de verificación a <strong>${email}</strong>. Revisá tu bandeja de entrada (y la carpeta de spam) para confirmar tu cuenta antes de continuar.`, 'success');
-            }
-            setTimeout(() => window.location.href = 'pages/onboarding.html', 2500);
+            const needsVerification = result?.user?.email_verified === false;
+
+            // Reemplazar el formulario con una pantalla de éxito clara
+            const card = document.querySelector('.auth-card');
+            card.innerHTML = needsVerification ? `
+                <div style="text-align:center;padding:32px 24px">
+                    <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <h2 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:8px">¡Cuenta creada!</h2>
+                    <p style="font-size:.92rem;color:var(--text-secondary);margin-bottom:8px;line-height:1.6">
+                        Te enviamos un email de confirmación a:<br>
+                        <strong style="color:var(--text-primary)">${email}</strong>
+                    </p>
+                    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:24px;line-height:1.6">
+                        Revisá tu bandeja de entrada (y la carpeta de spam) y hacé clic en el enlace para activar tu cuenta.<br>
+                        Mientras tanto, podés continuar con la configuración inicial.
+                    </p>
+                    <button onclick="window.location.href='pages/onboarding.html'" class="btn btn-primary btn-lg" style="width:100%;margin-bottom:10px">
+                        Continuar a la configuración →
+                    </button>
+                    <p style="font-size:.78rem;color:var(--text-secondary)">¿No te llegó? Revisá spam o pedí el reenvío desde Configuración.</p>
+                </div>
+            ` : `
+                <div style="text-align:center;padding:32px 24px">
+                    <div style="width:64px;height:64px;background:#D1FAE5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:8px">¡Institución creada con éxito!</h2>
+                    <p style="font-size:.92rem;color:var(--text-secondary);margin-bottom:24px;line-height:1.6">
+                        Tu cuenta de administrador quedó lista.<br>
+                        Ahora vamos a hacer 2 configuraciones rápidas para dejar todo listo.
+                    </p>
+                    <button onclick="window.location.href='pages/onboarding.html'" class="btn btn-primary btn-lg" style="width:100%">
+                        Continuar a la configuración →
+                    </button>
+                </div>
+            `;
+            card.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
             showAlert(err.message);
             btn.disabled = false;
