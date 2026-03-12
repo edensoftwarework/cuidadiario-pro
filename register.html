@@ -47,7 +47,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Teléfono (opcional)</label>
-                    <input type="tel" name="telefono" class="form-control" placeholder="+54 11 1234-5678">
+                    <input type="tel" name="telefono" id="regTelefono" class="form-control" placeholder="+54 11 1234-5678">
+                    <div class="form-hint" style="font-size:.8rem;color:var(--text-secondary);margin-top:3px">Solo números, espacios, guiones y paréntesis. Sin letras.</div>
                 </div>
             </div>
 
@@ -110,13 +111,42 @@
     function showAlert(msg, type = 'danger') {
         const icons = { danger: '❌', success: '✅', warning: '⚠️', info: 'ℹ️' };
         document.getElementById('alertMsg').innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || '❌'}</span>${msg}</div>`;
+        document.getElementById('alertMsg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Cuentas de prueba que no necesitan validación estricta ni verificación de email
+    function isTestEmail(email) {
+        return /^test\d*@test\d*$/i.test(email.trim());
+    }
+
+    // Validación de formato de email (debe tener dominio real con TLD)
+    function isValidEmailFormat(email) {
+        if (isTestEmail(email)) return true;
+        return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim());
+    }
+
+    // Validación de teléfono: solo dígitos, +, -, espacios y paréntesis
+    function isValidPhone(phone) {
+        if (!phone || phone.trim() === '') return true; // es opcional
+        if (/[a-zA-Z]/.test(phone)) return false; // rechazar letras
+        return /^[\+\d\s\-\(\)]{6,25}$/.test(phone.trim());
     }
 
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const f = e.target;
+        const email = f.email.value.trim();
+        const telefono = (f.telefono?.value || '').trim();
+
+        if (!isValidEmailFormat(email)) {
+            showAlert('El email no parece válido. Asegurate de usar un formato como nombre@dominio.com'); return;
+        }
+        if (!isValidPhone(telefono)) {
+            showAlert('El teléfono ingresado no es válido. Usá solo números, espacios, guiones y paréntesis. Por ejemplo: +54 11 1234-5678'); return;
+        }
         if (f.password.value !== f.password2.value) { showAlert('Las contraseñas no coinciden'); return; }
         if (f.password.value.length < 8) { showAlert('La contraseña debe tener al menos 8 caracteres'); return; }
+
         const btn = document.getElementById('registerBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Creando cuenta...';
@@ -125,12 +155,16 @@
                 nombre_institucion: f.nombre_institucion.value.trim(),
                 tipo_institucion: f.tipo_institucion.value,
                 nombre_admin: f.nombre_admin.value.trim(),
-                email: f.email.value.trim(),
+                email: email,
                 password: f.password.value,
-                telefono: f.telefono?.value?.trim() || undefined,
+                telefono: telefono || undefined,
             });
-            showAlert('¡Cuenta creada! Redirigiendo...', 'success');
-            setTimeout(() => window.location.href = 'pages/onboarding.html', 1200);
+            if (isTestEmail(email)) {
+                showAlert('¡Cuenta creada! Redirigiendo...', 'success');
+            } else {
+                showAlert(`¡Cuenta creada con éxito! Te enviamos un email de verificación a <strong>${email}</strong>. Revisá tu bandeja de entrada (y la carpeta de spam) para confirmar tu cuenta antes de continuar.`, 'success');
+            }
+            setTimeout(() => window.location.href = 'pages/onboarding.html', 2500);
         } catch (err) {
             showAlert(err.message);
             btn.disabled = false;

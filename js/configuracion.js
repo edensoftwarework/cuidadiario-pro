@@ -155,19 +155,25 @@ async function cambiarPassword(e) {
 async function guardarInstitucion(e) {
     e.preventDefault();
     const form = e.target;
+    const telefono = form.telefono.value.trim();
+
+    if (!form.nombre.value.trim()) {
+        showToast('El nombre de la institución es obligatorio', 'warning');
+        return;
+    }
+    if (telefono && (/[a-zA-Z]/.test(telefono) || !/^[\+\d\s\-\(\)]{6,25}$/.test(telefono))) {
+        showToast('El teléfono ingresado no es válido. Usá solo números, espacios, guiones y paréntesis.', 'warning');
+        return;
+    }
+
     const payload = {
         nombre: form.nombre.value.trim(),
         tipo: form.tipo.value,
-        telefono: form.telefono.value.trim(),
+        telefono: telefono,
         email: form.email.value.trim(),
         direccion: form.direccion.value.trim(),
         stock_modelo: form.stock_modelo.value
     };
-
-    if (!payload.nombre) {
-        showToast('El nombre de la institución es obligatorio', 'warning');
-        return;
-    }
 
     const btn = form.querySelector('[type=submit]');
     btn.disabled = true;
