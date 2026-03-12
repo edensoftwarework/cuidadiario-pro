@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar email — CuidaDiario PRO</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg-secondary,#F8FAFC); }
+        .verify-card {
+            background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.10);
+            padding:40px 36px; max-width:460px; width:100%; text-align:center;
+        }
+        .icon-wrap {
+            width:64px; height:64px; border-radius:50%; display:flex; align-items:center;
+            justify-content:center; margin:0 auto 20px;
+        }
+        .icon-wrap.success { background:#ECFDF5; }
+        .icon-wrap.error   { background:#FEF2F2; }
+        .icon-wrap.loading { background:#EEF2FF; }
+        h2 { font-size:1.2rem; font-weight:700; color:var(--text-primary,#111827); margin:0 0 10px; }
+        p  { font-size:.9rem; color:var(--text-secondary,#6B7280); line-height:1.65; margin:0 0 24px; }
+        .spinner { display:inline-block; width:28px; height:28px; border:3px solid #C7D2FE;
+                   border-top-color:#4F46E5; border-radius:50%; animation:spin .8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="verify-card" id="verifyCard">
+        <!-- Estado inicial: verificando... -->
+        <div class="icon-wrap loading">
+            <div class="spinner"></div>
+        </div>
+        <h2>Verificando tu email…</h2>
+        <p>Por favor esperá un momento.</p>
+    </div>
+
+    <script>
+    (async function () {
+        const params  = new URLSearchParams(window.location.search);
+        const token   = params.get('token');
+        const isB2B   = params.get('b2b') === '1';
+        const card    = document.getElementById('verifyCard');
+
+        function showSuccess() {
+            card.innerHTML = `
+                <div class="icon-wrap success">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
+                         stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+                <h2>¡Email confirmado!</h2>
+                <p>Tu cuenta está activa. Ya podés completar la configuración de tu institución.</p>
+                <a href="pages/onboarding.html" class="btn btn-primary" style="display:inline-block;width:100%">
+                    Ir a la configuración →
+                </a>`;
+        }
+
+        function showError(msg) {
+            card.innerHTML = `
+                <div class="icon-wrap error">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
+                         stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
+                <h2>Enlace inválido o vencido</h2>
+                <p>${msg || 'El link de confirmación expiró o ya fue usado. Podés solicitar uno nuevo desde la pantalla de configuración.'}</p>
+                <a href="pages/onboarding.html" class="btn btn-secondary" style="display:inline-block;width:100%">
+                    Volver a la configuración
+                </a>`;
+        }
+
+        if (!token) {
+            showError('No se encontró un token de verificación en el enlace.');
+            return;
+        }
+
+        try {
+            // Detect API base from storage.js / api.js convention
+            const API_BASE = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+            const endpoint = `${API_BASE}/api/b2b/auth/verify-email?token=${encodeURIComponent(token)}`;
+            const res  = await fetch(endpoint);
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                // Update localStorage user object so the gate in onboarding.js lifts immediately
+                try {
+                    const raw  = localStorage.getItem('cd_pro_user');
+                    if (raw) {
+                        const u = JSON.parse(raw);
+                        u.email_verified = true;
+                        localStorage.setItem('cd_pro_user', JSON.stringify(u));
+                    }
+                } catch (_) {}
+                showSuccess();
+            } else {
+                showError(data?.error || null);
+            }
+        } catch (err) {
+            showError('No se pudo conectar al servidor. Intentá de nuevo en unos minutos.');
+        }
+    })();
+    </script>
+</body>
+</html>

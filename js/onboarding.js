@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // ─ Verificación de email: bloquear el onboarding si el email no está verificado
+    // email_verified puede ser false (sabemos que está pendiente), undefined (backend viejo sin el campo)
+    // Solo bloqueamos si explícitamente es false; si es undefined/null, dejamos pasar (retrocompatibilidad)
+    if (user?.email_verified === false) {
+        _showEmailVerificationGate(user.email);
+        return;
+    }
+
     // Listeners de las option-cards (stock model)
     _setupOptionCards('stockModelo', ['optInstitucion', 'optFamiliar'], (val) => {
         _onbData.stock_modelo = val;
@@ -163,4 +171,54 @@ function _showAlert(msg, type = 'danger') {
 function _clearAlert() {
     const el = document.getElementById('onbAlert');
     if (el) el.innerHTML = '';
+}
+// ── Pantalla de verificación de email (bloquea el onboarding) ──
+function _showEmailVerificationGate(email) {
+    // Ocultar el wizard normal y el banner de bienvenida
+    document.querySelectorAll('.onb-step, .onb-progress-wrap').forEach(el => el.style.display = 'none');
+    const banner = document.querySelector('[style*="EEF2FF"]');
+    if (banner) banner.style.display = 'none';
+
+    const alertEl = document.getElementById('onbAlert');
+    if (alertEl) {
+        alertEl.style.padding = '20px 28px';
+        alertEl.innerHTML = `
+            <div style="text-align:center;padding:16px 0">
+                <div style="width:56px;height:56px;background:#EFF6FF;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <div style="font-weight:700;font-size:1rem;color:var(--text-primary);margin-bottom:8px">¿Recibiste el email de confirmación?</div>
+                <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:6px;line-height:1.6">
+                    Para activar tu cuenta, necesitás confirmar tu email.<br>
+                    Enviamos un link a <strong>${escapeHtml(email || 'tu email')}</strong>.
+                </p>
+                <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:20px">
+                    Si no lo ves, revisá la carpeta de <strong>spam</strong> o correo no deseado.
+                </p>
+                <div id="verifyGateAlert" style="margin-bottom:12px"></div>
+                <button id="btnResendVerification" class="btn btn-primary" onclick="_resendVerificationEmail()" style="width:100%;margin-bottom:10px">
+                    Reenviar email de confirmación
+                </button>
+                <p style="font-size:.78rem;color:var(--text-secondary)">
+                    ¿Ya lo confirmaste? <span style="color:var(--pro-primary);cursor:pointer;text-decoration:underline" onclick="location.reload()">
+                        Hacer clic aquí para continuar
+                    </span>
+                </p>
+            </div>
+        `;
+    }
+}
+
+async function _resendVerificationEmail() {
+    const btn = document.getElementById('btnResendVerification');
+    const alertEl = document.getElementById('verifyGateAlert');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Enviando...'; }
+    try {
+        await API_B2B.post('/api/b2b/auth/resend-verification', {});
+        if (alertEl) alertEl.innerHTML = '<div class="alert alert-success" style="font-size:.85rem"><span class="alert-icon">\u2705</span>Email enviado. Revisá tu bandeja de entrada y spam.</div>';
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Reenviar email de confirmación'; }
+    } catch (err) {
+        if (alertEl) alertEl.innerHTML = `<div class="alert alert-danger" style="font-size:.85rem"><span class="alert-icon">\u274C</span>${escapeHtml(err.message || 'Error al reenviar. Intentá de nuevo.')}</div>`;
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Reenviar email de confirmación'; }
+    }
 }
