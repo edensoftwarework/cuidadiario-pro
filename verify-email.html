@@ -79,8 +79,7 @@
         }
 
         try {
-            // Detect API base from storage.js / api.js convention
-            const API_BASE = (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '');
+            const API_BASE = 'https://cuidadiario-backend-production.up.railway.app';
             const endpoint = `${API_BASE}/api/b2b/auth/verify-email?token=${encodeURIComponent(token)}`;
             const res  = await fetch(endpoint);
             const data = await res.json().catch(() => ({}));
