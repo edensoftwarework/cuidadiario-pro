@@ -153,10 +153,10 @@
 
                         <div class="settings-info-block">
                             <h4 style="font-weight:600;margin-bottom:8px">📊 Estado del plan</h4>
-                            <div class="plan-badge">
-                                <span class="badge badge-primary" style="font-size:.9rem;padding:6px 14px">Plan PRO activo ✅</span>
+                            <div class="plan-badge" id="planBadgeWrap">
+                                <span class="badge badge-gray" style="font-size:.9rem;padding:6px 14px">Cargando…</span>
                             </div>
-                            <p style="margin-top:12px;font-size:.85rem;color:var(--text-secondary)">
+                            <p style="margin-top:12px;font-size:.85rem;color:var(--text-secondary)" id="planDesc">
                                 CuidaDiario PRO incluye pacientes ilimitados, reportes exportables y soporte prioritario.
                             </p>
                         </div>
@@ -333,6 +333,33 @@
 <script src="../js/api-b2b.js"></script>
 <script src="../js/utils-b2b.js"></script>
 <script src="../js/configuracion.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Dynamic plan badge
+    const u = API_B2B.getUser();
+    const wrap = document.getElementById('planBadgeWrap');
+    const desc = document.getElementById('planDesc');
+    if (wrap) {
+        const plan = u?.plan || 'free';
+        const isPro = plan === 'pro' || plan === 'basico';
+        wrap.innerHTML = isPro
+            ? `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 14px">Plan PRO activo ✅</span>`
+            : `<span class="badge badge-gray" style="font-size:.9rem;padding:6px 14px">⏳ Período de prueba gratuito</span>`;
+        if (desc && !isPro) desc.textContent = 'Estás en el período de prueba gratuito. Todas las funciones están habilitadas.';
+    }
+    // Password visibility toggle for the change-password form
+    window.togglePassConf = function(id, btn) {
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+        const vis = inp.type === 'text';
+        btn.innerHTML = vis
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        btn.title = vis ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    };
+});
+</script>
 
 </body>
 </html>
