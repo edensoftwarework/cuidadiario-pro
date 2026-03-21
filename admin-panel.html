@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDEN SoftWork — Panel Admin CuidaDiario</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F1F5F9;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+        .container { width: 100%; max-width: 520px; }
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .header h1 { font-size: 1.4rem; font-weight: 800; color: #1E293B; }
+        .header p  { font-size: .82rem; color: #64748B; margin-top: 4px; }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            padding: 28px;
+            margin-bottom: 16px;
+        }
+        .card h2 { font-size: .95rem; font-weight: 700; color: #1E293B; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: .78rem; font-weight: 600; color: #475569; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+        input, select, textarea {
+            width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1;
+            border-radius: 8px; font-size: .9rem; color: #1E293B;
+            background: #fff; transition: border-color .15s;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus { border-color: #6366F1; }
+        input[type="password"] { letter-spacing: .1em; }
+        textarea { resize: vertical; min-height: 60px; }
+        .btn {
+            width: 100%; padding: 12px; border: none; border-radius: 10px;
+            font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .15s;
+        }
+        .btn:hover { opacity: .88; }
+        .btn-primary { background: #4F46E5; color: #fff; }
+        .btn-danger  { background: #DC2626; color: #fff; margin-top: 8px; }
+        .result {
+            margin-top: 18px; padding: 14px 16px; border-radius: 10px;
+            font-size: .86rem; line-height: 1.6; display: none;
+        }
+        .result.ok    { background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; }
+        .result.error { background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; }
+        .result .res-title { font-weight: 700; margin-bottom: 4px; }
+        .plan-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+        }
+        .plan-free   { background: #E2E8F0; color: #475569; }
+        .plan-basico { background: #D1FAE5; color: #065F46; }
+        .plan-pro    { background: #EDE9FE; color: #5B21B6; }
+        .log {
+            background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;
+            padding: 12px; max-height: 180px; overflow-y: auto;
+            font-family: monospace; font-size: .76rem; color: #475569; margin-top: 16px;
+        }
+        .log-entry { padding: 3px 0; border-bottom: 1px solid #F1F5F9; }
+        .log-entry:last-child { border-bottom: none; }
+        .log-ok  { color: #059669; }
+        .log-err { color: #DC2626; }
+        .divider { height: 1px; background: #E2E8F0; margin: 18px 0; }
+        .note { font-size: .76rem; color: #94A3B8; margin-top: 8px; }
+        #mainSection { display: none; }
+        .key-saved { font-size: .8rem; color: #059669; margin-top: 6px; display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🏥 CuidaDiario PRO — Admin</h1>
+        <p>Panel privado de EDEN SoftWork · No compartir</p>
+    </div>
+
+    <!-- SECCIÓN: Ingresar clave -->
+    <div class="card" id="keySection">
+        <h2>🔑 Clave de administrador</h2>
+        <div class="form-group">
+            <label>SUPERADMIN_KEY (la que pusiste en Railway)</label>
+            <input type="password" id="adminKey" placeholder="••••••••••••••••" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" onclick="unlockPanel()">Ingresar →</button>
+        <p class="note">La clave nunca se envía al servidor hasta que realizás una acción. Se guarda solo en esta pestaña.</p>
+    </div>
+
+    <!-- SECCIÓN PRINCIPAL -->
+    <div id="mainSection">
+
+        <!-- Activar / cambiar plan -->
+        <div class="card">
+            <h2>💳 Activar o cambiar plan de institución</h2>
+
+            <div class="form-group">
+                <label>ID de la institución</label>
+                <input type="number" id="instId" placeholder="Ej: 5" min="1">
+                <p class="note">Lo encontrás en los logs de Railway o consultando la tabla <code>instituciones_b2b</code>.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Plan a asignar</label>
+                <select id="planSelect">
+                    <option value="pro">⭐ PRO — Pacientes ilimitados</option>
+                    <option value="basico">✅ Básico — Hasta 20 pacientes</option>
+                    <option value="free">🔓 Free — Período de prueba</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Nota interna (opcional)</label>
+                <textarea id="planNote" placeholder="Ej: Transferencia Banco Nación $15.000 — 21/03/2026"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="setPlan()">✅ Activar plan</button>
+
+            <div id="planResult" class="result"></div>
+        </div>
+
+        <!-- Consultar institución -->
+        <div class="card">
+            <h2>🔍 Consultar institución por ID</h2>
+            <div style="display:flex;gap:10px">
+                <input type="number" id="queryId" placeholder="ID de institución" min="1" style="flex:1">
+                <button class="btn btn-primary" style="width:auto;padding:10px 20px;white-space:nowrap" onclick="queryInst()">Consultar</button>
+            </div>
+            <div id="queryResult" class="result" style="margin-top:14px"></div>
+        </div>
+
+        <!-- Log de acciones -->
+        <div class="card">
+            <h2>📋 Historial de esta sesión</h2>
+            <div class="log" id="actionLog">
+                <div class="log-entry" style="color:#94A3B8">Sin acciones aún.</div>
+            </div>
+            <button class="btn btn-danger" style="margin-top:12px;font-size:.8rem;padding:8px" onclick="cerrarSesion()">🔒 Cerrar sesión</button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const BACKEND = 'https://cuidadiario-backend-production.up.railway.app';
+    let _key = '';
+
+    function unlockPanel() {
+        const k = document.getElementById('adminKey').value.trim();
+        if (!k) { alert('Ingresá la clave.'); return; }
+        _key = k;
+        document.getElementById('keySection').style.display = 'none';
+        document.getElementById('mainSection').style.display = 'block';
+        addLog('✅ Sesión iniciada', 'ok');
+    }
+
+    async function setPlan() {
+        const id   = document.getElementById('instId').value.trim();
+        const plan = document.getElementById('planSelect').value;
+        const note = document.getElementById('planNote').value.trim();
+        const res  = document.getElementById('planResult');
+
+        if (!id) { showResult(res, 'error', '⚠️ Error', 'Ingresá el ID de la institución.'); return; }
+
+        res.style.display = 'none';
+        try {
+            const r = await fetch(`${BACKEND}/api/admin/set-plan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': _key
+                },
+                body: JSON.stringify({ institucion_id: parseInt(id), plan, note: note || undefined })
+            });
+            const data = await r.json();
+            if (!r.ok) {
+                showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
+                addLog(`❌ set-plan inst ${id} → ${plan} — Error: ${data.error}`, 'err');
+            } else {
+                const planLabel = { pro: '⭐ PRO', basico: '✅ Básico', free: '🔓 Free' }[data.plan] || data.plan;
+                showResult(res, 'ok',
+                    `✅ Plan activado correctamente`,
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
+                     Plan asignado: <span class="plan-badge plan-${data.plan}">${planLabel}</span>
+                     ${note ? `<br><span style="color:#6B7280;font-size:.8rem">Nota: ${escHtml(note)}</span>` : ''}`
+                );
+                addLog(`✅ inst ${data.institucion_id} (${data.nombre}) → ${data.plan}${note ? ' | ' + note : ''}`, 'ok');
+                document.getElementById('instId').value = '';
+                document.getElementById('planNote').value = '';
+            }
+        } catch (e) {
+            showResult(res, 'error', '❌ Sin conexión', e.message);
+            addLog(`❌ Error de red: ${e.message}`, 'err');
+        }
+    }
+
+    async function queryInst() {
+        const id  = document.getElementById('queryId').value.trim();
+        const res = document.getElementById('queryResult');
+        if (!id) return;
+        res.style.display = 'none';
+        try {
+            // Usamos el endpoint /api/admin/set-plan con el mismo plan que ya tiene para "leer" — no, mejor
+            // hacemos una petición a set-plan con el mismo plan. Pero mejor: buscamos la lista de instituciones.
+            // Como no hay un GET /api/admin/institucion, vamos a intentar set-plan con plan vacío para obtener el error
+            // En su lugar, usamos el endpoint de login como alternativa o hacemos una consulta GET directa.
+            // De hecho, podemos verificar via set-plan con plan actual. Pero si no sabemos el plan, no funciona.
+            // Lo más limpio: agregar GET /api/admin/institucion — pero por ahora, usamos este truco:
+            const r = await fetch(`${BACKEND}/api/admin/institucion/${encodeURIComponent(id)}`, {
+                headers: { 'X-Admin-Key': _key }
+            });
+            const data = await r.json();
+            if (!r.ok) {
+                showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
+            } else {
+                const planLabel = { pro: '⭐ PRO', basico: '✅ Básico', free: '🔓 Free (período de prueba)' }[data.plan] || data.plan;
+                showResult(res, 'ok', `🏥 ${escHtml(data.nombre)}`,
+                    `ID: ${data.id} &nbsp;|&nbsp; Tipo: ${escHtml(data.tipo)}<br>
+                     Plan: <span class="plan-badge plan-${data.plan}">${planLabel}</span><br>
+                     Email: ${escHtml(data.email || '—')}<br>
+                     Tel: ${escHtml(data.telefono || '—')}`
+                );
+            }
+        } catch (e) {
+            showResult(res, 'error', '❌ Sin conexión', e.message);
+        }
+    }
+
+    function cerrarSesion() {
+        _key = '';
+        document.getElementById('mainSection').style.display = 'none';
+        document.getElementById('keySection').style.display = 'block';
+        document.getElementById('adminKey').value = '';
+        document.getElementById('actionLog').innerHTML = '<div class="log-entry" style="color:#94A3B8">Sin acciones aún.</div>';
+    }
+
+    // ── Helpers ──
+    function showResult(el, type, title, body) {
+        el.className = `result ${type}`;
+        el.innerHTML = `<div class="res-title">${title}</div>${body}`;
+        el.style.display = 'block';
+    }
+
+    function addLog(msg, type) {
+        const log = document.getElementById('actionLog');
+        const now = new Date().toLocaleTimeString('es-AR');
+        if (log.children.length === 1 && log.children[0].style.color === 'rgb(148, 163, 184)') {
+            log.innerHTML = '';
+        }
+        const div = document.createElement('div');
+        div.className = `log-entry log-${type}`;
+        div.textContent = `[${now}] ${msg}`;
+        log.prepend(div);
+    }
+
+    function escHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Enter en campo de clave
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && document.getElementById('keySection').style.display !== 'none') unlockPanel();
+    });
+</script>
+</body>
+</html>
