@@ -153,7 +153,7 @@ function renderCumpleanosHoy(lista) {
     const container = document.getElementById('cumpleanosHoy');
     if (!container) return;
     if (!lista || lista.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎂</div><p>Sin cumpleaños hoy</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Sin cumpleaños hoy</p></div>`;
         return;
     }
     container.innerHTML = lista.map(p => `
@@ -178,9 +178,9 @@ function renderStockBajo(lista) {
         <div class="item-row" style="border-left:3px solid var(--pro-warning)">
             <div class="item-icon badge-orange">💊</div>
             <div class="item-body">
-                <div class="item-title">${escapeHtml(m.nombre)}</div>
+                <div class="item-title">${escapeHtml(m.nombre)}${m.tipo === 'catalogo' ? ' <span class="badge badge-blue" style="font-size:.65rem">Catálogo</span>' : ''}</div>
                 <div class="item-subtitle">${escapeHtml(m.dosis_horario || '')}</div>
             </div>
-            <span class="badge badge-danger">Stock: ${m.stock}</span>
+            <span class="badge badge-danger">Stock: ${m.stock}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
         </div>`).join('');
 }

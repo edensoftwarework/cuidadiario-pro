@@ -141,8 +141,9 @@ function populateSidebarUser() {
             });
         }
     }
-    // Shared station mode: inject worker chip if the feature is enabled
-    initSharedStationUI();
+    // Shared station mode: inject worker chip only for non-familiar roles
+    // Familiares are read-only and must not have access to worker switching
+    if (user.rol !== 'familiar') initSharedStationUI();
     // Trial expiry banner for admin
     if (user.rol === 'admin_institucion') _checkTrialBanner(user);
 }

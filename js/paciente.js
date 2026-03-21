@@ -115,7 +115,7 @@ function renderPacienteHeader(p) {
                     ${edad !== null ? `<span class="paciente-meta-item">🎂 ${edad} años</span>` : ''}
                     ${p.fecha_nacimiento ? `<span class="paciente-meta-item">📅 ${formatDate(p.fecha_nacimiento)}</span>` : ''}
                     ${p.habitacion ? `<span class="paciente-meta-item">🛏️ Hab. ${escapeHtml(p.habitacion)}</span>` : ''}
-                    ${p.dni ? `<span class="paciente-meta-item">🪪 DNI ${escapeHtml(p.dni)}</span>` : ''}
+                    ${p.dni ? `<span class="paciente-meta-item"><span style="font-size:.72rem;font-weight:800;opacity:.75">DNI</span> ${escapeHtml(p.dni)}</span>` : ''}
                     ${p.obra_social ? `<span class="paciente-meta-item">🏥 ${escapeHtml(p.obra_social)}</span>` : ''}
                     ${p.fecha_ingreso ? `<span class="paciente-meta-item">📋 Ingreso: ${formatDate(p.fecha_ingreso)}</span>` : ''}
                 </div>
@@ -124,7 +124,7 @@ function renderPacienteHeader(p) {
             </div>
             <div class="d-flex gap-8 align-center flex-wrap">
                 ${p.fecha_egreso ? `<span class="badge badge-red" style="font-size:.8rem;padding:6px 12px">🚪 Alta: ${formatDate(p.fecha_egreso)} — ${escapeHtml(p.motivo_egreso || '')}</span>` : ''}
-                ${canDo('dar_alta') && !p.fecha_egreso ? `<button class="btn btn-sm btn-warning" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
+                ${canDo('dar_alta') && !p.fecha_egreso ? `<button class="btn btn-sm" style="background:#fff;color:#E65100;font-weight:700;border:none;box-shadow:0 2px 8px rgba(0,0,0,.2)" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
             </div>
         </div>`;
 }
@@ -444,6 +444,19 @@ async function handleSaveMed(e) {
 }
 
 function registrarToma(id, nombre) {
+    // Block toma if stock is depleted
+    const med = _meds.find(m => m.id === id);
+    if (med) {
+        if (_stockModelo === 'institucion' && med.catalogo_id) {
+            if ((med.catalogo_stock ?? 0) <= 0) {
+                showToast(`Sin stock en catálogo para "${nombre}". Reponé el medicamento antes de registrar una toma.`, 'warning', 4000);
+                return;
+            }
+        } else if (med.stock !== null && med.stock !== undefined && med.stock <= 0) {
+            showToast(`Sin stock disponible para "${nombre}". Actualizá el stock antes de registrar una toma.`, 'warning', 4000);
+            return;
+        }
+    }
     document.getElementById('tomaInfo').textContent = `Registrar toma de: ${nombre}`;
     document.getElementById('tomaMedId').value = id;
     document.getElementById('formToma').reset();
