@@ -814,6 +814,32 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     background: #e0e0e0;
 }
 
+/* ── Paginación de pacientes ── */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 4px;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pagination-info {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pagination-pages {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
 /* Tabs de filtro: Activos / Egresados / Todos */
 .filter-tabs {
     display: inline-flex;

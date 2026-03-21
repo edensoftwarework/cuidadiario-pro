@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CuidaDiario PRO — Plataforma de gestión clínica para geriátricos, hogares y centros de cuidado. Pacientes, medicamentos, staff y reportes en un solo lugar.">
+    <meta name="keywords" content="software geriatrico, gestión pacientes, cuidado institucional, historial clínico, medicamentos, geriátrico software argentina">
+    <meta name="author" content="EDEN SoftWork">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="CuidaDiario PRO — Gestión clínica para instituciones de cuidado">
+    <meta property="og:description" content="Gestioná pacientes, medicamentos, staff y reportes desde cualquier dispositivo. Probalo gratis por 60 días.">
+    <meta property="og:image" content="https://cuidadiario-pro.edensoftwork.com/og-image.png">
+    <meta property="og:url" content="https://cuidadiario-pro.edensoftwork.com/landing.html">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CuidaDiario PRO — Gestión clínica institucional">
+    <meta name="twitter:description" content="Gestioná pacientes, medicamentos, staff y reportes desde cualquier dispositivo.">
+
+    <title>CuidaDiario PRO — Software de gestión para instituciones de cuidado</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary:       #1565C0;
+            --primary-dark:  #0D2B6B;
+            --primary-light: #EEF2FF;
+            --accent:        #10B981;
+            --accent-dark:   #059669;
+            --text-main:     #111827;
+            --text-muted:    #6B7280;
+            --border:        #E5E7EB;
+            --bg:            #F8FAFC;
+            --white:         #ffffff;
+            --radius:        14px;
+            --shadow:        0 4px 24px rgba(0,0,0,.08);
+            --shadow-lg:     0 8px 48px rgba(0,0,0,.12);
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text-main);
+            background: var(--white);
+            line-height: 1.6;
+        }
+        a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; }
+        .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255,255,255,.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 0;
+        }
+        .navbar-inner {
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+        }
+        .navbar-logo {
+            display: flex; align-items: center; gap: 10px; font-weight: 800;
+            font-size: 1.15rem; color: var(--primary-dark);
+        }
+        .navbar-logo .logo-badge {
+            background: var(--primary); color: #fff;
+            font-size: .62rem; font-weight: 800; padding: 2px 7px;
+            border-radius: 20px; letter-spacing: .04em;
+        }
+        .navbar-links { display: flex; align-items: center; gap: 24px; list-style: none; }
+        .navbar-links a { font-size: .9rem; color: var(--text-muted); transition: color .15s; }
+        .navbar-links a:hover { color: var(--primary); }
+        .navbar-cta { display: flex; align-items: center; gap: 10px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+               padding: 10px 20px; border-radius: 10px; font-size: .9rem; font-weight: 600;
+               cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(21,101,192,.3); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-lg { padding: 14px 28px; font-size: 1rem; border-radius: 12px; }
+        .btn-xl { padding: 16px 36px; font-size: 1.05rem; border-radius: 14px; }
+        .btn-accent { background: var(--accent); color: #fff; }
+        .btn-accent:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(16,185,129,.3); }
+        .mobile-only { display: none; }
+
+        /* ===== HERO ===== */
+        .hero {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 55%, #1976D2 100%);
+            color: #fff;
+            padding: 96px 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; }
+        .hero-label {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+            padding: 5px 14px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+            margin-bottom: 20px; letter-spacing: .04em;
+        }
+        .hero h1 { font-size: 2.6rem; font-weight: 900; line-height: 1.18; margin-bottom: 20px; }
+        .hero h1 em { font-style: normal; color: #93C5FD; }
+        .hero-desc { font-size: 1.05rem; color: rgba(255,255,255,.82); line-height: 1.7; margin-bottom: 32px; }
+        .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+        .hero-trust {
+            display: flex; align-items: center; gap: 16px; margin-top: 28px;
+            font-size: .8rem; color: rgba(255,255,255,.65);
+        }
+        .hero-trust span { display: flex; align-items: center; gap: 5px; }
+        .hero-visual {
+            display: flex; align-items: center; justify-content: center;
+        }
+        .hero-mockup {
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.15);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 24px 80px rgba(0,0,0,.3);
+        }
+        .mockup-topbar {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+            padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.12);
+        }
+        .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .mockup-dot.r { background: #FF5F57; }
+        .mockup-dot.y { background: #FEBC2E; }
+        .mockup-dot.g { background: #28C840; }
+        .mockup-title { font-size: .82rem; color: rgba(255,255,255,.7); margin-left: auto; font-weight: 600; }
+        .mockup-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .mockup-stat {
+            background: rgba(255,255,255,.1); border-radius: 10px; padding: 12px;
+            text-align: center;
+        }
+        .mockup-stat-val { font-size: 1.5rem; font-weight: 900; color: #fff; }
+        .mockup-stat-label { font-size: .68rem; color: rgba(255,255,255,.6); margin-top: 2px; }
+        .mockup-row {
+            background: rgba(255,255,255,.08); border-radius: 8px; padding: 10px 12px;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+        }
+        .mockup-row:last-child { margin-bottom: 0; }
+        .mockup-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+        .mockup-info { flex: 1; min-width: 0; }
+        .mockup-name { font-size: .82rem; font-weight: 700; color: #fff; }
+        .mockup-sub { font-size: .7rem; color: rgba(255,255,255,.55); }
+        .mockup-badge {
+            font-size: .65rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+            white-space: nowrap;
+        }
+        .mb-ok { background: rgba(16,185,129,.25); color: #6EE7B7; }
+        .mb-warn { background: rgba(245,158,11,.25); color: #FCD34D; }
+        .mb-alert { background: rgba(239,68,68,.25); color: #FCA5A5; }
+
+        /* ===== LOGOS BAND ===== */
+        .logos-band {
+            background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+            padding: 28px 0;
+        }
+        .logos-band-inner {
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px;
+        }
+        .logos-band-label { font-size: .78rem; color: var(--text-muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-right: 4px; }
+        .inst-chip {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--white); border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: 20px; font-size: .82rem; font-weight: 500; color: var(--text-muted);
+        }
+
+        /* ===== SECTIONS ===== */
+        .section { padding: 80px 0; }
+        .section-sm { padding: 56px 0; }
+        .section-bg { background: var(--bg); }
+        .section-label {
+            font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+            color: var(--primary); margin-bottom: 10px;
+        }
+        .section-title { font-size: 2rem; font-weight: 800; color: var(--text-main); line-height: 1.25; margin-bottom: 14px; }
+        .section-desc { font-size: 1rem; color: var(--text-muted); max-width: 560px; line-height: 1.7; }
+        .text-center { text-align: center; }
+        .text-center .section-desc { margin: 0 auto; }
+
+        /* ===== FEATURES GRID ===== */
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+        .feature-card {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 28px 24px;
+            transition: all .2s; position: relative; overflow: hidden;
+        }
+        .feature-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--primary), #42A5F5);
+            opacity: 0; transition: opacity .2s;
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-icon { font-size: 2rem; margin-bottom: 14px; display: block; }
+        .feature-title { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        .feature-desc { font-size: .88rem; color: var(--text-muted); line-height: 1.65; }
+
+        /* ===== HOW IT WORKS ===== */
+        .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 48px; }
+        .step { text-align: center; padding: 20px; position: relative; }
+        .step:not(:last-child)::after {
+            content: '→'; position: absolute; right: -10px; top: 28px;
+            font-size: 1.2rem; color: var(--border);
+        }
+        .step-num {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--primary-light); color: var(--primary);
+            font-weight: 900; font-size: 1.15rem;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 14px;
+        }
+        .step-title { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+        .step-desc { font-size: .82rem; color: var(--text-muted); line-height: 1.6; }
+
+        /* ===== PRICING ===== */
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+        .pricing-card {
+            background: var(--white); border: 2px solid var(--border);
+            border-radius: 18px; padding: 32px 28px;
+            position: relative; transition: all .2s;
+        }
+        .pricing-card:hover { box-shadow: var(--shadow-lg); }
+        .pricing-card.featured {
+            border-color: var(--primary);
+            box-shadow: 0 8px 40px rgba(21,101,192,.2);
+            transform: scale(1.03);
+        }
+        .pricing-popular {
+            position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: #fff;
+            font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+            padding: 4px 16px; border-radius: 20px; white-space: nowrap;
+        }
+        .pricing-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+        .pricing-price { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1; margin: 14px 0 4px; }
+        .pricing-period { font-size: .82rem; color: var(--text-muted); margin-bottom: 20px; }
+        .pricing-desc { font-size: .85rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; min-height: 42px; }
+        .pricing-features { list-style: none; margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+        .pricing-features li { font-size: .88rem; display: flex; align-items: flex-start; gap: 8px; }
+        .pricing-features li::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+        .pricing-features li.disabled { color: var(--text-muted); }
+        .pricing-features li.disabled::before { content: '✕'; color: var(--border); }
+        .pricing-note { font-size: .75rem; color: var(--text-muted); margin-top: 14px; text-align: center; }
+
+        /* ===== TESTIMONIALS ===== */
+        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+        .testimonial-card {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 28px 24px;
+        }
+        .testimonial-stars { color: #F59E0B; font-size: 1rem; margin-bottom: 12px; letter-spacing: 2px; }
+        .testimonial-text { font-size: .9rem; color: var(--text-main); line-height: 1.7; margin-bottom: 18px; font-style: italic; }
+        .testimonial-author { display: flex; align-items: center; gap: 10px; }
+        .testimonial-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #42A5F5);
+            color: #fff; font-weight: 700; font-size: .95rem;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .testimonial-name { font-size: .88rem; font-weight: 700; }
+        .testimonial-role { font-size: .78rem; color: var(--text-muted); }
+
+        /* ===== CTA BOTTOM ===== */
+        .cta-section {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #fff; padding: 80px 0; text-align: center;
+        }
+        .cta-section h2 { font-size: 2rem; font-weight: 900; margin-bottom: 14px; }
+        .cta-section p { font-size: 1.05rem; color: rgba(255,255,255,.78); margin-bottom: 36px; }
+        .cta-btns { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+        .btn-white { background: #fff; color: var(--primary); }
+        .btn-white:hover { background: #f0f4ff; transform: translateY(-2px); }
+        .btn-ghost { background: transparent; border: 2px solid rgba(255,255,255,.45); color: #fff; }
+        .btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,.1); }
+
+        /* ===== FOOTER ===== */
+        footer {
+            background: var(--primary-dark); color: rgba(255,255,255,.7);
+            padding: 48px 0 24px;
+        }
+        .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+        .footer-logo { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .footer-tagline { font-size: .83rem; color: rgba(255,255,255,.5); line-height: 1.6; }
+        .footer-col-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 14px; }
+        .footer-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .footer-links a { font-size: .85rem; color: rgba(255,255,255,.6); transition: color .15s; }
+        .footer-links a:hover { color: #fff; }
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,.1);
+            padding-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .footer-bottom-text { font-size: .78rem; color: rgba(255,255,255,.4); }
+
+        /* ===== FAQ ===== */
+        .faq-grid { max-width: 700px; margin: 48px auto 0; display: flex; flex-direction: column; gap: 12px; }
+        .faq-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .faq-q {
+            padding: 18px 20px; font-size: .95rem; font-weight: 600; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            user-select: none; background: var(--white);
+        }
+        .faq-q:hover { background: var(--bg); }
+        .faq-arrow { font-size: .8rem; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
+        .faq-item.open .faq-arrow { transform: rotate(180deg); }
+        .faq-a { padding: 0 20px 16px; font-size: .88rem; color: var(--text-muted); line-height: 1.7; display: none; }
+        .faq-item.open .faq-a { display: block; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .hero-inner { grid-template-columns: 1fr; }
+            .hero-visual { display: none; }
+            .hero { padding: 64px 0 56px; }
+            .hero h1 { font-size: 2rem; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps { grid-template-columns: repeat(2, 1fr); }
+            .step:nth-child(2)::after, .step:nth-child(4)::after { display: none; }
+            .step:nth-child(1)::after, .step:nth-child(3)::after { display: none; }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+            .pricing-card.featured { transform: none; }
+            .testimonials-grid { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .navbar-links { display: none; }
+            .mobile-only { display: flex; }
+        }
+        @media (max-width: 560px) {
+            .section { padding: 56px 0; }
+            .section-title { font-size: 1.55rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .steps { grid-template-columns: 1fr; }
+            .step::after { display: none !important; }
+            .footer-grid { grid-template-columns: 1fr; }
+            .hero-btns { flex-direction: column; }
+            .hero-btns .btn { width: 100%; }
+            .cta-btns { flex-direction: column; align-items: center; }
+            .cta-btns .btn { width: 100%; max-width: 320px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+    <div class="container navbar-inner">
+        <a href="landing.html" class="navbar-logo">
+            <span>🏥</span>
+            <span>CuidaDiario</span>
+            <span class="logo-badge">PRO</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="#funciones">Funciones</a></li>
+            <li><a href="#como-funciona">Cómo funciona</a></li>
+            <li><a href="#precios">Precios</a></li>
+            <li><a href="#faq">FAQ</a></li>
+        </ul>
+        <div class="navbar-cta">
+            <a href="index.html" class="btn btn-outline" style="padding:8px 16px;font-size:.85rem">Iniciar sesión</a>
+            <a href="register.html" class="btn btn-primary" style="padding:8px 16px;font-size:.85rem">Comenzar gratis</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-inner">
+            <div>
+                <div class="hero-label">✨ 60 días de prueba gratuita · Sin tarjeta</div>
+                <h1>La gestión clínica que tu <em>institución</em> necesitaba</h1>
+                <p class="hero-desc">
+                    Geriátricos, hogares, centros de rehabilitación y empresas de cuidado domiciliario usaron papel e Excel durante años. CuidaDiario PRO lo reemplaza todo: pacientes, medicamentos, staff, reportes y más.
+                </p>
+                <div class="hero-btns">
+                    <a href="register.html" class="btn btn-accent btn-xl">🚀 Empezar gratis por 60 días</a>
+                    <a href="#funciones" class="btn btn-ghost btn-xl">Ver funciones</a>
+                </div>
+                <div class="hero-trust">
+                    <span>✅ Sin instalación</span>
+                    <span>✅ Funciona sin internet</span>
+                    <span>✅ Datos seguros</span>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-mockup">
+                    <div class="mockup-topbar">
+                        <span class="mockup-dot r"></span>
+                        <span class="mockup-dot y"></span>
+                        <span class="mockup-dot g"></span>
+                        <span class="mockup-title">📊 Dashboard</span>
+                    </div>
+                    <div class="mockup-stats">
+                        <div class="mockup-stat">
+                            <div class="mockup-stat-val">24</div>
+                            <div class="mockup-stat-label">Pacientes activos</div>
+                        </div>
+                        <div class="mockup-stat">
+                            <div class="mockup-stat-val">8</div>
+                            <div class="mockup-stat-label">Tomas hoy</div>
+                        </div>
+                        <div class="mockup-stat">
+                            <div class="mockup-stat-val">3</div>
+                            <div class="mockup-stat-label">Citas esta semana</div>
+                        </div>
+                        <div class="mockup-stat">
+                            <div class="mockup-stat-val">6</div>
+                            <div class="mockup-stat-label">Staff activo</div>
+                        </div>
+                    </div>
+                    <div class="mockup-row">
+                        <div class="mockup-avatar">👤</div>
+                        <div class="mockup-info">
+                            <div class="mockup-name">García, Roberto</div>
+                            <div class="mockup-sub">Hab. 12 · Cardiopatía</div>
+                        </div>
+                        <span class="mockup-badge mb-ok">✓ Al día</span>
+                    </div>
+                    <div class="mockup-row">
+                        <div class="mockup-avatar">👤</div>
+                        <div class="mockup-info">
+                            <div class="mockup-name">Martínez, Ana</div>
+                            <div class="mockup-sub">Hab. 7 · Diabetes</div>
+                        </div>
+                        <span class="mockup-badge mb-warn">⚠ Cita hoy</span>
+                    </div>
+                    <div class="mockup-row">
+                        <div class="mockup-avatar">👤</div>
+                        <div class="mockup-info">
+                            <div class="mockup-name">López, Carlos</div>
+                            <div class="mockup-sub">Hab. 3 · Alzheimer</div>
+                        </div>
+                        <span class="mockup-badge mb-alert">⬆ Stock bajo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== LOGOS BAND ===== -->
+<section class="logos-band">
+    <div class="container logos-band-inner">
+        <span class="logos-band-label">Pensado para</span>
+        <span class="inst-chip">🧓 Geriátricos</span>
+        <span class="inst-chip">🏠 Hogares convivenciales</span>
+        <span class="inst-chip">♿ Centros de discapacidad</span>
+        <span class="inst-chip">🧠 Centros de salud mental</span>
+        <span class="inst-chip">💊 Centros de diálisis</span>
+        <span class="inst-chip">🏃 Rehabilitación</span>
+        <span class="inst-chip">🚗 Cuidado domiciliario</span>
+    </div>
+</section>
+
+<!-- ===== FUNCIONES ===== -->
+<section class="section" id="funciones">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-label">Funciones</div>
+            <h2 class="section-title">Todo lo que necesitás en un solo lugar</h2>
+            <p class="section-desc">Sin planillas de Excel, sin papeles sueltos, sin WhatsApp como sistema de gestión.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">👤</span>
+                <div class="feature-title">Fichas completas de pacientes</div>
+                <div class="feature-desc">Datos personales, diagnóstico, obra social, contactos de emergencia, historial de ingresos y egresos. Todo en un lugar accesible desde cualquier dispositivo.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💊</span>
+                <div class="feature-title">Gestión de medicamentos</div>
+                <div class="feature-desc">Registrá cada medicamento con dosis, horarios y stock. El sistema avisa cuando el stock está bajo y registra cada toma con quién la administró.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📅</span>
+                <div class="feature-title">Citas médicas y turnos</div>
+                <div class="feature-desc">Programá citas con especialistas, médicos de cabecera y estudios. El dashboard muestra las próximas citas de la semana para no olvidar ninguna.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🩺</span>
+                <div class="feature-title">Síntomas y signos vitales</div>
+                <div class="feature-desc">Registrá temperatura, presión, saturación, frecuencia cardíaca y síntomas con fecha y hora. Historial completo por paciente con trazabilidad del personal.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">✅</span>
+                <div class="feature-title">Tareas de cuidado</div>
+                <div class="feature-desc">Asigná tareas diarias al personal (baño, aseo, fisioterapia) y registrá automáticamente cuándo se realizaron y quién las completó.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">👥</span>
+                <div class="feature-title">Gestión del staff</div>
+                <div class="feature-desc">Cargá todo tu equipo (cuidadores, médicos, administrativos) y asignalos a pacientes específicos. Cada uno ve solo sus pacientes asignados.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📋</span>
+                <div class="feature-title">Reportes clínicos en PDF</div>
+                <div class="feature-desc">Generá reportes completos por paciente para entregar a médicos o familiares: medicación, síntomas, citas, notas y signos vitales en un documento imprimible.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🏪</span>
+                <div class="feature-title">Inventario centralizado</div>
+                <div class="feature-desc">Modo institucional: la farmacia de tu institución gestiona un catálogo centralizado de medicamentos. El stock se descuenta automáticamente con cada toma registrada.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">👨‍👩‍👧</span>
+                <div class="feature-title">Acceso para familiares</div>
+                <div class="feature-desc">Los familiares pueden tener acceso de solo lectura para ver el estado, medicación y citas de su familiar, sin poder modificar ningún dato.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section section-bg" id="como-funciona">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-label">Proceso</div>
+            <h2 class="section-title">En 4 pasos estás funcionando</h2>
+            <p class="section-desc">Sin instalación. Sin capacitación técnica. Sin IT.</p>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-title">Registrás tu institución</div>
+                <div class="step-desc">Completás el formulario de registro en menos de 2 minutos. Sin tarjeta de crédito.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-title">Configurás tu cuenta</div>
+                <div class="step-desc">Cargás los datos de tu institución, modelo de stock y preferencias del equipo.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-title">Cargás pacientes y staff</div>
+                <div class="step-desc">Empezás a cargar los residentes y tu equipo. El personal ya puede usar el sistema.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-title">Operás desde cualquier lugar</div>
+                <div class="step-desc">Teléfono, tablet o computadora. En el hogar o de guardia. Siempre sincronizado.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section class="section" id="precios">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-label">Precios</div>
+            <h2 class="section-title">Simple y transparente</h2>
+            <p class="section-desc">Sin costos ocultos. Sin letra chica. Todos los planes incluyen soporte por email.</p>
+        </div>
+        <div class="pricing-grid">
+
+            <!-- FREE -->
+            <div class="pricing-card">
+                <div class="pricing-name">🔓 Período de prueba</div>
+                <div class="pricing-price">Gratis</div>
+                <div class="pricing-period">durante 60 días completos</div>
+                <div class="pricing-desc">Probá todo sin restricciones. Sin tarjeta de crédito.</div>
+                <ul class="pricing-features">
+                    <li>Pacientes ilimitados (60 días)</li>
+                    <li>Staff ilimitado (60 días)</li>
+                    <li>Todas las funciones incluidas</li>
+                    <li>Reportes clínicos PDF</li>
+                    <li>Soporte por email</li>
+                </ul>
+                <a href="register.html" class="btn btn-outline" style="width:100%">Comenzar gratis</a>
+            </div>
+
+            <!-- BÁSICO -->
+            <div class="pricing-card featured">
+                <div class="pricing-popular">Más elegido</div>
+                <div class="pricing-name">✅ Básico</div>
+                <div class="pricing-price">$7.500</div>
+                <div class="pricing-period">por mes · Pago en pesos ARS vía Mercado Pago</div>
+                <div class="pricing-desc">Ideal para instituciones pequeñas y medianas de hasta 20 residentes.</div>
+                <ul class="pricing-features">
+                    <li>Hasta 20 pacientes activos</li>
+                    <li>Hasta 5 miembros del staff</li>
+                    <li>Todas las funciones incluidas</li>
+                    <li>Reportes clínicos PDF</li>
+                    <li>Soporte prioritario</li>
+                </ul>
+                <a href="register.html" class="btn btn-primary" style="width:100%">Empezar con Básico</a>
+                <div class="pricing-note">Podés cancelar en cualquier momento.</div>
+            </div>
+
+            <!-- PRO -->
+            <div class="pricing-card">
+                <div class="pricing-name">⭐ PRO</div>
+                <div class="pricing-price">$15.000</div>
+                <div class="pricing-period">por mes · Pago en pesos ARS vía Mercado Pago</div>
+                <div class="pricing-desc">Para instituciones grandes que necesitan escalar sin límites.</div>
+                <ul class="pricing-features">
+                    <li>Pacientes ilimitados</li>
+                    <li>Staff ilimitado</li>
+                    <li>Todas las funciones incluidas</li>
+                    <li>Reportes clínicos PDF</li>
+                    <li>Soporte prioritario 24 hs</li>
+                </ul>
+                <a href="register.html" class="btn btn-primary" style="width:100%;background:var(--primary-dark)">Empezar con PRO</a>
+                <div class="pricing-note">Podés cancelar en cualquier momento.</div>
+            </div>
+
+        </div>
+        <p style="text-align:center;margin-top:28px;font-size:.83rem;color:var(--text-muted)">
+            💡 Los precios están en pesos argentinos (ARS). El pago se procesa de forma segura a través de Mercado Pago. Cancelación en 1 click.
+        </p>
+    </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section class="section section-bg">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-label">Testimonios</div>
+            <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"Pasamos de llevar carpetas con hojas sueltas a tener todo centralizado. El personal ahora registra las tomas desde el celular y yo puedo ver el historial de cualquier residente al instante."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">M</div>
+                    <div>
+                        <div class="testimonial-name">María González</div>
+                        <div class="testimonial-role">Directora, Geriátrico Los Pinos · Córdoba</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"La función de familiares es increíble. Los parientes pueden ver cómo está su ser querido sin llamarnos cada hora. Eso solo ya valió el precio del plan."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">R</div>
+                    <div>
+                        <div class="testimonial-name">Roberto Sánchez</div>
+                        <div class="testimonial-role">Administrador, Centro de Día Horizonte · CABA</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"Lo empezamos a usar en 1 día. Sin capacitación técnica. El equipo lo adoptó rápido porque es muy intuitivo. Los reportes para los médicos nos ahorran horas de trabajo."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">L</div>
+                    <div>
+                        <div class="testimonial-name">Laura Méndez</div>
+                        <div class="testimonial-role">Enfermera jefa, Hogar San José · Rosario</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section" id="faq">
+    <div class="container">
+        <div class="text-center">
+            <div class="section-label">Preguntas frecuentes</div>
+            <h2 class="section-title">¿Tenés dudas?</h2>
+        </div>
+        <div class="faq-grid">
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Necesito instalar algo? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">No. CuidaDiario PRO funciona directamente desde el navegador en cualquier dispositivo: computadora, tablet o celular. También se puede agregar a la pantalla de inicio para usar como app nativa.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Mis datos están seguros? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">Sí. Todos los datos se almacenan en servidores seguros con acceso encriptado (HTTPS). Cada institución está completamente aislada: ningún usuario puede ver datos de otra institución. Cumplimos con buenas prácticas de protección de datos.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Qué pasa cuando termina el período de prueba? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">Te avisamos por email cuando te quedan 15 y 5 días. Al vencer, necesitás contratar un plan para seguir creando registros. Todos tus datos se conservan y nunca se borran.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Puedo cancelar el plan en cualquier momento? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">Sí. La suscripción se puede cancelar desde Configuración en cualquier momento. Al cancelar, no se realizan más cobros y podés seguir usando el sistema hasta el fin del período pagado.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Cómo se cobra? ¿Aceptan Mercado Pago? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">Sí, el pago se procesa a través de Mercado Pago. Podés pagar con tarjeta de crédito, débito o saldo de Mercado Pago. El cobro es mensual y automático.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Puedo tener múltiples usuarios para el mismo establecimiento? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">Sí. Podés crear cuentas para todo tu equipo: cuidadores, médicos, administrativos y familiares. Cada rol tiene acceso solo a lo que necesita. Todos trabajan en la misma información en tiempo real.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">
+                    ¿Funciona sin conexión a internet? <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-a">CuidaDiario PRO tiene soporte offline básico gracias al Service Worker: podés navegar y consultar información cargada previamente aunque no tengas señal. Los registros nuevos se sincronizan automáticamente al volver a conectarte.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA BOTTOM ===== -->
+<section class="cta-section">
+    <div class="container">
+        <h2>Empezá hoy. Son 2 minutos.</h2>
+        <p>60 días completamente gratis. Sin tarjeta de crédito. Sin letra chica.</p>
+        <div class="cta-btns">
+            <a href="register.html" class="btn btn-white btn-xl">🚀 Crear cuenta gratis</a>
+            <a href="mailto:edensoftwarework@gmail.com" class="btn btn-ghost btn-xl">💬 Hablar con soporte</a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+    <div class="container">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-logo">🏥 CuidaDiario <span style="background:rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;font-size:.7rem">PRO</span></div>
+                <p class="footer-tagline">Software de gestión clínica para instituciones de cuidado en Argentina. Desarrollado por EDEN SoftWork.</p>
+            </div>
+            <div>
+                <div class="footer-col-title">Producto</div>
+                <ul class="footer-links">
+                    <li><a href="#funciones">Funciones</a></li>
+                    <li><a href="#precios">Precios</a></li>
+                    <li><a href="#como-funciona">Cómo funciona</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-col-title">Cuenta</div>
+                <ul class="footer-links">
+                    <li><a href="register.html">Registrarme</a></li>
+                    <li><a href="index.html">Iniciar sesión</a></li>
+                    <li><a href="reset-password.html">Olvidé mi contraseña</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-col-title">Legal</div>
+                <ul class="footer-links">
+                    <li><a href="pages/privacy.html">Política de privacidad</a></li>
+                    <li><a href="pages/terms.html">Términos y condiciones</a></li>
+                    <li><a href="mailto:edensoftwarework@gmail.com">Soporte</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span class="footer-bottom-text">© 2026 EDEN SoftWork · Todos los derechos reservados</span>
+            <span class="footer-bottom-text">🇦🇷 Hecho en Argentina</span>
+        </div>
+    </div>
+</footer>
+
+<script>
+    function toggleFaq(el) {
+        const item = el.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+        // Cerrar todos
+        document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+        // Abrir este si estaba cerrado
+        if (!isOpen) item.classList.add('open');
+    }
+
+    // Si ya está logueado, mostrar "Ir al dashboard" en lugar de "Comenzar gratis"
+    try {
+        const token = localStorage.getItem('cd_pro_token');
+        if (token) {
+            document.querySelectorAll('a[href="register.html"]').forEach(btn => {
+                btn.href = 'pages/dashboard.html';
+                btn.textContent = btn.textContent.replace('Comenzar gratis', 'Ir al dashboard').replace('Empezar con Básico', 'Ir al dashboard').replace('Empezar con PRO', 'Ir al dashboard').replace('Crear cuenta gratis', 'Ir al dashboard');
+            });
+        }
+    } catch (_) {}
+</script>
+</body>
+</html>

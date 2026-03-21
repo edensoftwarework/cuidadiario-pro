@@ -7,6 +7,11 @@ let _allPacientes = [];
 let _staffList = [];
 let _currentTab  = 'activos'; // 'activos' | 'egresados' | 'todos'
 
+// Paginación
+const PAGE_SIZE = 20;
+let _currentPage = 1;
+let _filteredPacientes = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
     initSidebar();
@@ -65,15 +70,23 @@ function renderPacientes(lista) {
     const countEl = document.getElementById('pacientesCount');
     if (countEl) countEl.textContent = lista.length;
     if (!grid) return;
+
+    // Calcular página actual
+    const totalPages = Math.max(1, Math.ceil(lista.length / PAGE_SIZE));
+    if (_currentPage > totalPages) _currentPage = totalPages;
+    const start = (_currentPage - 1) * PAGE_SIZE;
+    const paginated = lista.slice(start, start + PAGE_SIZE);
+
     if (lista.length === 0) {
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
             <div class="empty-icon">👤</div>
             <h3>No hay pacientes</h3>
             <p>Agregá el primer paciente haciendo clic en "Nuevo Paciente"</p>
         </div>`;
+        _renderPagination(0, 0);
         return;
     }
-    grid.innerHTML = lista.map(p => {
+    grid.innerHTML = paginated.map(p => {
         const edad = calcEdad(p.fecha_nacimiento);
         const isEgresado = !!p.fecha_egreso;
         const editBtn = !isEgresado && canDo('editar_paciente')
@@ -101,6 +114,37 @@ function renderPacientes(lista) {
             </div>
         </div>`;
     }).join('');
+
+    _renderPagination(totalPages, lista.length);
+}
+
+function _renderPagination(totalPages, totalItems) {
+    let container = document.getElementById('pacientesPagination');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'pacientesPagination';
+        container.className = 'pagination-bar';
+        document.getElementById('pacientesGrid')?.insertAdjacentElement('afterend', container);
+    }
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    const start = (_currentPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(_currentPage * PAGE_SIZE, totalItems);
+    container.innerHTML = `
+        <div class="pagination-info">${start}–${end} de ${totalItems}</div>
+        <div class="pagination-controls">
+            <button class="btn btn-sm btn-secondary" onclick="changePacientePage(${_currentPage - 1})" ${_currentPage <= 1 ? 'disabled' : ''}>‹ Anterior</button>
+            <span class="pagination-pages">Página ${_currentPage} de ${totalPages}</span>
+            <button class="btn btn-sm btn-secondary" onclick="changePacientePage(${_currentPage + 1})" ${_currentPage >= totalPages ? 'disabled' : ''}>Siguiente ›</button>
+        </div>`;
+}
+
+function changePacientePage(page) {
+    const totalPages = Math.max(1, Math.ceil(_filteredPacientes.length / PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _currentPage = page;
+    renderPacientes(_filteredPacientes);
+    // Scroll suave al tope de la grilla
+    document.getElementById('pacientesGrid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function initSearch() {
@@ -118,6 +162,8 @@ function applyFilters() {
     if (_currentTab === 'egresados') result = result.filter(p =>  p.fecha_egreso);
     if (q)   result = result.filter(p => `${p.nombre} ${p.apellido || ''} ${p.diagnostico || ''}`.toLowerCase().includes(q));
     if (hab) result = result.filter(p => p.habitacion === hab);
+    _filteredPacientes = result;
+    _currentPage = 1; // Resetear a primera página con cada filtro
     renderPacientes(result);
 }
 
@@ -218,7 +264,15 @@ async function handleSavePaciente(e) {
         closeModal('modalPaciente');
         await loadPacientes();
     } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        if (err.code === 'PLAN_LIMIT' || err.code === 'TRIAL_EXPIRED') {
+            confirmDialog(
+                `${err.message} ¿Querés ver los planes disponibles?`,
+                () => window.location.href = 'configuracion.html',
+                '📋 Ver planes'
+            );
+        } else {
+            showToast('Error: ' + err.message, 'error');
+        }
     } finally {
         btn.disabled = false;
     }

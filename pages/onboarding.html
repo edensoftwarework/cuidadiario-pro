@@ -152,27 +152,28 @@
                         <input type="radio" name="stockModelo" value="institucion" checked>
                         <div class="opt-icon">🏥</div>
                         <div class="opt-title">Stock institucional</div>
-                        <div class="opt-desc">La institución gestiona un inventario centralizado de medicamentos y lo distribuye a cada residente.</div>
+                        <div class="opt-desc">La institución gestiona un inventario centralizado de medicamentos. El personal registra cada ingreso de stock y el sistema lo descuenta automáticamente al registrar cada toma.</div>
                         <details style="margin-top:6px">
                             <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
                             <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Ideal para residencias y hogares donde el establecimiento compra y provee los medicamentos. La farmacia de la institución carga el stock y el sistema lo descuenta automáticamente con cada toma registrada. Un único catálogo para todos los pacientes.
+                                Recomendado para residencias, hogares de larga estadía y centros donde la institución compra y administra la medicación de sus residentes. Se trabaja con un catálogo unificado y alertas de stock mínimo por medicamento.
                             </div>
                         </details>
                     </label>
                     <label class="onb-option" id="optFamiliar">
                         <input type="radio" name="stockModelo" value="familiar">
                         <div class="opt-icon">👨‍👩‍👧</div>
-                        <div class="opt-title">Stock por paciente / familiar</div>
-                        <div class="opt-desc">La familia de cada paciente provee los medicamentos. El personal solo registra las tomas y el stock individual.</div>
+                        <div class="opt-title">Stock por residente</div>
+                        <div class="opt-desc">Cada residente cuenta con su propio inventario de medicamentos, provistos por la familia o por el paciente. El personal registra las tomas y el stock de forma individual.</div>
                         <details style="margin-top:6px">
                             <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
                             <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Ideal para centros de día, rehabilitación o clínicas donde cada paciente trae sus propios medicamentos. Cada paciente tiene su propio inventario. Los familiares pueden consultar el stock de su ser querido en modo lectura.
+                                Recomendado para centros de día, clínicas de rehabilitación o instituciones donde la medicación es aportada por cada paciente o su familia. El inventario y el historial de tomas se gestionan de forma independiente por residente.
                             </div>
                         </details>
                     </label>
                 </div>
+                <p style="font-size:.76rem;color:var(--text-secondary);margin-top:10px;padding:8px 10px;background:var(--bg-page);border-radius:8px">⚙️ Esta configuración puede modificarse en cualquier momento desde <strong>Configuración</strong> en el menú lateral.</p>
             </div>
             <div class="onb-footer">
                 <span></span>
@@ -195,27 +196,28 @@
                         <input type="radio" name="modoOp" value="compartida" checked>
                         <div class="opt-icon">🖥️</div>
                         <div class="opt-title">Estación compartida</div>
-                        <div class="opt-desc">Un dispositivo compartido entre todo el equipo. Cada cuidador elige su nombre antes de registrar, sin contraseña. El administrador mantiene su sesión activa siempre.</div>
+                        <div class="opt-desc">Un único dispositivo de uso compartido para todo el equipo. Cada profesional selecciona su nombre antes de registrar, sin necesidad de contraseña individual.</div>
                         <details style="margin-top:6px">
                             <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
                             <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Ideal para tablets de guardia, estaciones de enfermería o cualquier dispositivo compartido en sala. Aparece un botón en la barra superior que muestra quién está registrando en ese momento. Cualquier persona del equipo puede tocarlo y seleccionar su nombre sin necesidad de contraseña. El acceso con contraseña queda reservado para administradores y familiares.
+                                Recomendado para tablets de guardia, estaciones de enfermería o dispositivos de uso compartido en sala. Se muestra un selector de personal activo en la barra superior de cada pantalla, permitiendo identificar quién realiza cada registro. La autenticación con contraseña queda reservada para el administrador y los familiares.
                             </div>
                         </details>
                     </label>
                     <label class="onb-option" id="optIndividual">
                         <input type="radio" name="modoOp" value="individual">
                         <div class="opt-icon">👤</div>
-                        <div class="opt-title">Acceso individual</div>
-                        <div class="opt-desc">Cada miembro del equipo inicia sesión con su propio email y contraseña. La actividad queda registrada por usuario.</div>
+                        <div class="opt-title">Acceso individual por cuenta</div>
+                        <div class="opt-desc">Cada integrante del equipo accede con su propio usuario y contraseña. Toda la actividad queda registrada e identificada por persona.</div>
                         <details style="margin-top:6px">
                             <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
                             <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Recomendado cuando cada persona trabaja desde su propio dispositivo o cuando se necesita trazabilidad estricta de quién realizó cada registro. Requiere que cada empleado tenga su usuario dado de alta en el sistema.
+                                Recomendado cuando cada integrante del equipo trabaja desde su propio dispositivo o cuando se requiere trazabilidad estricta de la actividad por usuario. Requiere que cada miembro del personal tenga su cuenta creada previamente en el sistema.
                             </div>
                         </details>
                     </label>
                 </div>
+                <p style="font-size:.76rem;color:var(--text-secondary);margin-top:10px;padding:8px 10px;background:var(--bg-page);border-radius:8px">⚙️ Esta configuración puede modificarse en cualquier momento desde <strong>Configuración</strong> en el menú lateral.</p>
             </div>
             <div class="onb-footer">
                 <button class="btn btn-secondary" onclick="onbBack(2)">← Atrás</button>

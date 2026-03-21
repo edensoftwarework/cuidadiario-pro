@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateSidebarUser();
     const user = API_B2B.getUser();
 
+    // Role guard: admins belong in dashboard, familiares in familiar.html
+    if (user?.rol === 'admin_institucion') { window.location.href = 'dashboard.html'; return; }
+    if (user?.rol === 'familiar')          { window.location.href = 'familiar.html';  return; }
+
     // Fill cuidador card
     const avatarEl = document.getElementById('cuidadorAvatar');
     const nombreEl = document.getElementById('cuidadorNombre');

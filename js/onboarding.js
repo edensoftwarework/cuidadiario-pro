@@ -141,6 +141,7 @@ async function onbFinish() {
         // Guardar configuración en el backend (nombre/tipo/tel ya guardados en el registro)
         await API_B2B.updateInstitucion({
             stock_modelo:    _onbData.stock_modelo,
+            shared_mode:     _onbData.modo_compartida,
             onboarding_done: true
         });
 

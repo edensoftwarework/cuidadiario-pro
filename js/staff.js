@@ -142,7 +142,15 @@ async function handleSaveStaff(e) {
         closeModal('modalStaff');
         await loadStaff();
     } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        if (err.code === 'PLAN_LIMIT' || err.code === 'TRIAL_EXPIRED') {
+            confirmDialog(
+                `${err.message} ¿Querés ver los planes disponibles?`,
+                () => window.location.href = 'configuracion.html',
+                '📋 Ver planes'
+            );
+        } else {
+            showToast('Error: ' + err.message, 'error');
+        }
     } finally {
         btn.disabled = false;
     }

@@ -244,20 +244,4 @@ function intensidadBadge(v) {
     return `<span class="badge ${cls}">${v}/10</span>`;
 }
 
-async function exportarDatos() {
-    showToast('Generando exportación...', 'info');
-    try {
-        const res = await API_B2B.get('/api/b2b/institucion');
-        const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `cuidadiario-export-${today()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    } catch (e) {
-        showToast('Error al exportar datos', 'error');
-    }
-}
-
 document.addEventListener('DOMContentLoaded', initReportes);

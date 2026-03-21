@@ -41,8 +41,11 @@ const API_B2B = {
         }
         if (!res.ok) {
             let msg = `Error ${res.status}`;
-            try { const e = await res.json(); msg = e.error || msg; } catch {}
-            throw new Error(msg);
+            let code = null;
+            try { const e = await res.json(); msg = e.error || msg; code = e.code || null; } catch {}
+            const apiErr = new Error(msg);
+            if (code) apiErr.code = code;
+            throw apiErr;
         }
         return res.json();
     },
@@ -63,7 +66,21 @@ const API_B2B = {
     // AUTH
     // ============================================
     async register(data)          { const r = await this.postNoAuth('/api/b2b/auth/register', data); this.setToken(r.token); this.setUser(r.user); return r; },
-    async login(email, password)  { const r = await this.postNoAuth('/api/b2b/auth/login', { email, password }); this.setToken(r.token); this.setUser(r.user); return r; },
+    async login(email, password)  {
+        const r = await this.postNoAuth('/api/b2b/auth/login', { email, password });
+        this.setToken(r.token);
+        this.setUser(r.user);
+        // Sincronizar configuración de la institución al localStorage para persistencia cross-device
+        if (r.user) {
+            if (r.user.stock_modelo) localStorage.setItem('stock_modelo', r.user.stock_modelo);
+            if (r.user.shared_mode) {
+                localStorage.setItem('cd_shared_mode', '1');
+            } else {
+                localStorage.removeItem('cd_shared_mode');
+            }
+        }
+        return r;
+    },
     async getMe()                 { return this.get('/api/b2b/auth/me'); },
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },

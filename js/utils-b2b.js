@@ -143,6 +143,50 @@ function populateSidebarUser() {
     }
     // Shared station mode: inject worker chip if the feature is enabled
     initSharedStationUI();
+    // Trial expiry banner for admin
+    if (user.rol === 'admin_institucion') _checkTrialBanner(user);
+}
+
+/**
+ * Muestra un banner de aviso cuando el período de prueba está por vencer o ya venció.
+ * Solo se muestra una vez por sesión (sessionStorage) para no molestar.
+ */
+function _checkTrialBanner(user) {
+    if (!user || user.plan !== 'free' || !user.trial_started_at) return;
+    // Calcular días restantes
+    const trialEnd = new Date(user.trial_started_at);
+    trialEnd.setDate(trialEnd.getDate() + 60);
+    const daysLeft = Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24));
+
+    let type = null;
+    if (daysLeft <= 0) type = 'expired';
+    else if (daysLeft <= 5) type = 'critical';
+    else if (daysLeft <= 15) type = 'warn';
+
+    if (!type) return; // más de 15 días — no molestar
+
+    const sessionKey = `cd_trial_banner_${type}`;
+    if (sessionStorage.getItem(sessionKey)) return; // ya se mostró esta sesión
+    sessionStorage.setItem(sessionKey, '1');
+
+    const msgs = {
+        expired:  { text: '🔒 Tu período de prueba venció. Activá un plan para seguir registrando.',  color: '#DC2626', bg: '#FEF2F2' },
+        critical: { text: `⚠️ Tu prueba vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'}. Activá un plan ahora.`, color: '#92400E', bg: '#FFFBEB' },
+        warn:     { text: `⏳ Tu prueba vence en ${daysLeft} días. Elegí un plan antes de que expire.`,   color: '#92400E', bg: '#FFFBEB' },
+    };
+    const m = msgs[type];
+
+    const banner = document.createElement('div');
+    banner.id = 'trialExpiryBanner';
+    banner.style.cssText = `background:${m.bg};color:${m.color};padding:10px 16px;font-size:.83rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid ${m.color}33;position:sticky;top:0;z-index:100`;
+    banner.innerHTML = `
+        <span>${m.text}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <a href="configuracion.html" style="background:${m.color};color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none;font-size:.78rem">Ver planes</a>
+            <button onclick="this.closest('#trialExpiryBanner').remove()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:${m.color};line-height:1;padding:0">✕</button>
+        </span>`;
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.insertBefore(banner, mainContent.firstChild);
 }
 
 // ============================================
@@ -269,7 +313,7 @@ function canDo(action) {
 // ============================================
 // CONFIRM DIALOG (custom)
 // ============================================
-function confirmDialog(message, onConfirm) {
+function confirmDialog(message, onConfirm, confirmLabel = 'Confirmar') {
     let modal = document.getElementById('confirmModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -293,6 +337,7 @@ function confirmDialog(message, onConfirm) {
     const okBtn = document.getElementById('confirmOkBtn');
     const newBtn = okBtn.cloneNode(true);
     okBtn.replaceWith(newBtn);
+    newBtn.textContent = confirmLabel;
     newBtn.addEventListener('click', () => { closeModal('confirmModal'); onConfirm(); });
     openModal('confirmModal');
 }

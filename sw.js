@@ -6,20 +6,25 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-const CACHE_NAME = 'cuidadiario-pro-v1';
-const CACHE_NAME_API = 'cuidadiario-pro-api-v1';
+const CACHE_NAME = 'cuidadiario-pro-v2';
+const CACHE_NAME_API = 'cuidadiario-pro-api-v2';
 
 const STATIC_ASSETS = [
     './',
     './index.html',
+    './landing.html',
     './register.html',
+    './verify-email.html',
     './reset-password.html',
     './pages/dashboard.html',
     './pages/pacientes.html',
     './pages/paciente.html',
     './pages/staff.html',
     './pages/cuidador.html',
+    './pages/familiar.html',
+    './pages/onboarding.html',
     './pages/reportes.html',
+    './pages/catalogo.html',
     './pages/configuracion.html',
     './css/styles-b2b.css',
     './js/api-b2b.js',
@@ -29,7 +34,10 @@ const STATIC_ASSETS = [
     './js/paciente.js',
     './js/staff.js',
     './js/cuidador.js',
+    './js/familiar.js',
+    './js/onboarding.js',
     './js/reportes.js',
+    './js/catalogo.js',
     './js/configuracion.js',
     './manifest.json'
 ];

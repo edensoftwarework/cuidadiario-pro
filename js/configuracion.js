@@ -68,6 +68,20 @@ async function cargarInstitucion() {
         const smEl = document.getElementById('instStockModelo');
         if (smEl) smEl.value = modelo;
         onStockModeloChange(modelo);
+        // Sincronizar stock_modelo al localStorage para uso cross-page
+        localStorage.setItem('stock_modelo', modelo);
+
+        // Sincronizar shared_mode desde la DB (fuente de verdad cross-device)
+        const sharedMode = !!inst.shared_mode;
+        if (sharedMode) {
+            localStorage.setItem('cd_shared_mode', '1');
+        } else {
+            localStorage.removeItem('cd_shared_mode');
+        }
+        const smToggle = document.getElementById('sharedModeToggle');
+        if (smToggle) smToggle.checked = sharedMode;
+        const smInfo = document.getElementById('sharedModeInfo');
+        if (smInfo) smInfo.style.display = sharedMode ? '' : 'none';
 
         // Actualizar nombre en topbar
         if (inst.nombre) {
@@ -184,6 +198,8 @@ async function guardarInstitucion(e) {
         await API_B2B.patch('/api/b2b/institucion', payload);
         showToast('Institución actualizada ✅', 'success');
         onStockModeloChange(payload.stock_modelo);
+        // Sincronizar stock_modelo al localStorage para uso cross-page y cross-device
+        localStorage.setItem('stock_modelo', payload.stock_modelo);
 
         const tb = document.getElementById('topbarInstitucion');
         if (tb) tb.textContent = payload.nombre;
@@ -244,6 +260,8 @@ function toggleSharedMode(enabled) {
     if (enabled) {
         localStorage.setItem('cd_shared_mode', '1');
         if (info) info.style.display = '';
+        // Persistir en la DB para sincronización cross-device
+        API_B2B.updateInstitucion({ shared_mode: true }).catch(err => console.warn('[shared_mode] Error guardando en DB:', err.message));
         // Si no hay nadie activo, abrir el selector enseguida
         if (!sessionStorage.getItem('cd_active_worker')) {
             setTimeout(() => openWorkerSwitcher(), 350);
@@ -254,6 +272,8 @@ function toggleSharedMode(enabled) {
         sessionStorage.removeItem('cd_active_worker');
         if (info) info.style.display = 'none';
         document.getElementById('workerChip')?.remove();
+        // Persistir en la DB para sincronización cross-device
+        API_B2B.updateInstitucion({ shared_mode: false }).catch(err => console.warn('[shared_mode] Error guardando en DB:', err.message));
         showToast('Modo estación compartida desactivado', 'info');
     }
 }
@@ -660,22 +680,30 @@ async function verificarPlan(preapprovalId = null) {
     if (result) result.innerHTML = '';
     try {
         const res = await API_B2B.verifySubscription(preapprovalId);
-        const plan = res.plan || 'basico';
-        // Actualizar badge y botones
+        const plan = res.plan || 'free';
+
+        // 'current' = solo consulta sin cambios (no se pasó preapproval_id)
+        if (res.status === 'current') {
+            renderPlanBadge(plan);
+            const planLabels = { pro: 'Plan PRO', basico: 'Plan Básico', free: 'Período de prueba', expired: 'Sin plan activo' };
+            if (result) result.innerHTML = `<div class="alert alert-info" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">ℹ️</span>Tu plan actual es: <strong>${planLabels[plan] || plan}</strong>. Si ya realizaste un pago, aguardá la confirmación de MercadoPago o usá el enlace de verificación que llegó a tu email.</div>`;
+            showToast('Plan consultado', 'info');
+            return;
+        }
+
+        // Actualizar badge, botones y usuario local
         renderPlanBadge(plan);
-        // Actualizar objeto usuario local
         const user = API_B2B.getUser();
         if (user) { user.plan = plan; API_B2B.setUser(user); }
-        const msgs = {
-            pro:     '✅ ¡Plan PRO activo! Todos los beneficios desbloqueados.',
-            basico:  '✅ Plan Básico activo.',
-            pending: '⏳ El pago está siendo procesado. Puede demorar unos minutos. Intentá verificar nuevamente.',
-            not_found: 'No se encontró suscripción activa en MercadoPago.'
+
+        const isOk  = plan === 'pro' || plan === 'basico';
+        const msgs  = {
+            authorized: plan === 'pro' ? '✅ ¡Plan PRO activo! Todos los beneficios habilitados.' : '✅ Plan Básico activo.',
+            pending:    '⏳ El pago está siendo procesado. Puede demorar unos minutos.',
         };
-        const statusMsg = msgs[res.status] || msgs[plan] || res.message || 'Estado actualizado.';
-        const isOk = plan === 'pro' || plan === 'basico';
+        const statusMsg = msgs[res.status] || res.message || (isOk ? 'Plan activado correctamente.' : 'Sin suscripción activa.');
         if (result) result.innerHTML = `<div class="alert alert-${isOk ? 'success' : 'warning'}" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">${isOk ? '✅' : '⚠️'}</span>${statusMsg}</div>`;
-        showToast(isOk ? 'Plan actualizado ✅' : 'Sin suscripción activa aún', isOk ? 'success' : 'warning');
+        showToast(isOk ? 'Plan activado ✅' : 'Sin suscripción activa aún', isOk ? 'success' : 'warning');
     } catch (err) {
         if (result) result.innerHTML = `<div class="alert alert-danger" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">❌</span>Error: ${escapeHtml(err.message)}</div>`;
         showToast('Error al verificar: ' + err.message, 'error');
