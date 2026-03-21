@@ -223,8 +223,61 @@
             </div>
         </div>
 
-        <!-- ========== STEP 3: Confirmación ========== -->
+        <!-- ========== STEP 3: Planes ========== -->
         <div class="onb-step" id="onbStep3">
+            <div class="onb-header">
+                <div class="onb-step-badge">3</div>
+                <div>
+                    <div class="onb-step-title">Planes y precios</div>
+                    <div class="onb-step-subtitle">Cómo funciona la suscripción</div>
+                </div>
+            </div>
+            <div class="onb-body">
+                <!-- Trial info -->
+                <div style="background:#EEF2FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:4px solid var(--pro-primary)">
+                    <div style="font-weight:700;font-size:.95rem;color:var(--pro-primary);margin-bottom:6px">🎁 60 días de prueba gratuita</div>
+                    <p style="font-size:.84rem;color:#374151;line-height:1.6;margin:0">
+                        Tenés <strong>60 días para explorar todas las funciones</strong> sin pagar nada.<br>
+                        Sin tarjeta. Sin compromiso. Al vencer, elegís el plan que más se adapte a tu institución.
+                    </p>
+                </div>
+                <!-- Plan cards -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+                    <div style="border:2px solid var(--border-color);border-radius:12px;padding:14px">
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:6px">Plan Básico</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:#374151;margin-bottom:8px">$7.500<span style="font-size:.75rem;font-weight:400">/mes</span></div>
+                        <ul style="font-size:.78rem;color:#6B7280;line-height:1.8;padding-left:14px;margin:0">
+                            <li>Hasta 20 pacientes</li>
+                            <li>Hasta 5 miembros staff</li>
+                            <li>Registros ilimitados</li>
+                            <li>Medicamentos, síntomas, signos</li>
+                        </ul>
+                    </div>
+                    <div style="border:2px solid var(--pro-primary);border-radius:12px;padding:14px;background:#EEF2FF">
+                        <div style="font-weight:700;font-size:.9rem;margin-bottom:2px;color:var(--pro-primary)">Plan PRO ⭐</div>
+                        <div style="font-size:.68rem;color:var(--pro-primary);margin-bottom:6px">Recomendado</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:var(--pro-primary);margin-bottom:8px">$15.000<span style="font-size:.75rem;font-weight:400">/mes</span></div>
+                        <ul style="font-size:.78rem;color:#374151;line-height:1.8;padding-left:14px;margin:0">
+                            <li><strong>Pacientes ilimitados</strong></li>
+                            <li><strong>Staff ilimitado</strong></li>
+                            <li>Reportes PDF exportables</li>
+                            <li>Soporte prioritario</li>
+                        </ul>
+                    </div>
+                </div>
+                <p style="font-size:.78rem;color:var(--text-secondary);line-height:1.5">
+                    💡 Podés cambiar o contratar tu plan en cualquier momento desde <strong>Configuración → Plan y suscripción</strong>.
+                    Todos los precios en pesos argentinos (ARS). Facturación mensual vía MercadoPago.
+                </p>
+            </div>
+            <div class="onb-footer">
+                <button class="btn btn-secondary" onclick="onbBack(3)">← Atrás</button>
+                <button class="btn btn-primary" onclick="onbNext(3)">Entendido →</button>
+            </div>
+        </div>
+
+        <!-- ========== STEP 4: Confirmación ========== -->
+        <div class="onb-step" id="onbStep4">
             <div class="onb-header">
                 <div class="onb-step-badge">✓</div>
                 <div>
@@ -239,7 +292,7 @@
                 </p>
             </div>
             <div class="onb-footer">
-                <button class="btn btn-secondary" onclick="onbBack(3)">← Atrás</button>
+                <button class="btn btn-secondary" onclick="onbBack(4)">← Atrás</button>
                 <button class="btn btn-primary" id="onbFinishBtn" onclick="onbFinish()">
                     Ir al panel →
                 </button>

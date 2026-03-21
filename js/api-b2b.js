@@ -184,6 +184,19 @@ const API_B2B = {
     },
 
     // ============================================
+    // SUSCRIPCIÓN / PLAN (MercadoPago)
+    // ============================================
+    async createSubscription(plan = 'pro', testMode = false) {
+        return this.post('/api/b2b/create-subscription', { plan, test_mode: testMode });
+    },
+    async verifySubscription(preapprovalId = null) {
+        const url = preapprovalId
+            ? `/api/b2b/verify-subscription?preapproval_id=${encodeURIComponent(preapprovalId)}`
+            : '/api/b2b/verify-subscription';
+        return this.get(url);
+    },
+
+    // ============================================
     // DOCUMENTOS ADJUNTOS
     // ============================================
     async getDocumentos(paciente_id)  { return this.get(`/api/b2b/documentos?paciente_id=${paciente_id}`); },

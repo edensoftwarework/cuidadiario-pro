@@ -39,6 +39,7 @@ async function initConfiguracion() {
     if (isAdmin) {
         cargarInstitucion();
         loadPermisos();
+        cargarEstadoPlan();
     }
     loadNotifPrefs();
     loadSharedMode();
@@ -573,3 +574,117 @@ function buildExportHTML(d) {
 }
 
 document.addEventListener('DOMContentLoaded', initConfiguracion);
+
+// ============================================
+// PLAN & SUSCRIPCIÓN
+// ============================================
+async function cargarEstadoPlan() {
+    try {
+        const inst = await API_B2B.get('/api/b2b/institucion');
+        const data = inst.institucion || inst;
+        let plan = data.plan || 'free';
+        // Si sigue en 'free', verificar si los 60 días de prueba ya vencieron
+        if (plan === 'free' && data.trial_started_at) {
+            const trialEnd = new Date(data.trial_started_at);
+            trialEnd.setDate(trialEnd.getDate() + 60);
+            if (trialEnd < new Date()) plan = 'expired';
+        }
+        renderPlanBadge(plan, data.trial_started_at);
+    } catch {
+        renderPlanBadge('free');
+    }
+}
+
+function renderPlanBadge(plan, trialStartedAt = null) {
+    const wrap      = document.getElementById('planBadgeWrap');
+    const desc      = document.getElementById('planDesc');
+    const btnPRO    = document.getElementById('btnSuscribirPRO');
+    const btnBasico = document.getElementById('btnSuscribirBasico');
+    const btnVerif  = document.getElementById('btnVerificarPlan');
+    if (!wrap) return;
+
+    // Calcular días restantes de prueba
+    let daysLeft = null;
+    if (trialStartedAt && (plan === 'free' || plan === 'trial')) {
+        const end = new Date(trialStartedAt);
+        end.setDate(end.getDate() + 60);
+        daysLeft = Math.max(0, Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24)));
+    }
+
+    const trialLabel = daysLeft !== null ? `⏳ Período de prueba (${daysLeft}d restantes)` : '⏳ Período de prueba';
+    const trialDesc  = daysLeft !== null
+        ? `Estás en el período de prueba gratuito. Te quedan ${daysLeft} días. Todas las funciones habilitadas. Al vencer, elegí el plan que mejor se adapte.`
+        : 'Estás en el período de prueba gratuito de 60 días. Todas las funciones habilitadas. Al vencer, elegí el plan que mejor se adapte.';
+
+    const configs = {
+        pro:     { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">⭐ Plan PRO activo</span>`,
+                   desc: 'Plan PRO activo — pacientes ilimitados, staff ilimitado, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false },
+        basico:  { badge: `<span class="badge badge-teal" style="font-size:.9rem;padding:6px 16px">✅ Plan Básico activo</span>`,
+                   desc: 'Plan Básico activo — hasta 20 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false },
+        trial:   { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
+                   desc: trialDesc, showPRO: true, showBasico: true },
+        free:    { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
+                   desc: trialDesc, showPRO: true, showBasico: true },
+        expired: { badge: `<span class="badge badge-gray" style="font-size:.9rem;padding:6px 16px">🔒 Sin plan activo</span>`,
+                   desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: true, showBasico: true },
+    };
+    const cfg = configs[plan] || configs.free;
+    wrap.innerHTML = cfg.badge;
+    if (desc) desc.textContent = cfg.desc;
+    if (btnPRO)    btnPRO.style.display    = cfg.showPRO    ? '' : 'none';
+    if (btnBasico) btnBasico.style.display = cfg.showBasico ? '' : 'none';
+    if (btnVerif)  btnVerif.style.display  = (plan !== 'pro') ? '' : 'none';
+}
+
+async function suscribirPlan(plan, testMode) {
+    const btn = document.getElementById(testMode ? null : (plan === 'pro' ? 'btnSuscribirPRO' : 'btnSuscribirBasico'));
+    if (btn) { btn.disabled = true; btn.textContent = 'Redirigiendo…'; }
+    try {
+        const res = await API_B2B.createSubscription(plan, testMode);
+        if (res.init_point) {
+            window.location.href = res.init_point;
+        } else {
+            showToast('No se pudo obtener el link de pago', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+        }
+    } catch (err) {
+        showToast('Error: ' + (err.message || 'No se pudo crear la suscripción'), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+    }
+}
+
+async function verificarPlan(preapprovalId = null) {
+    const btn    = document.getElementById('btnVerificarPlan');
+    const result = document.getElementById('planVerifyResult');
+    if (btn) { btn.disabled = true; btn.textContent = '🔄 Verificando…'; }
+    if (result) result.innerHTML = '';
+    try {
+        const res = await API_B2B.verifySubscription(preapprovalId);
+        const plan = res.plan || 'basico';
+        // Actualizar badge y botones
+        renderPlanBadge(plan);
+        // Actualizar objeto usuario local
+        const user = API_B2B.getUser();
+        if (user) { user.plan = plan; API_B2B.setUser(user); }
+        const msgs = {
+            pro:     '✅ ¡Plan PRO activo! Todos los beneficios desbloqueados.',
+            basico:  '✅ Plan Básico activo.',
+            pending: '⏳ El pago está siendo procesado. Puede demorar unos minutos. Intentá verificar nuevamente.',
+            not_found: 'No se encontró suscripción activa en MercadoPago.'
+        };
+        const statusMsg = msgs[res.status] || msgs[plan] || res.message || 'Estado actualizado.';
+        const isOk = plan === 'pro' || plan === 'basico';
+        if (result) result.innerHTML = `<div class="alert alert-${isOk ? 'success' : 'warning'}" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">${isOk ? '✅' : '⚠️'}</span>${statusMsg}</div>`;
+        showToast(isOk ? 'Plan actualizado ✅' : 'Sin suscripción activa aún', isOk ? 'success' : 'warning');
+    } catch (err) {
+        if (result) result.innerHTML = `<div class="alert alert-danger" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">❌</span>Error: ${escapeHtml(err.message)}</div>`;
+        showToast('Error al verificar: ' + err.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 Verificar estado del pago'; }
+    }
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}

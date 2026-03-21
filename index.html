@@ -107,7 +107,7 @@
             if (localStorage.getItem('cd_shared_mode') === '1') {
                 if (user.rol === 'cuidador_staff' || user.rol === 'medico') {
                     API_B2B.removeToken(); // limpiar sesión sin redirigir
-                    showAlert('Esta institución usa el modo Estación Compartida. En este modo, el personal operativo no inicia sesión con contraseña. Pedíle al administrador que active el panel y te seleccione como la persona que está registrando en este turno.', 'warning');                    // Limpiar contraseña para evitar que el navegador la recomplete sin que el usuario lo note
+                    showAlert('Esta institución usa el modo Estación Compartida. En este modo, el personal operativo no inicia sesión con contraseña. Solicita al administrador que active el panel y te seleccione como la persona que está registrando en este turno.', 'warning');                    // Limpiar contraseña para evitar que el navegador la recomplete sin que el usuario lo note
                     document.getElementById('loginPass').value = '';                    btn.disabled = false;
                     btn.innerHTML = 'Iniciar sesión';
                     return;

@@ -6,7 +6,7 @@
 
 // ── Estado del wizard ──
 let _currentStep = 1;
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 // Datos recopilados en el wizard
 // (nombre, tipo, teléfono ya se guardaron en el registro)
@@ -75,6 +75,9 @@ function onbNext(fromStep) {
     }
     if (fromStep === 2) {
         _onbData.modo_compartida = (document.querySelector('input[name="modoOp"]:checked')?.value || 'individual') === 'compartida';
+    }
+    if (fromStep === 3) {
+        // Step 3 is the plans info step — just build summary before going to step 4
         _buildSummary();
     }
     _clearAlert();

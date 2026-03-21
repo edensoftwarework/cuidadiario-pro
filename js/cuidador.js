@@ -55,11 +55,7 @@ function renderMisPacientes(lista) {
     if (empty) empty.style.display = (lista.length === 0) ? 'block' : 'none';
     if (!grid) return;
     if (lista.length === 0) {
-        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-            <div class="empty-icon">👤</div>
-            <h3>No tenés residentes / pacientes asignados</h3>
-            <p>Contactá al administrador para que te asigne pacientes.</p>
-        </div>`;
+        grid.innerHTML = '';
         return;
     }
 
