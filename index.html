@@ -1,160 +1,38 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
+<!--
+    index.html â€” Smart router
+    - Usuario NO autenticado â†’ landing.html
+    - Usuario autenticado    â†’ su pÃ¡gina segÃºn rol
+    La pÃ¡gina de login estÃ¡ en login.html
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CuidaDiario PRO — Plataforma de gestión clínica para instituciones de cuidado y salud">
-    <title>Iniciar sesión — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>CuidaDiario PRO</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>ðŸ¥</text></svg>">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/styles-b2b.css">
+    <style>
+        body { margin:0; background:#0D2B6B; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        .spin { width:36px; height:36px; border:3px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; }
+        @keyframes sp { to { transform:rotate(360deg); } }
+    </style>
 </head>
 <body>
-<div class="auth-bg">
-    <div class="auth-card">
-        <div class="auth-logo">
-            <span class="logo-emoji">🏥</span>
-            <h1>CuidaDiario <span>PRO</span></h1>
-            <p>Gestión de residentes y pacientes para instituciones de cuidado</p>
-        </div>
-
-        <div id="alertMsg"></div>
-
-        <!-- Login Form -->
-        <form id="loginForm" autocomplete="on">
-            <div class="form-group">
-                <label class="form-label">Email institucional</label>
-                <input type="email" name="email" class="form-control" placeholder="admin@miinstitución.com" required autocomplete="email">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Contraseña</label>
-                <div class="input-group">
-                    <input type="password" id="loginPass" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
-                    <button type="button" class="input-group-btn" onclick="togglePass('loginPass',this)" title="Mostrar contraseña"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block" id="loginBtn">
-                Iniciar sesión
-            </button>
-            <div class="d-flex justify-between align-center mt-12">
-                <span class="auth-link" onclick="showForgot()">¿Olvidaste tu contraseña?</span>
-                <span class="auth-link" onclick="goRegister()">Registrar institución →</span>
-            </div>
-        </form>
-
-        <!-- Forgot Password Form -->
-        <form id="forgotForm" class="hidden" autocomplete="off">
-            <div class="alert alert-info"><span class="alert-icon">ℹ️</span>Te enviaremos un link de recuperación a tu email.</div>
-            <div class="form-group">
-                <label class="form-label">Email institucional</label>
-                <input type="email" name="email" class="form-control" placeholder="admin@miinstitución.com" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block" id="forgotBtn">Enviar link de recuperación</button>
-            <div class="text-center mt-12">
-                <span class="auth-link" onclick="showLogin()">← Volver al login</span>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div style="text-align:center;padding:20px 0 8px;font-size:.78rem;color:#9CA3AF">
-    <a href="pages/privacy.html" style="color:#6B7280;text-decoration:none">Privacidad</a> &nbsp;·&nbsp;
-    <a href="pages/terms.html" style="color:#6B7280;text-decoration:none">Términos</a> &nbsp;·&nbsp;
-    <a href="mailto:edensoftwarework@gmail.com" style="color:#6B7280;text-decoration:none">Soporte</a> &nbsp;·&nbsp;
-    © 2026 EDEN SoftWork
-</div>
-
+<div class="spin"></div>
 <script src="js/api-b2b.js"></script>
 <script>
-    // Redirect if already logged in
+(function () {
     if (API_B2B.isAuth()) {
-        const u = API_B2B.getUser();
-        if (u?.rol === 'cuidador_staff' || u?.rol === 'medico') window.location.href = 'pages/cuidador.html';
-        else if (u?.rol === 'familiar') window.location.href = 'pages/familiar.html';
-        else if (u?.rol === 'admin_institucion' && !u?.onboarding_done) window.location.href = 'pages/onboarding.html';
-        else window.location.href = 'pages/dashboard.html';
+        var u = API_B2B.getUser();
+        if (u && (u.rol === 'cuidador_staff' || u.rol === 'medico')) { window.location.replace('pages/cuidador.html'); return; }
+        if (u && u.rol === 'familiar')                                 { window.location.replace('pages/familiar.html');  return; }
+        if (u && u.rol === 'admin_institucion' && !u.onboarding_done)  { window.location.replace('pages/onboarding.html'); return; }
+        window.location.replace('pages/dashboard.html');
+    } else {
+        window.location.replace('landing.html');
     }
-
-    // Mostrar aviso si la sesión expiró
-    if (new URLSearchParams(window.location.search).get('expired') === '1') {
-        showAlert('⏱️ Tu sesión expiró. Por favor, volvé a iniciar sesión.', 'warning');
-        history.replaceState(null, '', window.location.pathname);
-    }
-
-    function showAlert(msg, type = 'danger') {
-        const icons = { danger: '❌', success: '✅', warning: '⚠️', info: 'ℹ️' };
-        const el = document.getElementById('alertMsg');
-        el.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || '❌'}</span>${msg}</div>`;
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    function clearAlert() { document.getElementById('alertMsg').innerHTML = ''; }
-    function showForgot() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('forgotForm').classList.remove('hidden'); clearAlert(); }
-    function showLogin() { document.getElementById('forgotForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); clearAlert(); }
-    function goRegister() { window.location.href = 'register.html'; }
-
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearAlert();
-        const btn = document.getElementById('loginBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Ingresando...';
-        const f = e.target;
-        try {
-            const data = await API_B2B.login(f.email.value.trim(), f.password.value);
-            const user = data.user;
-
-            // En modo estación compartida, solo admins y familiares pueden usar email/contraseña
-            if (localStorage.getItem('cd_shared_mode') === '1') {
-                if (user.rol === 'cuidador_staff' || user.rol === 'medico') {
-                    API_B2B.removeToken(); // limpiar sesión sin redirigir
-                    showAlert('Esta institución usa el modo Estación Compartida. En este modo, el personal operativo no inicia sesión con contraseña. Solicita al administrador que active el panel y te seleccione como la persona que está registrando en este turno.', 'warning');                    // Limpiar contraseña para evitar que el navegador la recomplete sin que el usuario lo note
-                    document.getElementById('loginPass').value = '';                    btn.disabled = false;
-                    btn.innerHTML = 'Iniciar sesión';
-                    return;
-                }
-            }
-
-            if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
-                window.location.href = 'pages/cuidador.html';
-            } else if (user?.rol === 'familiar') {
-                window.location.href = 'pages/familiar.html';
-            } else if (user?.rol === 'admin_institucion' && user?.onboarding_done === false) {
-                window.location.href = 'pages/onboarding.html';
-            } else {
-                window.location.href = 'pages/dashboard.html';
-            }
-        } catch (err) {
-            showAlert(err.message);
-            btn.disabled = false;
-            btn.innerHTML = 'Iniciar sesión';
-        }
-    });
-
-    document.getElementById('forgotForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('forgotBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Enviando...';
-        try {
-            await API_B2B.forgotPassword(e.target.email.value.trim());
-            showAlert('✅ Si el email existe, recibirás el link en minutos.', 'success');
-        } catch (err) {
-            showAlert(err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = 'Enviar link de recuperación';
-        }
-    });
-
-    function togglePass(id, btn) {
-        const inp = document.getElementById(id);
-        if (!inp) return;
-        inp.type = inp.type === 'password' ? 'text' : 'password';
-        const vis = inp.type === 'text';
-        btn.innerHTML = vis
-            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
-            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-    }
+})();
 </script>
 </body>
 </html>

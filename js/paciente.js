@@ -336,7 +336,41 @@ async function loadMedicamentos() {
     try {
         _meds = await API_B2B.getMedicamentos(_pacienteId);
         renderMedicamentos(_meds);
+        loadHistorialTomas(); // non-blocking, refresh alongside stock
     } catch (err) { console.error(err); }
+}
+
+// ============================================
+// HISTORIAL DE TOMAS
+// ============================================
+async function loadHistorialTomas() {
+    try {
+        const hist = await API_B2B.getHistorialMeds(_pacienteId);
+        renderHistorialTomas(hist);
+    } catch (_) {}
+}
+
+function renderHistorialTomas(lista) {
+    const el = document.getElementById('historialTomasContent');
+    if (!el) return;
+    const header = `<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;border-top:2px solid var(--border-color);margin-top:16px">
+        <span style="font-weight:700;font-size:.88rem;color:var(--text-primary)">🕐 Últimas tomas registradas</span>
+    </div>`;
+    if (!lista || lista.length === 0) {
+        el.innerHTML = header + `<p style="font-size:.82rem;color:var(--text-secondary);padding:4px 0 12px">Sin tomas registradas aún para este paciente.</p>`;
+        return;
+    }
+    const rows = lista.slice(0, 15).map(t => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-color)">
+            <span style="flex-shrink:0;margin-top:1px;font-size:.95rem">✅</span>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}</div>
+                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
+                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
+                </div>
+            </div>
+        </div>`).join('');
+    el.innerHTML = header + `<div>${rows}</div>`;
 }
 
 function renderMedicamentos(lista) {
@@ -589,8 +623,9 @@ async function deleteCita(id) {
 // ============================================
 let _tareas = [];
 async function loadTareas() {
-    try { _tareas = await API_B2B.getTareas(_pacienteId); renderTareas(_tareas); } catch (err) { console.error(err); }
+    try { _tareas = await API_B2B.getTareas(_pacienteId); renderTareas(_tareas); loadHistorialTareas(); } catch (err) { console.error(err); }
 }
+
 
 function renderTareas(lista) {
     const el = document.getElementById('tareasContent');
@@ -616,6 +651,39 @@ function renderTareas(lista) {
                 <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${t.id})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
+}
+
+// ============================================
+// HISTORIAL DE TAREAS
+// ============================================
+async function loadHistorialTareas() {
+    try {
+        const hist = await API_B2B.getHistorialTareas(_pacienteId);
+        renderHistorialTareas(hist);
+    } catch (_) {}
+}
+
+function renderHistorialTareas(lista) {
+    const el = document.getElementById('historialTareasContent');
+    if (!el) return;
+    const header = `<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;border-top:2px solid var(--border-color);margin-top:16px">
+        <span style="font-weight:700;font-size:.88rem;color:var(--text-primary)">🕐 Últimas tareas completadas</span>
+    </div>`;
+    if (!lista || lista.length === 0) {
+        el.innerHTML = header + `<p style="font-size:.82rem;color:var(--text-secondary);padding:4px 0 12px">Sin tareas completadas aún para este paciente.</p>`;
+        return;
+    }
+    const rows = lista.slice(0, 15).map(t => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-color)">
+            <span style="flex-shrink:0;margin-top:1px;font-size:.95rem">✅</span>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.tarea_titulo || '—')}</div>
+                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
+                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.completador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
+                </div>
+            </div>
+        </div>`).join('');
+    el.innerHTML = header + `<div>${rows}</div>`;
 }
 
 let _editingTareaId = null;
@@ -658,6 +726,7 @@ async function handleCompletarTarea(e) {
         await API_B2B.completarTarea(id, f.tareaNotas.value.trim(), getRegistrador());
         showToast('Tarea completada ✅', 'success');
         closeModal('modalCompletarTarea');
+        loadTareas(); // refresh list + historial (non-blocking)
     } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 

@@ -47,7 +47,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllMo
 // ============================================
 // AUTH GUARD
 // ============================================
-function requireAuth(redirectTo = '../index.html') {
+function requireAuth(redirectTo = '../login.html') {
     if (!API_B2B.isAuth()) {
         window.location.href = redirectTo;
         return false;

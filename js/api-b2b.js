@@ -32,7 +32,7 @@ const API_B2B = {
                 // Sesión expirada mientras estaba autenticado — redirigir al login
                 this.removeToken();
                 const inPages = window.location.pathname.includes('/pages/');
-                window.location.href = (inPages ? '../' : '') + 'index.html?expired=1';
+                window.location.href = (inPages ? '../' : '') + 'login.html?expired=1';
             }
             // Login fallido o credenciales inválidas — mostrar mensaje del backend
             let msg = 'Email o contraseña incorrectos. Verificá tus datos.';
@@ -85,7 +85,7 @@ const API_B2B = {
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },
     async resetPassword(token, password) { return this.postNoAuth('/api/b2b/auth/reset-password', { token, password }); },
-    logout() { this.removeToken(); window.location.href = '../index.html'; },
+    logout() { this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
 
     // ============================================
     // INSTITUCIÓN
