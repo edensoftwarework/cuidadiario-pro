@@ -220,28 +220,58 @@ function onStockModeloChange(val) {
 }
 
 // ============================================
-// NOTIFICACIONES — persistencia local
+// ALERTAS DEL DASHBOARD — persistencia en DB
 // ============================================
-const NOTIF_IDS = ['notifSintomas', 'notifNotas', 'notifTareas', 'notifStock'];
+const NOTIF_IDS = ['notifSintomas', 'notifNotas', 'notifCitas', 'notifStock'];
 
-function loadNotifPrefs() {
+async function loadNotifPrefs() {
     try {
-        const prefs = JSON.parse(localStorage.getItem('cd_notif_prefs') || '{}');
+        const prefs = await API_B2B.getNotifPrefs();
         NOTIF_IDS.forEach(id => {
             const el = document.getElementById(id);
             if (el && id in prefs) el.checked = prefs[id];
         });
-    } catch {}
+    } catch {
+        // Fallback silencioso: si no hay conexión, los toggles quedan en su estado por defecto
+    }
 }
 
-function guardarNotifPrefs() {
+async function guardarNotifPrefs() {
     const prefs = {};
     NOTIF_IDS.forEach(id => {
         const el = document.getElementById(id);
         if (el) prefs[id] = el.checked;
     });
-    localStorage.setItem('cd_notif_prefs', JSON.stringify(prefs));
-    showToast('Preferencias de notificaciones guardadas ✅', 'success');
+    try {
+        await API_B2B.saveNotifPrefs(prefs);
+        API_B2B.updateUser({ notif_prefs: prefs });  // sincronizar en el objeto local
+        showToast('Preferencias de alertas guardadas ✅', 'success');
+    } catch (err) {
+        showToast('Error al guardar preferencias: ' + err.message, 'error');
+    }
+}
+
+// ============================================
+// CACHÉ DE LA APP
+// ============================================
+async function limpiarCache() {
+    const btn = document.getElementById('btnLimpiarCache');
+    if (btn) { btn.disabled = true; btn.textContent = 'Limpiando...'; }
+    try {
+        // 1. Borrar todos los caches del Cache Storage de este origen
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        // 2. Dar de baja el service worker para que se vuelva a registrar con los archivos nuevos
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(r => r.unregister()));
+        }
+        showToast('Caché limpiado. Recargando…', 'success');
+        setTimeout(() => window.location.reload(true), 900);
+    } catch (err) {
+        showToast('No se pudo limpiar el caché: ' + err.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Limpiar caché y recargar'; }
+    }
 }
 
 // ============================================

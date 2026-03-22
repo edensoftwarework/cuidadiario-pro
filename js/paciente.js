@@ -201,7 +201,7 @@ async function loadDocumentos() {
         _documentos = await API_B2B.getDocumentos(_pacienteId);
         renderDocumentos(_documentos);
     } catch (err) {
-        el.innerHTML = `<div class="empty-state"><div class="empty-icon">📎</div><h3>Error al cargar documentos</h3></div>`;
+        el.innerHTML = `<div class="empty-state"><h3>Error al cargar documentos</h3></div>`;
     }
 }
 
@@ -220,7 +220,7 @@ function renderDocumentos(lista) {
         </div>` : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} documento${lista.length !== 1 ? 's' : ''}</span></div>`;
 
     if (lista.length === 0) {
-        el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📎</div><h3>Sin documentos adjuntos</h3><p class="text-muted">Podés subir archivos PDF, Word, Excel o imágenes (máx. 5 MB).</p></div>`;
+        el.innerHTML = toolbar + `<div class="empty-state"><h3>Sin documentos adjuntos</h3><p class="text-muted">Podés subir archivos PDF, Word, Excel o imágenes (máx. 5 MB).</p></div>`;
         return;
     }
 
@@ -252,7 +252,7 @@ function _docIcon(mime, nombre) {
     if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || ext === 'docx') return '📃';
     if (mime?.includes('spreadsheet') || ext === 'xls' || ext === 'xlsx') return '📊';
     if (mime?.startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
-    return '📎';
+    return '�';
 }
 
 function _formatBytes(bytes) {
@@ -396,7 +396,7 @@ function renderMedicamentos(lista) {
                     ${ !_isReadOnly ? (
                         (_stockModelo === 'institucion' && m.catalogo_id)
                             ? `<span class="badge ${(m.catalogo_stock??0) <= 0 ? 'badge-red' : (m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${m.catalogo_stock??0}${m.catalogo_unidad ? ' '+m.catalogo_unidad+'s' : ''}${(m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? ' ⚠️' : ''}</span>`
-                            : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : '')
+                            : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : '<span class="badge badge-gray" style="opacity:.65">Sin stock</span>')
                     ) : '' }
                 </div>
             </div>
@@ -449,6 +449,11 @@ function openModalMed(id) {
         }
     }
     openModal('modalMed');
+    // Show stock note if stock is empty on open
+    setTimeout(() => {
+        const stockInp = document.querySelector('#formMed [name="mStock"]');
+        if (stockInp) _onStockInput(stockInp);
+    }, 0);
 }
 
 // Called when catalog picker changes
@@ -462,6 +467,11 @@ function onCatalogoSelectChange(sel) {
     }
 }
 
+function _onStockInput(inp) {
+    const note = document.getElementById('stockNullNote');
+    if (note) note.style.display = inp.value === '' ? 'block' : 'none';
+}
+
 async function handleSaveMed(e) {
     e.preventDefault();
     const f = e.target;
@@ -471,7 +481,14 @@ async function handleSaveMed(e) {
     const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catSel?.value ? parseInt(catSel.value) : null };
     try {
         if (_editingMedId) { await API_B2B.updateMedicamento(_editingMedId, data); showToast('Medicamento actualizado', 'success'); }
-        else { await API_B2B.createMedicamento(data); showToast('Medicamento agregado', 'success'); }
+        else {
+            await API_B2B.createMedicamento(data);
+            if (data.stock === null && !data.catalogo_id) {
+                showToast('Medicamento agregado. Nota: sin stock cargado, las tomas no descontarán unidades.', 'info', 5000);
+            } else {
+                showToast('Medicamento agregado', 'success');
+            }
+        }
         closeModal('modalMed');
         await loadMedicamentos();
     } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }

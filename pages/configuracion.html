@@ -246,43 +246,58 @@
                     </div>
                 </div>
 
-                <!-- Notificaciones -->
+                <!-- Alertas en el dashboard -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">🔔 Notificaciones</h3>
+                        <h3 class="card-title">Alertas en el dashboard</h3>
                     </div>
                     <div class="card-body">
+                        <div style="font-size:.88rem;color:var(--text-secondary);margin-bottom:18px;line-height:1.6">
+                            Las alertas de CuidaDiario PRO se muestran directamente en el dashboard al iniciar sesión. No se envían notificaciones al dispositivo para evitar interrupciones en instituciones con muchos pacientes.
+                        </div>
+                        <div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Secciones visibles en el dashboard</div>
                         <div class="toggle-list">
                             <label class="toggle-item">
                                 <div>
-                                    <div class="toggle-title">Síntomas urgentes</div>
-                                    <div class="toggle-desc">Alerta cuando se registra un síntoma intenso</div>
+                                    <div class="toggle-title">Síntomas recientes (últimas 24h)</div>
                                 </div>
                                 <label class="switch"><input type="checkbox" checked id="notifSintomas"><span class="switch-slider"></span></label>
                             </label>
                             <label class="toggle-item">
                                 <div>
                                     <div class="toggle-title">Notas urgentes</div>
-                                    <div class="toggle-desc">Alerta cuando se agrega una nota marcada como urgente</div>
                                 </div>
                                 <label class="switch"><input type="checkbox" checked id="notifNotas"><span class="switch-slider"></span></label>
                             </label>
                             <label class="toggle-item">
                                 <div>
-                                    <div class="toggle-title">Tareas sin completar</div>
-                                    <div class="toggle-desc">Recordatorio de tareas pendientes del día</div>
+                                    <div class="toggle-title">Citas próximas (7 días)</div>
                                 </div>
-                                <label class="switch"><input type="checkbox" id="notifTareas"><span class="switch-slider"></span></label>
+                                <label class="switch"><input type="checkbox" checked id="notifCitas"><span class="switch-slider"></span></label>
                             </label>
                             <label class="toggle-item">
                                 <div>
-                                    <div class="toggle-title">Stock bajo de medicamentos</div>
-                                    <div class="toggle-desc">Alerta cuando el stock queda por debajo de 5 unidades</div>
+                                    <div class="toggle-title">Medicamentos con stock bajo</div>
                                 </div>
                                 <label class="switch"><input type="checkbox" checked id="notifStock"><span class="switch-slider"></span></label>
                             </label>
                         </div>
                         <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="guardarNotifPrefs()">Guardar preferencias</button>
+                    </div>
+                </div>
+
+                <!-- Caché de la app -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Caché de la app</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
+                            Limpia los archivos en caché de CuidaDiario PRO en este dispositivo. Útilas después de una actualización si la app no se refrescó automáticamente. No afecta ningún otro sitio ni aplicación.
+                        </p>
+                        <button id="btnLimpiarCache" type="button" class="btn btn-secondary" onclick="limpiarCache()">
+                            Limpiar caché y recargar
+                        </button>
                     </div>
                 </div>
 

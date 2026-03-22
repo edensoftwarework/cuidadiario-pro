@@ -36,6 +36,7 @@ async function loadDashboard() {
         renderNotasUrgentes(data.notas_urgentes);
         renderCumpleanosHoy(data.cumpleanos_hoy);
         renderStockBajo(data.stock_bajo);
+        _applyNotifPrefs();
         // Topbar: show +Paciente button only if the user can create patients
         const btnTopbar = document.getElementById('btnTopbarNuevoPaciente');
         if (btnTopbar && !canDo('crear_paciente')) btnTopbar.style.display = 'none';
@@ -183,4 +184,22 @@ function renderStockBajo(lista) {
             </div>
             <span class="badge badge-danger">Stock: ${m.stock}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
         </div>`).join('');
+}
+
+// Muestra u oculta secciones del dashboard según las preferencias guardadas en la DB (sincronizadas al login)
+function _applyNotifPrefs() {
+    try {
+        // notif_prefs viene del usuario almacenado localmente (hidratado desde la DB en cada login)
+        const prefs = API_B2B.getUser()?.notif_prefs || {};
+        const map = {
+            notifSintomas: 'cardSintomasRecientes',
+            notifNotas:    'cardNotasUrgentes',
+            notifCitas:    'cardCitasProximas',
+            notifStock:    'cardStockBajo'
+        };
+        Object.entries(map).forEach(([pref, cardId]) => {
+            const el = document.getElementById(cardId);
+            if (el && pref in prefs) el.style.display = prefs[pref] ? '' : 'none';
+        });
+    } catch {}
 }

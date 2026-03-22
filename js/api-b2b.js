@@ -201,6 +201,12 @@ const API_B2B = {
     },
 
     // ============================================
+    // ALERTAS DEL DASHBOARD (notif prefs)
+    // ============================================
+    async getNotifPrefs()       { return this.get('/api/b2b/me/notif-prefs'); },
+    async saveNotifPrefs(prefs) { return this.patch('/api/b2b/me/notif-prefs', prefs); },
+
+    // ============================================
     // SUSCRIPCIÓN / PLAN (MercadoPago)
     // ============================================
     async createSubscription(plan = 'pro', testMode = false) {
