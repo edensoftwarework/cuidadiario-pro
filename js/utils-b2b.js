@@ -461,7 +461,7 @@ async function openWorkerSwitcher() {
     let recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
     try {
         const staffList = await API_B2B.getStaff();
-        staffList.filter(s => s.activo).forEach(s => {
+        staffList.filter(s => s.activo && s.rol !== 'familiar').forEach(s => {
             if (!recientes.includes(s.nombre)) recientes.push(s.nombre);
         });
         localStorage.setItem('cd_workers_recientes', JSON.stringify(recientes.slice(0, 12)));
