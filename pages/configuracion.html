@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -56,350 +56,338 @@
         <div class="page-content">
             <div class="settings-grid">
 
-                <!-- Perfil personal -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">👤 Mi perfil</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="formPerfil" onsubmit="guardarPerfil(event)">
-                            <div class="form-group">
-                                <label class="form-label">Nombre</label>
-                                <input type="text" name="nombre" id="perfilNombre" class="form-control" placeholder="Tu nombre completo">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" id="perfilEmail" class="form-control" placeholder="tu@email.com">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Rol</label>
-                                <input type="text" id="perfilRol" class="form-control" disabled>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Guardar perfil</button>
-                        </form>
+                <!-- ===== COLUMNA 1 ===== -->
+                <div class="settings-col">
 
-                        <hr style="margin:24px 0;border-color:var(--border-color)">
-
-                        <h4 style="margin-bottom:16px;font-weight:600">🔑 Cambiar contraseña</h4>
-                        <form id="formPassword" onsubmit="cambiarPassword(event)">
-                            <div class="form-group">
-                                <label class="form-label">Contraseña actual</label>
-                                <input type="password" name="passwordActual" class="form-control" placeholder="••••••••">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Nueva contraseña</label>
-                                <input type="password" name="passwordNueva" id="passNueva" class="form-control" placeholder="Mín. 8 caracteres" minlength="8">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Confirmar contraseña</label>
-                                <input type="password" name="passwordConfirm" class="form-control" placeholder="Repetir nueva contraseña" minlength="8">
-                            </div>
-                            <button type="submit" class="btn btn-secondary">Cambiar contraseña</button>
-                        </form>
+                    <!-- Perfil personal -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">👤 Mi perfil</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="formPerfil" onsubmit="guardarPerfil(event)">
+                                <div class="form-group">
+                                    <label class="form-label">Nombre</label>
+                                    <input type="text" name="nombre" id="perfilNombre" class="form-control" placeholder="Tu nombre completo">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" name="email" id="perfilEmail" class="form-control" placeholder="tu@email.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Rol</label>
+                                    <input type="text" id="perfilRol" class="form-control" disabled>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Guardar perfil</button>
+                            </form>
+                            <hr style="margin:24px 0;border-color:var(--border-color)">
+                            <h4 style="margin-bottom:16px;font-weight:600">🔑 Cambiar contraseña</h4>
+                            <form id="formPassword" onsubmit="cambiarPassword(event)">
+                                <div class="form-group">
+                                    <label class="form-label">Contraseña actual</label>
+                                    <input type="password" name="passwordActual" class="form-control" placeholder="••••••••">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nueva contraseña</label>
+                                    <input type="password" name="passwordNueva" id="passNueva" class="form-control" placeholder="Mín. 8 caracteres" minlength="8">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Confirmar contraseña</label>
+                                    <input type="password" name="passwordConfirm" class="form-control" placeholder="Repetir nueva contraseña" minlength="8">
+                                </div>
+                                <button type="submit" class="btn btn-secondary">Cambiar contraseña</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Institución (solo admin) -->
-                <div class="card admin-only">
-                    <div class="card-header">
-                        <h3 class="card-title">🏥 Datos de la institución</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="formInstitucion" onsubmit="guardarInstitucion(event)">
-                            <div class="form-group">
-                                <label class="form-label">Nombre de la institución</label>
-                                <input type="text" name="nombre" id="instNombre" class="form-control" placeholder="Nombre oficial">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Tipo</label>
-                                <select name="tipo" id="instTipo" class="form-control">
-                                    <option value="geriatrico">Geriátrico / Residencia de adultos mayores</option>
-                                    <option value="discapacidad">Centro de día / Hogar para personas con discapacidad</option>
-                                    <option value="salud_mental">Centro de salud mental / Psiquiátrico privado</option>
-                                    <option value="rehabilitacion">Centro de rehabilitación (motora, adictología)</option>
-                                    <option value="oncologia">Centro oncológico / Clínica de infusiones</option>
-                                    <option value="dialisis">Centro de diálisis</option>
-                                    <option value="hogar_convivencial">Hogar convivencial / Casa de medio camino</option>
-                                    <option value="pediatrico_especial">Centro pediátrico de cuidados especiales</option>
-                                    <option value="cuidado_domiciliario">Empresa de cuidado domiciliario</option>
-                                    <option value="clinica">Clínica / Centro médico ambulatorio</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Teléfono</label>
-                                <input type="tel" name="telefono" id="instTelefono" class="form-control" placeholder="+54 11 1234-5678">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Email de contacto
-                                    <span style="font-size:.75rem;color:var(--text-secondary);font-weight:400;margin-left:6px">— usado para pagos MP y notificaciones del sistema</span>
+                    <!-- Modo Estación Compartida (solo admin) -->
+                    <div class="card admin-only">
+                        <div class="card-header">
+                            <h3 class="card-title">🖥️ Modo Estación Compartida</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="toggle-list">
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Activar modo estación compartida</div>
+                                        <div class="toggle-desc">Una sola computadora o tablet para todo el equipo. Cada persona elige su nombre antes de registrar, sin cerrar ni abrir sesión.</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="sharedModeToggle" onchange="toggleSharedMode(this.checked)"><span class="switch-slider"></span></label>
                                 </label>
-                                <input type="email" name="email" id="instEmail" class="form-control" placeholder="contacto@institucion.com">
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Dirección</label>
-                                <input type="text" name="direccion" id="instDireccion" class="form-control" placeholder="Calle, número, ciudad">
+                            <div id="sharedModeInfo" style="display:none;margin-top:16px;padding:12px 14px;background:var(--bg-page);border-radius:8px;border-left:3px solid var(--pro-primary)">
+                                <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">
+                                    <strong>✅ Modo activo</strong> — Aparece un botón en la barra superior de cada página que muestra el nombre de la persona que está registrando en ese momento.<br>
+                                    Cualquier miembro del equipo puede tocarlo y seleccionar su nombre. No hace falta contraseña.<br>
+                                    <span style="font-size:.78rem;opacity:.75">La selección se reinicia al cerrar el navegador. La sesión del administrador permanece activa en todo momento.</span>
+                                </p>
+                                <button class="btn btn-primary btn-sm" onclick="openWorkerSwitcher()">👥 Seleccionar quién registra ahora</button>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">🏪 Modelo de gestión de stock de medicamentos</label>
-                                <select name="stock_modelo" id="instStockModelo" class="form-control" onchange="onStockModeloChange(this.value)">
-                                    <option value="familiar">Familiar / Responsable — Cada paciente tiene su propio stock</option>
-                                    <option value="institucion">Institucional — La institución gestiona un catálogo centralizado</option>
-                                </select>
-                                <div class="form-hint" style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">En el modelo <strong>familiar</strong>, el stock lo carga la familia de cada paciente. En el <strong>institucional</strong>, la farmacia de la institución centraliza el inventario y se descuenta automáticamente con cada toma registrada.</div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Guardar institución</button>
-                        </form>
-
-                        <hr style="margin:24px 0;border-color:var(--border-color)">
-
-                        <!-- PLAN & SUSCRIPCIÓN -->
-                        <div id="planSection">
-                            <h4 style="font-weight:700;margin-bottom:14px;font-size:.95rem">💳 Plan y suscripción</h4>
-
-                            <!-- Badge del plan actual -->
-                            <div id="planBadgeWrap" style="margin-bottom:12px">
-                                <span class="badge badge-gray" style="font-size:.9rem;padding:6px 14px">Cargando…</span>
-                            </div>
-                            <p id="planDesc" style="font-size:.85rem;color:var(--text-secondary);margin-bottom:18px"></p>
-
-                            <!-- Comparación de planes -->
-                            <div style="border:1px solid var(--border-color);border-radius:12px;overflow:hidden;margin-bottom:18px;font-size:.83rem">
-                                <!-- Header -->
-                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--bg-page)">
-                                    <div style="padding:10px 12px;font-weight:700;font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;border-right:1px solid var(--border-color)">Función</div>
-                                    <div style="padding:10px 12px;font-weight:700;text-align:center;border-right:1px solid var(--border-color);color:#4B5563">Básico<br><span style="font-weight:400;font-size:.72rem">$10.000/mes*</span></div>
-                                    <div style="padding:10px 12px;font-weight:700;text-align:center;color:#374151">PRO<br><span style="font-weight:400;font-size:.72rem">$15.000/mes*</span></div>
-                                </div>
-                                <!-- Pacientes — única diferencia -->
-                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color)">
-                                    <div style="padding:8px 12px;border-right:1px solid var(--border-color)">Pacientes</div>
-                                    <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">Hasta 20</div>
-                                    <div style="padding:8px 12px;text-align:center;font-weight:600">Ilimitados</div>
-                                </div>
-                                <!-- Staff — única diferencia -->
-                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color);background:#FAFAFA">
-                                    <div style="padding:8px 12px;border-right:1px solid var(--border-color)">Staff</div>
-                                    <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">Hasta 5</div>
-                                    <div style="padding:8px 12px;text-align:center;font-weight:600">Ilimitado</div>
-                                </div>
-                                <!-- Todo lo demás igual -->
-                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color)">
-                                    <div style="padding:8px 12px;border-right:1px solid var(--border-color);color:var(--text-secondary)">Todas las funciones<br><span style="font-size:.74rem">(registros, meds, citas, reportes…)</span></div>
-                                    <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">✅</div>
-                                    <div style="padding:8px 12px;text-align:center">✅</div>
-                                </div>
-                            </div>
-
-                            <p style="font-size:.72rem;color:var(--text-secondary);margin-top:-10px;margin-bottom:18px">* Precio de lanzamiento por los primeros 6 meses. Precio regular: Básico $20.000/mes · PRO $30.000/mes.</p>
-
-                            <!-- Botones de acción de plan -->
-                            <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap">
-                                <button class="btn btn-primary btn-sm" id="btnSuscribirPRO" onclick="suscribirPlan('pro', false)" style="display:none">
-                                    💳 Contratar Plan PRO
-                                </button>
-                                <button class="btn btn-secondary btn-sm" id="btnSuscribirBasico" onclick="suscribirPlan('basico', false)" style="display:none">
-                                    Contratar Plan Básico
-                                </button>
-                                <button class="btn btn-secondary btn-sm" id="btnVerificarPlan" onclick="verificarPlan()" style="display:none">
-                                    🔄 Verificar estado del pago
-                                </button>
-                            </div>
-
-                            <!-- Zona de test (oculta por defecto, visible con ?test=1 en la URL) -->
-                            <div id="planTestZone" style="display:none;margin-top:16px;padding:12px 14px;background:#FFF7ED;border-radius:8px;border:1px dashed #F59E0B">
-                                <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;margin-bottom:8px">🧪 Modo test (1 día de prueba)</div>
-                                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                                    <button class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="suscribirPlan('pro', true)">Test PRO</button>
-                                    <button class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="suscribirPlan('basico', true)">Test Básico</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="verificarPlan()">Verificar ahora</button>
-                                </div>
-                                <p style="font-size:.75rem;color:#92400E;margin-top:8px">Usa tus credenciales sandbox de MercadoPago. El trial de 1 día te permite verificar el flujo completo sin esperas.</p>
-                            </div>
-
-                            <div id="planVerifyResult" style="margin-top:14px"></div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Modo Estación Compartida (solo admin) -->
-                <div class="card admin-only">
-                    <div class="card-header">
-                        <h3 class="card-title">&#x1F5A5;&#xFE0F; Modo Estación Compartida</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="toggle-list">
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Activar modo estación compartida</div>
-                                    <div class="toggle-desc">Una sola computadora o tablet para todo el equipo. Cada persona elige su nombre antes de registrar, sin cerrar ni abrir sesión.</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="sharedModeToggle" onchange="toggleSharedMode(this.checked)"><span class="switch-slider"></span></label>
-                            </label>
+                    <!-- Caché de la app -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Caché de la app</h3>
                         </div>
-                        <div id="sharedModeInfo" style="display:none;margin-top:16px;padding:12px 14px;background:var(--bg-page);border-radius:8px;border-left:3px solid var(--pro-primary)">
-                            <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">
-                                <strong>&#x2705; Modo activo</strong> &mdash; Aparece un botón en la barra superior de cada página que muestra el nombre de la persona que está registrando en ese momento.<br>
-                                Cualquier miembro del equipo puede tocarlo y seleccionar su nombre. No hace falta contraseña.<br>
-                                <span style="font-size:.78rem;opacity:.75">La selección se reinicia al cerrar el navegador. La sesión del administrador permanece activa en todo momento.</span>
+                        <div class="card-body">
+                            <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
+                                Limpia los archivos en caché de CuidaDiario PRO en este dispositivo. Útil después de una actualización si la app no se refrescó automáticamente. No afecta ningún otro sitio ni aplicación.
                             </p>
-                            <button class="btn btn-primary btn-sm" onclick="openWorkerSwitcher()">&#x1F465; Seleccionar quién registra ahora</button>
+                            <button id="btnLimpiarCache" type="button" class="btn btn-secondary" onclick="limpiarCache()">
+                                Limpiar caché y recargar
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- Alertas en el dashboard -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Alertas en el dashboard</h3>
-                    </div>
-                    <div class="card-body">
-                        <div style="font-size:.88rem;color:var(--text-secondary);margin-bottom:18px;line-height:1.6">
-                            Las alertas de CuidaDiario PRO se muestran directamente en el dashboard al iniciar sesión. No se envían notificaciones al dispositivo para evitar interrupciones en instituciones con muchos pacientes.
+                    <!-- Zona de peligro -->
+                    <div class="card admin-only">
+                        <div class="card-header">
+                            <h3 class="card-title" style="color:var(--danger)">⚠️ Zona de peligro</h3>
                         </div>
-                        <div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Secciones visibles en el dashboard</div>
-                        <div class="toggle-list">
-                            <label class="toggle-item">
+                        <div class="card-body">
+                            <div class="danger-zone">
                                 <div>
-                                    <div class="toggle-title">Síntomas recientes (últimas 24h)</div>
+                                    <div style="font-weight:600;margin-bottom:4px">Exportar todos los datos</div>
+                                    <div style="font-size:.85rem;color:var(--text-secondary)">Descargá un backup completo de todos los datos de la institución en formato PDF.</div>
                                 </div>
-                                <label class="switch"><input type="checkbox" checked id="notifSintomas"><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Notas urgentes</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" checked id="notifNotas"><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Citas próximas (7 días)</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" checked id="notifCitas"><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Medicamentos con stock bajo</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" checked id="notifStock"><span class="switch-slider"></span></label>
-                            </label>
-                        </div>
-                        <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="guardarNotifPrefs()">Guardar preferencias</button>
-                    </div>
-                </div>
-
-                <!-- Caché de la app -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Caché de la app</h3>
-                    </div>
-                    <div class="card-body">
-                        <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
-                            Limpia los archivos en caché de CuidaDiario PRO en este dispositivo. Útiles después de una actualización si la app no se refrescó automáticamente. No afecta ningún otro sitio ni aplicación.
-                        </p>
-                        <button id="btnLimpiarCache" type="button" class="btn btn-secondary" onclick="limpiarCache()">
-                            Limpiar caché y recargar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Permisos del equipo (solo admin, no en modo estación compartida) -->
-                <div class="card admin-only" id="permisosCard">
-                    <div class="card-header">
-                        <h3 class="card-title">🔐 Permisos del equipo</h3>
-                    </div>
-                    <div class="card-body">
-                        <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px">Define qué puede hacer cada rol cuando inician sesión de forma individual. Los permisos no aplican en modo Estación Compartida (el admin siempre está activo en ese caso).</p>
-
-                        <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🩺 Médico / Profesional</p>
-                        <div class="toggle-list" style="margin-bottom:20px">
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede crear nuevos pacientes</div>
-                                    <div class="toggle-desc">Permite al médico registrar nuevos ingresos</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_medico_crear_paciente" checked><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede editar datos de pacientes</div>
-                                    <div class="toggle-desc">Permite modificar datos clínicos y personales</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_medico_editar_paciente" checked><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
-                                    <div class="toggle-desc">Permite al médico registrar el egreso definitivo</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_medico_dar_alta" checked><span class="switch-slider"></span></label>
-                            </label>
-                        </div>
-
-                        <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">👤 Personal / Operativo</p>
-                        <div class="toggle-list">
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede crear nuevos pacientes</div>
-                                    <div class="toggle-desc">Permite al personal registrar nuevos ingresos</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_paciente" checked><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede editar datos de pacientes</div>
-                                    <div class="toggle-desc">Permite modificar datos del residente</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_editar_paciente" checked><span class="switch-slider"></span></label>
-                            </label>
-                            <label class="toggle-item">
-                                <div>
-                                    <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
-                                    <div class="toggle-desc">Desactivado por defecto — suele ser una acción médica o administrativa</div>
-                                </div>
-                                <label class="switch"><input type="checkbox" id="perm_cuidador_staff_dar_alta"><span class="switch-slider"></span></label>
-                            </label>
-                        </div>
-
-                        <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:18px" onclick="guardarPermisos()">🔐 Guardar permisos</button>
-                    </div>
-                </div>
-
-                <!-- Zona de peligro -->
-                <div class="card admin-only">
-                    <div class="card-header">
-                        <h3 class="card-title" style="color:var(--danger)">⚠️ Zona de peligro</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="danger-zone">
-                            <div>
-                                <div style="font-weight:600;margin-bottom:4px">Exportar todos los datos</div>
-                                <div style="font-size:.85rem;color:var(--text-secondary)">Descargá un backup completo de todos los datos de la institución en formato PDF.</div>
+                                <button class="btn btn-secondary btn-sm" onclick="exportarDatos()">📦 Exportar</button>
                             </div>
-                            <button class="btn btn-secondary btn-sm" onclick="exportarDatos()">📦 Exportar</button>
-                        </div>
-                        <div class="danger-zone" style="margin-top:16px">
-                            <div>
-                                <div style="font-weight:600;margin-bottom:4px;color:var(--danger)">Desactivar institución</div>
-                                <div style="font-size:.85rem;color:var(--text-secondary)">Esta acción desactiva el acceso de todos los usuarios. Es reversible contactando soporte.</div>
+                            <div class="danger-zone" style="margin-top:16px">
+                                <div>
+                                    <div style="font-weight:600;margin-bottom:4px;color:var(--danger)">Desactivar institución</div>
+                                    <div style="font-size:.85rem;color:var(--text-secondary)">Esta acción desactiva el acceso de todos los usuarios. Es reversible contactando soporte.</div>
+                                </div>
+                                <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Seguro que deseás desactivar la institución? Todos los accesos serán bloqueados.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
                             </div>
-                            <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Seguro que deseás desactivar la institución? Todos los accesos serán bloqueados.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
                         </div>
                     </div>
-                </div>
 
-                <!-- Catálogo de insumos (solo admin, solo modelo institucional) -->
-                <div class="card admin-only" id="catalogoCard" style="display:none">
-                    <div class="card-header">
-                        <h3 class="card-title">📦 Catálogo de insumos activo</h3>
-                        <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
-                    </div>
-                    <div class="card-body">
-                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de insumos (medicamentos, materiales y más) desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
-                    </div>
-                </div>
+                </div><!-- /settings-col 1 -->
 
-            </div>
+                <!-- ===== COLUMNA 2 ===== -->
+                <div class="settings-col">
+
+                    <!-- Institución (solo admin) -->
+                    <div class="card admin-only">
+                        <div class="card-header">
+                            <h3 class="card-title">🏥 Datos de la institución</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="formInstitucion" onsubmit="guardarInstitucion(event)">
+                                <div class="form-group">
+                                    <label class="form-label">Nombre de la institución</label>
+                                    <input type="text" name="nombre" id="instNombre" class="form-control" placeholder="Nombre oficial">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tipo</label>
+                                    <select name="tipo" id="instTipo" class="form-control">
+                                        <option value="geriatrico">Geriátrico / Residencia de adultos mayores</option>
+                                        <option value="discapacidad">Centro de día / Hogar para personas con discapacidad</option>
+                                        <option value="salud_mental">Centro de salud mental / Psiquiátrico privado</option>
+                                        <option value="rehabilitacion">Centro de rehabilitación (motora, adictología)</option>
+                                        <option value="oncologia">Centro oncológico / Clínica de infusiones</option>
+                                        <option value="dialisis">Centro de diálisis</option>
+                                        <option value="hogar_convivencial">Hogar convivencial / Casa de medio camino</option>
+                                        <option value="pediatrico_especial">Centro pediátrico de cuidados especiales</option>
+                                        <option value="cuidado_domiciliario">Empresa de cuidado domiciliario</option>
+                                        <option value="clinica">Clínica / Centro médico ambulatorio</option>
+                                        <option value="otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="tel" name="telefono" id="instTelefono" class="form-control" placeholder="+54 11 1234-5678">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email de contacto
+                                        <span style="font-size:.75rem;color:var(--text-secondary);font-weight:400;margin-left:6px">— usado para pagos MP y notificaciones del sistema</span>
+                                    </label>
+                                    <input type="email" name="email" id="instEmail" class="form-control" placeholder="contacto@institucion.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Dirección</label>
+                                    <input type="text" name="direccion" id="instDireccion" class="form-control" placeholder="Calle, número, ciudad">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">🏪 Modelo de gestión de stock de medicamentos</label>
+                                    <select name="stock_modelo" id="instStockModelo" class="form-control" onchange="onStockModeloChange(this.value)">
+                                        <option value="familiar">Familiar / Responsable — Cada paciente tiene su propio stock</option>
+                                        <option value="institucion">Institucional — La institución gestiona un catálogo centralizado</option>
+                                    </select>
+                                    <div class="form-hint" style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">En el modelo <strong>familiar</strong>, el stock lo carga la familia de cada paciente. En el <strong>institucional</strong>, la farmacia de la institución centraliza el inventario y se descuenta automáticamente con cada toma registrada.</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Guardar institución</button>
+                            </form>
+
+                            <hr style="margin:24px 0;border-color:var(--border-color)">
+
+                            <!-- PLAN & SUSCRIPCIÓN -->
+                            <div id="planSection">
+                                <h4 style="font-weight:700;margin-bottom:14px;font-size:.95rem">💳 Plan y suscripción</h4>
+
+                                <div id="planBadgeWrap" style="margin-bottom:12px">
+                                    <span class="badge badge-gray" style="font-size:.9rem;padding:6px 14px">Cargando…</span>
+                                </div>
+                                <p id="planDesc" style="font-size:.85rem;color:var(--text-secondary);margin-bottom:18px"></p>
+
+                                <!-- Comparación de planes -->
+                                <div style="border:1px solid var(--border-color);border-radius:12px;overflow:hidden;margin-bottom:18px;font-size:.83rem">
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--bg-page)">
+                                        <div style="padding:10px 12px;font-weight:700;font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;border-right:1px solid var(--border-color)">Función</div>
+                                        <div style="padding:10px 12px;font-weight:700;text-align:center;border-right:1px solid var(--border-color);color:#4B5563">Básico<br><span style="font-weight:400;font-size:.72rem">$10.000/mes*</span></div>
+                                        <div style="padding:10px 12px;font-weight:700;text-align:center;color:#374151">PRO<br><span style="font-weight:400;font-size:.72rem">$15.000/mes*</span></div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color)">
+                                        <div style="padding:8px 12px;border-right:1px solid var(--border-color)">Pacientes</div>
+                                        <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">Hasta 20</div>
+                                        <div style="padding:8px 12px;text-align:center;font-weight:600">Ilimitados</div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color);background:#FAFAFA">
+                                        <div style="padding:8px 12px;border-right:1px solid var(--border-color)">Staff</div>
+                                        <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">Hasta 5</div>
+                                        <div style="padding:8px 12px;text-align:center;font-weight:600">Ilimitado</div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color)">
+                                        <div style="padding:8px 12px;border-right:1px solid var(--border-color);color:var(--text-secondary)">Todas las funciones<br><span style="font-size:.74rem">(registros, meds, citas, reportes…)</span></div>
+                                        <div style="padding:8px 12px;text-align:center;border-right:1px solid var(--border-color)">✅</div>
+                                        <div style="padding:8px 12px;text-align:center">✅</div>
+                                    </div>
+                                </div>
+
+                                <p style="font-size:.72rem;color:var(--text-secondary);margin-top:-10px;margin-bottom:18px">* Precio de lanzamiento por los primeros 6 meses. Precio regular: Básico $20.000/mes · PRO $30.000/mes.</p>
+
+                                <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap">
+                                    <button class="btn btn-primary btn-sm" id="btnSuscribirPRO" onclick="suscribirPlan('pro', false)" style="display:none">💳 Contratar Plan PRO</button>
+                                    <button class="btn btn-secondary btn-sm" id="btnSuscribirBasico" onclick="suscribirPlan('basico', false)" style="display:none">Contratar Plan Básico</button>
+                                    <button class="btn btn-secondary btn-sm" id="btnVerificarPlan" onclick="verificarPlan()" style="display:none">🔄 Verificar estado del pago</button>
+                                </div>
+
+                                <!-- Zona de test (oculta por defecto, visible con ?test=1 en la URL) -->
+                                <div id="planTestZone" style="display:none;margin-top:16px;padding:12px 14px;background:#FFF7ED;border-radius:8px;border:1px dashed #F59E0B">
+                                    <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;margin-bottom:8px">🧪 Modo test (1 día de prueba)</div>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                        <button class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="suscribirPlan('pro', true)">Test PRO</button>
+                                        <button class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="suscribirPlan('basico', true)">Test Básico</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="verificarPlan()">Verificar ahora</button>
+                                    </div>
+                                    <p style="font-size:.75rem;color:#92400E;margin-top:8px">Usa tus credenciales sandbox de MercadoPago. El trial de 1 día te permite verificar el flujo completo sin esperas.</p>
+                                </div>
+
+                                <div id="planVerifyResult" style="margin-top:14px"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas en el dashboard -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Alertas en el dashboard</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="font-size:.88rem;color:var(--text-secondary);margin-bottom:18px;line-height:1.6">
+                                Las alertas de CuidaDiario PRO se muestran directamente en el dashboard al iniciar sesión. No se envían notificaciones al dispositivo para evitar interrupciones en instituciones con muchos pacientes.
+                            </div>
+                            <div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Secciones visibles en el dashboard</div>
+                            <div class="toggle-list">
+                                <label class="toggle-item">
+                                    <div><div class="toggle-title">Síntomas recientes (últimas 24h)</div></div>
+                                    <label class="switch"><input type="checkbox" checked id="notifSintomas"><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div><div class="toggle-title">Notas urgentes</div></div>
+                                    <label class="switch"><input type="checkbox" checked id="notifNotas"><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div><div class="toggle-title">Citas próximas (7 días)</div></div>
+                                    <label class="switch"><input type="checkbox" checked id="notifCitas"><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div><div class="toggle-title">Medicamentos con stock bajo</div></div>
+                                    <label class="switch"><input type="checkbox" checked id="notifStock"><span class="switch-slider"></span></label>
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="guardarNotifPrefs()">Guardar preferencias</button>
+                        </div>
+                    </div>
+
+                    <!-- Permisos del equipo (solo admin, no en modo estación compartida) -->
+                    <div class="card admin-only" id="permisosCard">
+                        <div class="card-header">
+                            <h3 class="card-title">🔐 Permisos del equipo</h3>
+                        </div>
+                        <div class="card-body">
+                            <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px">Define qué puede hacer cada rol cuando inician sesión de forma individual. Los permisos no aplican en modo Estación Compartida (el admin siempre está activo en ese caso).</p>
+
+                            <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🩺 Médico / Profesional</p>
+                            <div class="toggle-list" style="margin-bottom:20px">
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede crear nuevos pacientes</div>
+                                        <div class="toggle-desc">Permite al médico registrar nuevos ingresos</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_medico_crear_paciente" checked><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede editar datos de pacientes</div>
+                                        <div class="toggle-desc">Permite modificar datos clínicos y personales</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_medico_editar_paciente" checked><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
+                                        <div class="toggle-desc">Permite al médico registrar el egreso definitivo</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_medico_dar_alta" checked><span class="switch-slider"></span></label>
+                                </label>
+                            </div>
+
+                            <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">👤 Personal / Operativo</p>
+                            <div class="toggle-list">
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede crear nuevos pacientes</div>
+                                        <div class="toggle-desc">Permite al personal registrar nuevos ingresos</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_paciente" checked><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede editar datos de pacientes</div>
+                                        <div class="toggle-desc">Permite modificar datos del residente</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_cuidador_staff_editar_paciente" checked><span class="switch-slider"></span></label>
+                                </label>
+                                <label class="toggle-item">
+                                    <div>
+                                        <div class="toggle-title">Puede dar de alta (egresar) pacientes</div>
+                                        <div class="toggle-desc">Desactivado por defecto — suele ser una acción médica o administrativa</div>
+                                    </div>
+                                    <label class="switch"><input type="checkbox" id="perm_cuidador_staff_dar_alta"><span class="switch-slider"></span></label>
+                                </label>
+                            </div>
+
+                            <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:18px" onclick="guardarPermisos()">🔐 Guardar permisos</button>
+                        </div>
+                    </div>
+
+                    <!-- Catálogo de insumos (solo admin, solo modelo institucional) -->
+                    <div class="card admin-only" id="catalogoCard" style="display:none">
+                        <div class="card-header">
+                            <h3 class="card-title">📦 Catálogo de insumos activo</h3>
+                            <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
+                        </div>
+                        <div class="card-body">
+                            <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de insumos (medicamentos, materiales y más) desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
+                        </div>
+                    </div>
+
+                </div><!-- /settings-col 2 -->
+
+            </div><!-- /settings-grid -->
         </div>
     </main>
 </div>
@@ -425,17 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const preapprovalId = params.get('preapproval_id') || null;
         setTimeout(() => verificarPlan(preapprovalId), 800);
     }
-    // Password visibility toggle for the change-password form
-    window.togglePassConf = function(id, btn) {
-        const inp = document.getElementById(id);
-        if (!inp) return;
-        inp.type = inp.type === 'password' ? 'text' : 'password';
-        const vis = inp.type === 'text';
-        btn.innerHTML = vis
-            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
-            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-        btn.title = vis ? 'Ocultar contraseña' : 'Mostrar contraseña';
-    };
 });
 </script>
 

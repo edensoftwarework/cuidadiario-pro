@@ -149,34 +149,35 @@ function populateSidebarUser() {
 }
 
 /**
- * Muestra un banner de aviso cuando el período de prueba está por vencer o ya venció.
- * Solo se muestra una vez por sesión (sessionStorage) para no molestar.
+ * Muestra un banner de aviso cuando el período de prueba está por vencer,
+ * o un overlay de bloqueo total cuando ya venció.
  */
 function _checkTrialBanner(user) {
     if (!user || user.plan !== 'free' || !user.trial_started_at) return;
-    // Calcular días restantes
+
     const trialEnd = new Date(user.trial_started_at);
     trialEnd.setDate(trialEnd.getDate() + 60);
     const daysLeft = Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24));
 
-    let type = null;
-    if (daysLeft <= 0) type = 'expired';
-    else if (daysLeft <= 5) type = 'critical';
-    else if (daysLeft <= 15) type = 'warn';
+    if (daysLeft > 15) return; // más de 15 días — no molestar
 
-    if (!type) return; // más de 15 días — no molestar
+    // --- Trial expirado: overlay de bloqueo total ---
+    if (daysLeft <= 0) {
+        _showTrialExpiredOverlay(user);
+        return;
+    }
 
+    // --- Aviso previo al vencimiento (banner) ---
+    let type = daysLeft <= 5 ? 'critical' : 'warn';
     const sessionKey = `cd_trial_banner_${type}`;
-    if (sessionStorage.getItem(sessionKey)) return; // ya se mostró esta sesión
+    if (sessionStorage.getItem(sessionKey)) return;
     sessionStorage.setItem(sessionKey, '1');
 
     const msgs = {
-        expired:  { text: '🔒 Tu período de prueba venció. Activá un plan para seguir registrando.',  color: '#DC2626', bg: '#FEF2F2' },
         critical: { text: `⚠️ Tu prueba vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'}. Activá un plan ahora.`, color: '#92400E', bg: '#FFFBEB' },
-        warn:     { text: `⏳ Tu prueba vence en ${daysLeft} días. Elegí un plan antes de que expire.`,   color: '#92400E', bg: '#FFFBEB' },
+        warn:     { text: `⏳ Tu prueba vence en ${daysLeft} días. Elegí un plan antes de que expire.`,              color: '#92400E', bg: '#FFFBEB' },
     };
     const m = msgs[type];
-
     const banner = document.createElement('div');
     banner.id = 'trialExpiryBanner';
     banner.style.cssText = `background:${m.bg};color:${m.color};padding:10px 16px;font-size:.83rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid ${m.color}33;position:sticky;top:0;z-index:100`;
@@ -188,6 +189,96 @@ function _checkTrialBanner(user) {
         </span>`;
     const mainContent = document.getElementById('mainContent');
     if (mainContent) mainContent.insertBefore(banner, mainContent.firstChild);
+}
+
+/**
+ * Muestra un overlay de bloqueo total cuando el trial expiró.
+ * Permite solo navegar a pacientes.html, staff.html y configuracion.html.
+ * Bloquea todo lo demás hasta que contraten un plan.
+ * @param {object} user - objeto usuario; puede tener _pacientes_count/_staff_count ya calculados
+ */
+async function _showTrialExpiredOverlay(user) {
+    // Evitar múltiples overlays
+    if (document.getElementById('trialExpiredOverlay')) return;
+
+    // Páginas permitidas aun con trial expirado (para reducir conteos)
+    const allowedPages = ['pacientes.html', 'staff.html', 'configuracion.html'];
+    const currentPage = window.location.pathname.split('/').pop();
+    const isAllowedPage = allowedPages.includes(currentPage);
+
+    // Obtener conteos actuales (usar los del error si ya vienen, si no fetch)
+    let pacientesCount = user._pacientes_count !== undefined ? user._pacientes_count : 0;
+    let staffCount = user._staff_count !== undefined ? user._staff_count : 0;
+    if (user._pacientes_count === undefined) {
+        try {
+            const inst = await API_B2B.getInstitucion();
+            pacientesCount = inst.pacientes_count || 0;
+            staffCount = inst.staff_count || 0;
+        } catch (e) { /* si falla, continuar con 0 */ }
+    }
+
+    const canUseBasico = pacientesCount <= 20 && staffCount <= 5;
+
+    // Construir mensaje de conteos si excede límites de Básico
+    let countWarning = '';
+    if (!canUseBasico) {
+        const parts = [];
+        if (pacientesCount > 20) parts.push(`${pacientesCount} pacientes activos (máx. 20 en Básico)`);
+        if (staffCount > 5) parts.push(`${staffCount} miembros de staff (máx. 5 en Básico)`);
+        countWarning = `
+            <div style="margin:16px 0;padding:14px 16px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
+                <p style="font-weight:700;color:#92400E;margin-bottom:6px;font-size:.9rem">⚠️ Para contratar el Plan Básico necesitás reducir:</p>
+                <ul style="margin:0;padding-left:20px;color:#78350F;font-size:.85rem;line-height:1.8">
+                    ${parts.map(p => `<li>${p}</li>`).join('')}
+                </ul>
+                <p style="font-size:.8rem;color:#92400E;margin-top:8px;margin-bottom:0">Podés archivar o dar de alta pacientes desde <a href="pacientes.html" style="color:#92400E;font-weight:700">Pacientes</a> y gestionar el staff desde <a href="staff.html" style="color:#92400E;font-weight:700">Staff</a>.</p>
+            </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'trialExpiredOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+        <div style="position:relative;background:#fff;border-radius:16px;max-width:500px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,.4)">
+            <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#0F172A;margin-bottom:8px">Tu período de prueba venció</h2>
+            <p style="color:#64748B;font-size:.9rem;line-height:1.6;margin-bottom:4px">
+                Los 60 días de prueba gratuita de <strong>CuidaDiario PRO</strong> terminaron.<br>
+                Elegí un plan para continuar usando todas las funciones.
+            </p>
+            ${countWarning}
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+                <a href="configuracion.html" style="display:block;background:#0F172A;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">
+                    💳 Contratar Plan PRO — Ilimitado
+                </a>
+                ${canUseBasico
+                    ? `<a href="configuracion.html" style="display:block;background:#fff;color:#0F172A;padding:11px 20px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.9rem;border:1.5px solid #CBD5E1">
+                           Contratar Plan Básico (hasta 20 pac. · 5 staff)
+                       </a>`
+                    : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:11px 20px;border-radius:10px;font-weight:600;font-size:.9rem;border:1.5px solid #E2E8F0;cursor:not-allowed">
+                           Plan Básico — Reducí pacientes/staff primero
+                       </button>`
+                }
+            </div>
+            ${isAllowedPage ? `
+            <button id="trialOverlayDismiss" style="position:absolute;top:14px;right:14px;background:#F1F5F9;border:none;cursor:pointer;color:#64748B;font-size:1.1rem;line-height:1;padding:5px 9px;border-radius:6px" title="Cerrar (podés seguir en esta página)">✕</button>
+            <p style="margin-top:18px;font-size:.78rem;color:#94A3B8">
+                Podés gestionar pacientes y staff en esta sección para ajustar tu plan.
+            </p>` : `
+            <p style="margin-top:18px;font-size:.78rem;color:#94A3B8">
+                Podés seguir accediendo a
+                <a href="pacientes.html" style="color:#64748B">Pacientes</a>,
+                <a href="staff.html" style="color:#64748B">Staff</a> y
+                <a href="configuracion.html" style="color:#64748B">Configuración</a>
+                para gestionar tu cuenta.
+            </p>`}
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    // Dismiss solo en páginas permitidas
+    const dismissBtn = overlay.querySelector('#trialOverlayDismiss');
+    if (dismissBtn) dismissBtn.onclick = () => overlay.remove();
 }
 
 // ============================================

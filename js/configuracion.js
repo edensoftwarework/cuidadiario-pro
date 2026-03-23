@@ -244,7 +244,9 @@ async function guardarNotifPrefs() {
     });
     try {
         await API_B2B.saveNotifPrefs(prefs);
-        API_B2B.updateUser({ notif_prefs: prefs });  // sincronizar en el objeto local
+        // Sincronizar en el objeto local para que _applyNotifPrefs() funcione sin re-login
+        const _u = API_B2B.getUser();
+        if (_u) { _u.notif_prefs = prefs; API_B2B.setUser(_u); }
         showToast('Preferencias de alertas guardadas ✅', 'success');
     } catch (err) {
         showToast('Error al guardar preferencias: ' + err.message, 'error');

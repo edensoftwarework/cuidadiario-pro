@@ -42,9 +42,21 @@ const API_B2B = {
         if (!res.ok) {
             let msg = `Error ${res.status}`;
             let code = null;
-            try { const e = await res.json(); msg = e.error || msg; code = e.code || null; } catch {}
+            let extra = {};
+            try {
+                const e = await res.json();
+                msg = e.error || msg;
+                code = e.code || null;
+                extra = { pacientes_count: e.pacientes_count, staff_count: e.staff_count, can_use_basico: e.can_use_basico };
+            } catch {}
             const apiErr = new Error(msg);
             if (code) apiErr.code = code;
+            Object.assign(apiErr, extra);
+            // Si el trial expiró, mostrar el overlay de bloqueo automáticamente
+            if (code === 'TRIAL_EXPIRED' && typeof _showTrialExpiredOverlay === 'function') {
+                const user = this.getUser() || {};
+                _showTrialExpiredOverlay({ ...user, _pacientes_count: extra.pacientes_count, _staff_count: extra.staff_count });
+            }
             throw apiErr;
         }
         return res.json();

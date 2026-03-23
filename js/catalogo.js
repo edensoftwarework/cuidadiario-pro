@@ -104,7 +104,7 @@ function renderCatalogo(lista) {
         el.innerHTML = `<div class="empty-state">
             <div class="empty-icon">📦</div>
             <h3>Catálogo vacío</h3>
-            <p>Agregaá los insumos que maneja la institución (medicamentos, materiales, elementos de stock) para llevar un inventario centralizado.</p>
+            <p>Agregá los insumos que maneja la institución (medicamentos, materiales, elementos de stock) para llevar un inventario centralizado.</p>
             <button class="btn btn-primary" onclick="openModalCatalogoItem()">+ Agregar primer ítem</button>
         </div>`;
         return;

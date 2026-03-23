@@ -252,7 +252,7 @@ function _docIcon(mime, nombre) {
     if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || ext === 'docx') return '📃';
     if (mime?.includes('spreadsheet') || ext === 'xls' || ext === 'xlsx') return '📊';
     if (mime?.startsWith('image/') || ['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
-    return '�';
+    return '📎';
 }
 
 function _formatBytes(bytes) {
