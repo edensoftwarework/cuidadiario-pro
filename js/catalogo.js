@@ -6,6 +6,14 @@
 
 'use strict';
 
+/** Pluraliza la unidad de medida de un insumo */
+function pluralUnidad(u) {
+    if (!u) return '';
+    const map = { 'unidad': 'unidades', 'comprimido': 'comprimidos', 'c\u00e1psula': 'c\u00e1psulas',
+        'ampolla': 'ampollas', 'frasco': 'frascos', 'sobre': 'sobres', 'parche': 'parches' };
+    return map[u] || (u + 's');
+}
+
 let _catalogoItems = [];
 let _catalogoView = 'institucional'; // 'institucional' | 'paciente'
 let _selectedPacienteId = null;
@@ -108,8 +116,14 @@ async function switchView(view) {
         if (btnPac)  { btnPac.className  = 'btn btn-primary btn-sm'; }
         if (pacWrap) pacWrap.style.display = '';
         if (cardTitle) cardTitle.textContent = '👤 Insumos del residente';
-        // Si ya hay un paciente seleccionado, cargar sus items
+        // Restore patient selection from DOM selector (may have been cleared when switching to institucional)
+        const domSel = document.getElementById('pacienteSelector');
+        if (!_selectedPacienteId && domSel?.value) {
+            _selectedPacienteId = parseInt(domSel.value);
+        }
         if (_selectedPacienteId) {
+            const pac = _pacientesList.find(p => p.id === _selectedPacienteId);
+            if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? escapeHtml((pac.apellido + ' ' + pac.nombre).trim()) : 'residente'}`;
             await loadCatalogo();
         } else {
             document.getElementById('catalogoList').innerHTML =
@@ -161,7 +175,7 @@ function renderStockBajoAlert() {
                 </span>
                 <span style="font-weight:600">${escapeHtml(c.nombre)}</span>
                 ${c.paciente_nombre ? `<span class="badge badge-purple" style="font-size:.7rem">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</span>` : ''}
-                <span class="text-muted">${c.stock_actual} / ${c.stock_minimo ?? 5} ${c.unidad}s</span>
+                <span class="text-muted">${c.stock_actual} / ${c.stock_minimo ?? 5} ${pluralUnidad(c.unidad)}</span>
                 <button class="btn btn-sm btn-secondary" onclick="openModalCatalogoItem(${c.id})" style="margin-left:auto">
                     + Reponer stock
                 </button>
