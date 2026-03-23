@@ -415,38 +415,38 @@ function openModalMed(id) {
     const f = document.getElementById('formMed');
     f.reset();
 
-    // Catalog picker always visible
-    const catGroup = document.getElementById('catalogoPickerGroup');
+    // Both catalog pickers always visible
+    const catGroup   = document.getElementById('catalogoPickerGroup');
     const stockGroup = document.getElementById('stockFamiliarGroup');
-    if (catGroup) catGroup.style.display = '';
+    if (catGroup)   catGroup.style.display   = '';
     if (stockGroup) stockGroup.style.display = '';
 
-    // Populate catalog dropdown with optgroups
-    const catSel = document.getElementById('mCatalogoSelect');
-    if (catSel) {
-        catSel.innerHTML = '<option value="">— Sin vincular (insumo individual) —</option>';
-        if (_catalogo.length > 0) {
-            const grpInst = document.createElement('optgroup');
-            grpInst.label = '🏥 Catálogo institucional';
-            _catalogo.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = `${c.nombre}${c.presentacion ? ' — ' + c.presentacion : ''} (Stock: ${c.stock_actual})`;
-                grpInst.appendChild(opt);
-            });
-            catSel.appendChild(grpInst);
-        }
-        if (_catalogoPaciente.length > 0) {
-            const grpPac = document.createElement('optgroup');
-            grpPac.label = '👤 Catálogo del residente';
-            _catalogoPaciente.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = `${c.nombre}${c.presentacion ? ' — ' + c.presentacion : ''} (Stock: ${c.stock_actual})`;
-                grpPac.appendChild(opt);
-            });
-            catSel.appendChild(grpPac);
-        }
+    // Clear hint
+    const hintDiv = document.getElementById('catLinkHint');
+    if (hintDiv) { hintDiv.textContent = ''; hintDiv.style.display = 'none'; }
+
+    // Populate institutional catalog select
+    const instSel = document.getElementById('mCatalogoInstSelect');
+    if (instSel) {
+        instSel.innerHTML = '<option value="">— Sin vincular al institucional —</option>';
+        _catalogo.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.nombre}${c.presentacion ? ' — ' + c.presentacion : ''} (Stock: ${c.stock_actual})`;
+            instSel.appendChild(opt);
+        });
+    }
+
+    // Populate patient-specific catalog select
+    const pacSel = document.getElementById('mCatalogoPacSelect');
+    if (pacSel) {
+        pacSel.innerHTML = '<option value="">— Sin vincular al del residente —</option>';
+        _catalogoPaciente.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.nombre}${c.presentacion ? ' — ' + c.presentacion : ''} (Stock: ${c.stock_actual})`;
+            pacSel.appendChild(opt);
+        });
     }
 
     if (_editingMedId) {
@@ -458,58 +458,76 @@ function openModalMed(id) {
             f.mHorarios.value = m.horarios_custom || '';
             f.mInstrucciones.value = m.instrucciones || '';
             f.mStock.value = m.stock ?? '';
-            if (catSel && m.catalogo_id) {
-                catSel.value = m.catalogo_id;
-                if (stockGroup) stockGroup.style.display = 'none';
-                // Show hint
-                onCatalogoSelectChange(catSel);
+            if (m.catalogo_id) {
+                // Pre-select in whichever list contains this id
+                const isInst = _catalogo.some(c => c.id === m.catalogo_id);
+                if (isInst && instSel) {
+                    instSel.value = m.catalogo_id;
+                    onCatalogoSelectChange('inst', instSel);
+                } else if (pacSel) {
+                    pacSel.value = m.catalogo_id;
+                    onCatalogoSelectChange('pac', pacSel);
+                }
             }
         }
     }
     openModal('modalMed');
-    // Show stock note if stock is empty on open
     setTimeout(() => {
         const stockInp = document.querySelector('#formMed [name="mStock"]');
         if (stockInp) _onStockInput(stockInp);
     }, 0);
 }
 
-// Called when catalog picker changes
-function onCatalogoSelectChange(sel) {
+// Called when either catalog picker changes
+// type: 'inst' | 'pac'
+function onCatalogoSelectChange(type, sel) {
+    const instSel    = document.getElementById('mCatalogoInstSelect');
+    const pacSel     = document.getElementById('mCatalogoPacSelect');
     const stockGroup = document.getElementById('stockFamiliarGroup');
-    const hintDiv = document.getElementById('catLinkHint');
-    if (!sel.value) {
-        // No catalog link — show manual stock input
-        if (stockGroup) stockGroup.style.display = '';
-        if (hintDiv) { hintDiv.textContent = ''; hintDiv.style.display = 'none'; }
+    const hintDiv    = document.getElementById('catLinkHint');
+
+    // Mutual exclusion: selecting one clears the other
+    if (type === 'inst' && sel.value && pacSel) pacSel.value = '';
+    if (type === 'pac'  && sel.value && instSel) instSel.value = '';
+
+    const hasValue = !!sel.value;
+    if (!hasValue) {
+        // Check if the OTHER select still has a value
+        const otherVal = type === 'inst' ? pacSel?.value : instSel?.value;
+        if (!otherVal) {
+            // Neither selected — show manual stock
+            if (stockGroup) stockGroup.style.display = '';
+            if (hintDiv) { hintDiv.textContent = ''; hintDiv.style.display = 'none'; }
+        }
         return;
     }
-    // Hide manual stock since stock is managed by catalog
+
+    // A catalog item is selected — hide manual stock
     if (stockGroup) stockGroup.style.display = 'none';
+
+    // Auto-fill name if empty
     const valInt = parseInt(sel.value);
-    // Determine if institutional or patient-specific
-    const instItem = _catalogo.find(c => c.id === valInt);
-    const pacItem  = _catalogoPaciente.find(c => c.id === valInt);
-    const item = instItem || pacItem;
+    const catalog = type === 'inst' ? _catalogo : _catalogoPaciente;
+    const item = catalog.find(c => c.id === valInt);
     if (item) {
-        // Auto-fill name if empty
         const f = document.getElementById('formMed');
         if (f && !f.mNombre.value.trim()) f.mNombre.value = item.nombre;
-        // Show hint
-        if (hintDiv) {
-            if (instItem) {
-                hintDiv.textContent = '📦 El stock se descuenta del inventario institucional.';
-                hintDiv.style.color = 'var(--pro-primary, #1565C0)';
-                hintDiv.style.background = '#EEF2FF';
-            } else {
-                hintDiv.textContent = '👤 El stock se descuenta del catálogo personal del residente.';
-                hintDiv.style.color = '#7C3AED';
-                hintDiv.style.background = '#F5F3FF';
-            }
-            hintDiv.style.padding = '6px 10px';
-            hintDiv.style.borderRadius = '6px';
-            hintDiv.style.display = 'block';
+    }
+
+    // Show hint
+    if (hintDiv) {
+        if (type === 'inst') {
+            hintDiv.textContent = '📦 El stock se descuenta del inventario institucional.';
+            hintDiv.style.color = 'var(--pro-primary, #1565C0)';
+            hintDiv.style.background = '#EEF2FF';
+        } else {
+            hintDiv.textContent = '👤 El stock se descuenta del catálogo personal del residente.';
+            hintDiv.style.color = '#7C3AED';
+            hintDiv.style.background = '#F5F3FF';
         }
+        hintDiv.style.padding = '6px 10px';
+        hintDiv.style.borderRadius = '6px';
+        hintDiv.style.display = 'block';
     }
 }
 
@@ -523,8 +541,10 @@ async function handleSaveMed(e) {
     const f = e.target;
     const btn = f.querySelector('[type=submit]');
     btn.disabled = true;
-    const catSel = document.getElementById('mCatalogoSelect');
-    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catSel?.value ? parseInt(catSel.value) : null };
+    const instSel = document.getElementById('mCatalogoInstSelect');
+    const pacSel  = document.getElementById('mCatalogoPacSelect');
+    const catId   = (instSel?.value ? parseInt(instSel.value) : null) || (pacSel?.value ? parseInt(pacSel.value) : null) || null;
+    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catId };
     try {
         if (_editingMedId) { await API_B2B.updateMedicamento(_editingMedId, data); showToast('Medicamento actualizado', 'success'); }
         else {
