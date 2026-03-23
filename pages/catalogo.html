@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Medicamentos — CuidaDiario PRO</title>
+    <title>Catálogo de insumos — CuidaDiario PRO</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
@@ -28,7 +28,7 @@
             <span class="nav-section-label admin-only">Administración</span>
             <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
             <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
-            <a href="catalogo.html" class="nav-item active admin-only"><span class="nav-icon">💊</span><span class="nav-label">Catálogo</span></a>
+            <a href="catalogo.html" class="nav-item active admin-only"><span class="nav-icon">📦</span><span class="nav-label">Catálogo</span></a>
             <a href="configuracion.html" class="nav-item"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
         </nav>
         <div class="sidebar-footer">
@@ -47,7 +47,7 @@
     <main class="main-content" id="mainContent">
         <div class="topbar">
             <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
-            <div class="topbar-title">💊 Catálogo de medicamentos</div>
+            <div class="topbar-title">� Catálogo de insumos</div>
             <div class="topbar-actions">
                 <span class="topbar-institucion" id="topbarInstitucion">—</span>
             </div>
@@ -106,8 +106,9 @@
             <form id="formCatalogoItem">
                 <div class="form-grid">
                     <div class="form-group form-col-2">
-                        <label class="form-label">Nombre del medicamento *</label>
-                        <input type="text" name="cNombre" id="cNombre" class="form-control" placeholder="Ej: Paracetamol" required>
+                        <label class="form-label">Nombre del ítem *</label>
+                        <input type="text" name="cNombre" id="cNombre" class="form-control" placeholder="Ej: Paracetamol, pañales, guantes quirurgícos…" required>
+                        <small style="font-size:.74rem;color:var(--text-secondary);margin-top:4px;display:block">Puede ser un medicamento, insumo, material o cualquier elemento con stock.</small>
                     </div>
                     <div class="form-group form-col-2">
                         <label class="form-label">Principio activo</label>

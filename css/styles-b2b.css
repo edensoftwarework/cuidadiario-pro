@@ -1106,6 +1106,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+    align-items: start;
 }
 @media (max-width: 900px) {
     .settings-grid { grid-template-columns: 1fr; }

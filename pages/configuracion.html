@@ -28,7 +28,7 @@
             <span class="nav-section-label admin-only">Administración</span>
             <a href="staff.html" class="nav-item admin-only"><span class="nav-icon">👥</span><span class="nav-label">Staff</span></a>
             <a href="reportes.html" class="nav-item admin-only"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></a>
-            <a href="catalogo.html" class="nav-item admin-only"><span class="nav-icon">💊</span><span class="nav-label">Catálogo</span></a>
+            <a href="catalogo.html" class="nav-item admin-only"><span class="nav-icon">📦</span><span class="nav-label">Catálogo</span></a>
             <a href="configuracion.html" class="nav-item active"><span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span></a>
         </nav>
         <div class="sidebar-footer">
@@ -168,8 +168,8 @@
                                 <!-- Header -->
                                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--bg-page)">
                                     <div style="padding:10px 12px;font-weight:700;font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;border-right:1px solid var(--border-color)">Función</div>
-                                    <div style="padding:10px 12px;font-weight:700;text-align:center;border-right:1px solid var(--border-color);color:#4B5563">Básico<br><span style="font-weight:400;font-size:.72rem">$7.500/mes</span></div>
-                                    <div style="padding:10px 12px;font-weight:700;text-align:center;color:#374151">PRO<br><span style="font-weight:400;font-size:.72rem">$15.000/mes</span></div>
+                                    <div style="padding:10px 12px;font-weight:700;text-align:center;border-right:1px solid var(--border-color);color:#4B5563">Básico<br><span style="font-weight:400;font-size:.72rem">$10.000/mes*</span></div>
+                                    <div style="padding:10px 12px;font-weight:700;text-align:center;color:#374151">PRO<br><span style="font-weight:400;font-size:.72rem">$15.000/mes*</span></div>
                                 </div>
                                 <!-- Pacientes — única diferencia -->
                                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border-color)">
@@ -190,6 +190,8 @@
                                     <div style="padding:8px 12px;text-align:center">✅</div>
                                 </div>
                             </div>
+
+                            <p style="font-size:.72rem;color:var(--text-secondary);margin-top:-10px;margin-bottom:18px">* Precio de lanzamiento por los primeros 6 meses. Precio regular: Básico $20.000/mes · PRO $30.000/mes.</p>
 
                             <!-- Botones de acción de plan -->
                             <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap">
@@ -293,7 +295,7 @@
                     </div>
                     <div class="card-body">
                         <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
-                            Limpia los archivos en caché de CuidaDiario PRO en este dispositivo. Útilas después de una actualización si la app no se refrescó automáticamente. No afecta ningún otro sitio ni aplicación.
+                            Limpia los archivos en caché de CuidaDiario PRO en este dispositivo. Útiles después de una actualización si la app no se refrescó automáticamente. No afecta ningún otro sitio ni aplicación.
                         </p>
                         <button id="btnLimpiarCache" type="button" class="btn btn-secondary" onclick="limpiarCache()">
                             Limpiar caché y recargar
@@ -386,14 +388,14 @@
                     </div>
                 </div>
 
-                <!-- Catálogo de medicamentos (solo admin, solo modelo institucional) -->
+                <!-- Catálogo de insumos (solo admin, solo modelo institucional) -->
                 <div class="card admin-only" id="catalogoCard" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">💊 Catálogo institucional activo</h3>
-                        <a href="catalogo.html" class="btn btn-sm btn-primary">💊 Ir al Catálogo</a>
+                        <h3 class="card-title">📦 Catálogo de insumos activo</h3>
+                        <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
                     </div>
                     <div class="card-body">
-                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de medicamentos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
+                        <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de insumos (medicamentos, materiales y más) desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
                     </div>
                 </div>
 

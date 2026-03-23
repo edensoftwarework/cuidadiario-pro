@@ -1,5 +1,5 @@
 /**
- * catalogo.js — Catálogo institucional de medicamentos
+ * catalogo.js — Catálogo institucional de insumos
  * CuidaDiario PRO — by EDEN SoftWork
  */
 
@@ -102,9 +102,9 @@ function renderCatalogo(lista) {
 
     if (lista.length === 0) {
         el.innerHTML = `<div class="empty-state">
-            <div class="empty-icon">💊</div>
+            <div class="empty-icon">📦</div>
             <h3>Catálogo vacío</h3>
-            <p>Agregá los medicamentos que maneja la institución para llevar un inventario centralizado.</p>
+            <p>Agregaá los insumos que maneja la institución (medicamentos, materiales, elementos de stock) para llevar un inventario centralizado.</p>
             <button class="btn btn-primary" onclick="openModalCatalogoItem()">+ Agregar primer ítem</button>
         </div>`;
         return;
@@ -115,7 +115,7 @@ function renderCatalogo(lista) {
         <table style="width:100%;border-collapse:collapse;font-size:.9rem">
             <thead>
                 <tr style="border-bottom:2px solid var(--border-color);text-align:left">
-                    <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Medicamento</th>
+                    <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Ítem</th>
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Presentación</th>
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600;text-align:center">Stock actual</th>
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600;text-align:center">Mínimo</th>
