@@ -55,30 +55,36 @@
 
         <div class="page-content">
 
-            <!-- Modelo inactivo -->
-            <div id="catalogoInactivo" style="display:none">
-                <div class="alert alert-warning" style="margin-bottom:20px">
-                    <span class="alert-icon">⚠️</span>
-                    <span>El catálogo institucional está desactivado. La institución usa el modelo <strong>familiar</strong>, donde el stock es gestionado por cada familia.
-                    Para activar el catálogo centralizado, cambiá el modelo en <a href="configuracion.html" style="color:var(--pro-primary);text-decoration:underline">Configuración</a>.</span>
-                </div>
-            </div>
-
             <!-- Resumen de stock bajo -->
             <div id="stockBajoCard" style="display:none" class="card" style="margin-bottom:20px;border-left:4px solid var(--pro-danger)">
                 <div class="card-header">
                     <h3 class="card-title" style="color:var(--pro-danger)">⚠️ Stock bajo</h3>
-                    <button class="btn btn-sm btn-secondary" onclick="loadCatalogo()">🔄 Actualizar</button>
                 </div>
                 <div class="card-body">
                     <div id="stockBajoList"></div>
                 </div>
             </div>
 
+            <!-- Selector de vista: institucional vs. por paciente -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body" style="padding:14px 20px">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <span style="font-size:.82rem;font-weight:600;color:var(--text-secondary)">Ver:</span>
+                        <button id="btnViewInstitucional" class="btn btn-primary btn-sm" onclick="switchView('institucional')">🏥 Insumos institucionales</button>
+                        <button id="btnViewPaciente" class="btn btn-secondary btn-sm" onclick="switchView('paciente')">👤 Insumos por residente</button>
+                        <div id="pacienteSelectWrap" style="display:none;flex:1;min-width:200px;max-width:320px">
+                            <select id="pacienteSelector" class="form-control" style="padding:6px 10px;font-size:.85rem" onchange="onPacienteSelectorChange()">
+                                <option value="">— Seleccioná un residente —</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Catálogo principal -->
-            <div id="catalogoMainCard" class="card" style="display:none">
+            <div id="catalogoMainCard" class="card">
                 <div class="card-header">
-                    <h3 class="card-title">📦 Inventario del catálogo</h3>
+                    <h3 class="card-title" id="catalogoCardTitle">📦 Inventario institucional</h3>
                     <div class="d-flex gap-8 align-center">
                         <input type="text" id="catalogoSearch" class="form-control" style="width:200px;padding:6px 10px;font-size:.85rem" placeholder="Buscar...">
                         <button class="btn btn-primary btn-sm" onclick="openModalCatalogoItem()">+ Agregar ítem</button>
@@ -104,6 +110,26 @@
         </div>
         <div class="modal-body">
             <form id="formCatalogoItem">
+                <div class="form-group">
+                    <label class="form-label">Tipo de insumo</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem;padding:8px 14px;border:2px solid var(--border-color);border-radius:8px;flex:1;min-width:140px" id="catTipoInst">
+                            <input type="radio" name="catTipo" value="institucional" checked onchange="onCatTipoChange(this.value)">
+                            🏥 Institucional (general)
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem;padding:8px 14px;border:2px solid var(--border-color);border-radius:8px;flex:1;min-width:140px" id="catTipoPaciente">
+                            <input type="radio" name="catTipo" value="paciente" onchange="onCatTipoChange(this.value)">
+                            👤 Específico de un residente
+                        </label>
+                    </div>
+                </div>
+                <div id="catPacienteGroup" class="form-group" style="display:none">
+                    <label class="form-label">Residente *</label>
+                    <select name="cPacienteId" id="cPacienteId" class="form-control">
+                        <option value="">— Seleccioná un residente —</option>
+                    </select>
+                    <small style="font-size:.74rem;color:var(--text-secondary);margin-top:4px;display:block">El stock de este ítem se lleva de forma independiente para este residente. Es visible para sus familiares.</small>
+                </div>
                 <div class="form-grid">
                     <div class="form-group form-col-2">
                         <label class="form-label">Nombre del ítem *</label>

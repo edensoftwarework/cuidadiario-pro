@@ -140,9 +140,18 @@ const API_B2B = {
     async getHistorialMeds(paciente_id)   { return this.get(`/api/b2b/medicamentos/historial?paciente_id=${paciente_id}`); },
 
     // ============================================
-    // CATÁLOGO DE MEDICAMENTOS (modelo institucional)
+    // CATÁLOGO DE INSUMOS (modelo híbrido)
+    // getCatalogo()                  → insumos institucionales generales
+    // getCatalogo({paciente_id: X})  → insumos específicos del paciente X
     // ============================================
-    async getCatalogo()                   { return this.get('/api/b2b/catalogo'); },
+    async getCatalogo(params = {}) {
+        let url = '/api/b2b/catalogo';
+        const qs = new URLSearchParams();
+        if (params.paciente_id) qs.set('paciente_id', params.paciente_id);
+        const q = qs.toString();
+        if (q) url += '?' + q;
+        return this.get(url);
+    },
     async getCatalogoStockBajo()          { return this.get('/api/b2b/catalogo/stock-bajo'); },
     async createCatalogoItem(data)        { return this.post('/api/b2b/catalogo', data); },
     async updateCatalogoItem(id, data)    { return this.patch(`/api/b2b/catalogo/${id}`, data); },

@@ -210,14 +210,6 @@
                                     <label class="form-label">Dirección</label>
                                     <input type="text" name="direccion" id="instDireccion" class="form-control" placeholder="Calle, número, ciudad">
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">🏪 Modelo de gestión de stock de medicamentos</label>
-                                    <select name="stock_modelo" id="instStockModelo" class="form-control" onchange="onStockModeloChange(this.value)">
-                                        <option value="familiar">Familiar / Responsable — Cada paciente tiene su propio stock</option>
-                                        <option value="institucion">Institucional — La institución gestiona un catálogo centralizado</option>
-                                    </select>
-                                    <div class="form-hint" style="font-size:.82rem;color:var(--text-secondary);margin-top:4px">En el modelo <strong>familiar</strong>, el stock lo carga la familia de cada paciente. En el <strong>institucional</strong>, la farmacia de la institución centraliza el inventario y se descuenta automáticamente con cada toma registrada.</div>
-                                </div>
                                 <button type="submit" class="btn btn-primary">Guardar institución</button>
                             </form>
 
@@ -374,14 +366,14 @@
                         </div>
                     </div>
 
-                    <!-- Catálogo de insumos (solo admin, solo modelo institucional) -->
-                    <div class="card admin-only" id="catalogoCard" style="display:none">
+                    <!-- Catálogo de insumos (siempre activo — modelo híbrido) -->
+                    <div class="card admin-only" id="catalogoCard">
                         <div class="card-header">
-                            <h3 class="card-title">📦 Catálogo de insumos activo</h3>
+                            <h3 class="card-title">📦 Catálogo de insumos</h3>
                             <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
                         </div>
                         <div class="card-body">
-                            <p style="font-size:.88rem;color:var(--text-secondary)">El modelo institucional está activo. Gestioná el inventario centralizado de insumos (medicamentos, materiales y más) desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
+                            <p style="font-size:.88rem;color:var(--text-secondary)">CuidaDiario PRO usa un <strong>modelo híbrido</strong>: catálogo institucional para los insumos que provee la institución, e insumos específicos por residente para lo que aporta cada familia. Gestioná ambos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
                         </div>
                     </div>
 

@@ -64,12 +64,6 @@ async function cargarInstitucion() {
         document.getElementById('instTelefono').value = inst.telefono || '';
         document.getElementById('instEmail').value = inst.email || '';
         document.getElementById('instDireccion').value = inst.direccion || '';
-        const modelo = inst.stock_modelo || 'familiar';
-        const smEl = document.getElementById('instStockModelo');
-        if (smEl) smEl.value = modelo;
-        onStockModeloChange(modelo);
-        // Sincronizar stock_modelo al localStorage para uso cross-page
-        localStorage.setItem('stock_modelo', modelo);
 
         // Sincronizar shared_mode desde la DB (fuente de verdad cross-device)
         const sharedMode = !!inst.shared_mode;
@@ -186,8 +180,7 @@ async function guardarInstitucion(e) {
         tipo: form.tipo.value,
         telefono: telefono,
         email: form.email.value.trim(),
-        direccion: form.direccion.value.trim(),
-        stock_modelo: form.stock_modelo.value
+        direccion: form.direccion.value.trim()
     };
 
     const btn = form.querySelector('[type=submit]');
@@ -197,9 +190,6 @@ async function guardarInstitucion(e) {
     try {
         await API_B2B.patch('/api/b2b/institucion', payload);
         showToast('Institución actualizada ✅', 'success');
-        onStockModeloChange(payload.stock_modelo);
-        // Sincronizar stock_modelo al localStorage para uso cross-page y cross-device
-        localStorage.setItem('stock_modelo', payload.stock_modelo);
 
         const tb = document.getElementById('topbarInstitucion');
         if (tb) tb.textContent = payload.nombre;
@@ -212,12 +202,8 @@ async function guardarInstitucion(e) {
 }
 
 // ============================================
-// MODELO DE STOCK — muestra/oculta card info
+// CATÁLOGO DE INSUMOS — siempre activo (modelo híbrido)
 // ============================================
-function onStockModeloChange(val) {
-    const card = document.getElementById('catalogoCard');
-    if (card) card.style.display = val === 'institucion' ? '' : 'none';
-}
 
 // ============================================
 // ALERTAS DEL DASHBOARD — persistencia en DB

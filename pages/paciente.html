@@ -100,14 +100,15 @@
 <div class="modal-overlay" id="modalMed">
     <div class="modal"><div class="modal-header"><span class="modal-title" id="modalMedTitle">Medicamento</span><button class="modal-close" onclick="closeModal('modalMed')">✕</button></div>
     <div class="modal-body"><form id="formMed">
-        <!-- Selector de catálogo institucional (oculto en modelo familiar) -->
-        <div id="catalogoPickerGroup" style="display:none">
+        <!-- Selector de catálogo (híbrido: institucional + paciente) -->
+        <div id="catalogoPickerGroup">
             <div class="form-group">
-                <label class="form-label">📦 Vincular al catálogo institucional</label>
+                <label class="form-label">📦 Vincular al catálogo de insumos</label>
                 <select id="mCatalogoSelect" class="form-control" onchange="onCatalogoSelectChange(this)">
-                    <option value="">— Sin vincular (medicamento individual) —</option>
+                    <option value="">— Sin vincular (insumo individual) —</option>
+                    <!-- optgroups populated dynamically -->
                 </select>
-                <div class="form-hint" style="font-size:.8rem;color:var(--text-secondary);margin-top:4px">Al vincular, el stock se descuenta automáticamente del inventario institucional.</div>
+                <div id="catLinkHint" class="form-hint" style="font-size:.8rem;color:var(--text-secondary);margin-top:4px;display:none"></div>
             </div>
         </div>
         <div class="form-grid">
@@ -120,7 +121,7 @@
                 <label class="form-label">Stock actual</label>
                 <input type="number" name="mStock" class="form-control" min="0" placeholder="Unidades" oninput="_onStockInput(this)" onfocus="_onStockInput(this)">
                 <div id="stockNullNote" style="display:none;margin-top:6px;font-size:.8rem;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;padding:7px 10px;line-height:1.5">
-                    Sin stock cargado: las tomas de este medicamento no descontarán stock. Podés cargarlo en cualquier momento editando el medicamento.
+                    Sin stock cargado: las tomas de este insumo no descontarán stock. Podés cargarlo en cualquier momento editando el medicamento.
                 </div>
             </div>
         </div>

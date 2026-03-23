@@ -142,38 +142,30 @@
             <div class="onb-header">
                 <div class="onb-step-badge">1</div>
                 <div>
-                    <div class="onb-step-title">Medicamentos</div>
-                    <div class="onb-step-subtitle">¿Cómo se gestiona el stock?</div>
+                    <div class="onb-step-title">Gestión de insumos y medicamentos</div>
+                    <div class="onb-step-subtitle">Modelo híbrido incluido en todos los planes</div>
                 </div>
             </div>
             <div class="onb-body">
-                <div class="onb-options">
-                    <label class="onb-option selected" id="optInstitucion">
-                        <input type="radio" name="stockModelo" value="institucion" checked>
-                        <div class="opt-icon">🏥</div>
-                        <div class="opt-title">Stock institucional</div>
-                        <div class="opt-desc">La institución gestiona un inventario centralizado de medicamentos. El personal registra cada ingreso de stock y el sistema lo descuenta automáticamente al registrar cada toma.</div>
-                        <details style="margin-top:6px">
-                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
-                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Recomendado para residencias, hogares de larga estadía y centros donde la institución compra y administra la medicación de sus residentes. Se trabaja con un catálogo unificado y alertas de stock mínimo por medicamento.
-                            </div>
-                        </details>
-                    </label>
-                    <label class="onb-option" id="optFamiliar">
-                        <input type="radio" name="stockModelo" value="familiar">
-                        <div class="opt-icon">👨‍👩‍👧</div>
-                        <div class="opt-title">Stock por residente</div>
-                        <div class="opt-desc">Cada residente cuenta con su propio inventario de medicamentos, provistos por la familia o por el paciente. El personal registra las tomas y el stock de forma individual.</div>
-                        <details style="margin-top:6px">
-                            <summary style="font-size:.78rem;color:var(--pro-primary);cursor:pointer;user-select:none">Ver más detalles</summary>
-                            <div style="font-size:.78rem;color:var(--text-secondary);line-height:1.5;margin-top:6px;padding-left:4px">
-                                Recomendado para centros de día, clínicas de rehabilitación o instituciones donde la medicación es aportada por cada paciente o su familia. El inventario y el historial de tomas se gestionan de forma independiente por residente.
-                            </div>
-                        </details>
-                    </label>
+                <!-- Hybrid model explanation card -->
+                <div style="background:linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 100%);border:1.5px solid #C7D2FE;border-radius:14px;padding:20px 18px;margin-bottom:16px">
+                    <div style="font-size:1.5rem;margin-bottom:10px;text-align:center">🏥 + 👤</div>
+                    <div style="font-weight:800;font-size:1rem;color:#3730A3;margin-bottom:8px;text-align:center">Modelo híbrido de stock</div>
+                    <p style="font-size:.84rem;color:#4338CA;line-height:1.6;margin-bottom:14px;text-align:center">CuidaDiario PRO combina los dos esquemas en uno: catálogo institucional para los insumos que provee la institución, y catálogos individuales para lo que aporta cada familia.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div style="background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #C7D2FE">
+                            <div style="font-size:1.2rem;margin-bottom:4px">🏥</div>
+                            <div style="font-weight:700;font-size:.83rem;color:#1E40AF;margin-bottom:4px">Catálogo institucional</div>
+                            <div style="font-size:.75rem;color:#475569;line-height:1.5">Medicamentos e insumos que la institución adquiere y distribuye. El personal registra el stock y el sistema lo descuenta al registrar cada toma.</div>
+                        </div>
+                        <div style="background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #C7D2FE">
+                            <div style="font-size:1.2rem;margin-bottom:4px">👤</div>
+                            <div style="font-weight:700;font-size:.83rem;color:#1E40AF;margin-bottom:4px">Insumos por residente</div>
+                            <div style="font-size:.75rem;color:#475569;line-height:1.5">Medicamentos o insumos propios de cada residente, provistos por su familia. Se registran individualmente y generan alertas cuando el stock es bajo.</div>
+                        </div>
+                    </div>
                 </div>
-                <p style="font-size:.76rem;color:var(--text-secondary);margin-top:10px;padding:8px 10px;background:var(--bg-page);border-radius:8px">⚙️ Esta configuración puede modificarse en cualquier momento desde <strong>Configuración</strong> en el menú lateral.</p>
+                <p style="font-size:.76rem;color:var(--text-secondary);padding:8px 10px;background:var(--bg-page);border-radius:8px">💡 Podés usar ambos catálogos en simultáneo. No hay nada que configurar: el modelo híbrido está disponible desde el primer día.</p>
             </div>
             <div class="onb-footer">
                 <span></span>

@@ -172,18 +172,27 @@ function renderStockBajo(lista) {
     const container = document.getElementById('stockBajo');
     if (!container) return;
     if (!lista || lista.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">💊</div><p>Todos los medicamentos tienen stock suficiente</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">�</div><p>Todos los insumos tienen stock suficiente</p></div>`;
         return;
     }
-    container.innerHTML = lista.map(m => `
+    container.innerHTML = lista.map(m => {
+        const esPaciente = m.tipo === 'catalogo_paciente' || m.paciente_nombre;
+        const pacienteBadge = esPaciente
+            ? ` <span class="badge badge-purple" style="font-size:.65rem">👤 ${escapeHtml((m.paciente_nombre || '') + ' ' + (m.paciente_apellido || '')).trim()}</span>`
+            : '';
+        const catBadge = (m.tipo === 'catalogo' && !esPaciente)
+            ? ' <span class="badge badge-blue" style="font-size:.65rem">🏥 Institucional</span>'
+            : '';
+        return `
         <div class="item-row" style="border-left:3px solid var(--pro-warning)">
-            <div class="item-icon badge-orange">💊</div>
+            <div class="item-icon badge-orange">${esPaciente ? '👤' : '📦'}</div>
             <div class="item-body">
-                <div class="item-title">${escapeHtml(m.nombre)}${m.tipo === 'catalogo' ? ' <span class="badge badge-blue" style="font-size:.65rem">Catálogo</span>' : ''}</div>
+                <div class="item-title">${escapeHtml(m.nombre)}${catBadge}${pacienteBadge}</div>
                 <div class="item-subtitle">${escapeHtml(m.dosis_horario || '')}</div>
             </div>
             <span class="badge badge-danger">Stock: ${m.stock}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 // Muestra u oculta secciones del dashboard según las preferencias guardadas en la DB (sincronizadas al login)

@@ -11,7 +11,6 @@ const TOTAL_STEPS = 4;
 // Datos recopilados en el wizard
 // (nombre, tipo, teléfono ya se guardaron en el registro)
 const _onbData = {
-    stock_modelo: 'institucion',
     modo_compartida: true
 };
 
@@ -39,10 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Listeners de las option-cards (stock model)
-    _setupOptionCards('stockModelo', ['optInstitucion', 'optFamiliar'], (val) => {
-        _onbData.stock_modelo = val;
-    });
     // Listeners de las option-cards (modo operación)
     _setupOptionCards('modoOp', ['optCompartida', 'optIndividual'], (val) => {
         _onbData.modo_compartida = val === 'compartida';
@@ -70,14 +65,12 @@ function _setupOptionCards(radioName, cardIds, onChange) {
 
 // ── Navegación ──
 function onbNext(fromStep) {
-    if (fromStep === 1) {
-        _onbData.stock_modelo = document.querySelector('input[name="stockModelo"]:checked')?.value || 'institucion';
-    }
     if (fromStep === 2) {
         _onbData.modo_compartida = (document.querySelector('input[name="modoOp"]:checked')?.value || 'individual') === 'compartida';
+        _buildSummary();
     }
     if (fromStep === 3) {
-        // Step 3 is the plans info step — just build summary before going to step 4
+        // Step 3 is plans info — build summary before going to step 4
         _buildSummary();
     }
     _clearAlert();
@@ -102,12 +95,8 @@ function _updateProgress() {
     if (bar) bar.style.width = `${(_currentStep / TOTAL_STEPS) * 100}%`;
 }
 
-// ── Resumen del paso 3 ──
+// ── Resumen del paso 2 ──
 function _buildSummary() {
-    const stockLabel = {
-        institucion: '🏥 Stock institucional (la institución provee)',
-        familiar: '👨‍👩‍👧 Stock por paciente (la familia provee)'
-    };
     const modoLabel = _onbData.modo_compartida
         ? '🖥️ Estación compartida (se activará al finalizar)'
         : '👤 Acceso individual por cuenta';
@@ -115,7 +104,7 @@ function _buildSummary() {
     const instNombre = API_B2B.getUser()?.institucion_nombre || 'Tu institución';
     const items = [
         { icon: '🏥', label: 'Institución', value: instNombre },
-        { icon: '💊', label: 'Medicamentos', value: stockLabel[_onbData.stock_modelo] || _onbData.stock_modelo },
+        { icon: '📦', label: 'Gestión de insumos', value: 'Modelo híbrido — catálogo institucional + insumos por residente' },
         { icon: '🖥️', label: 'Modo de trabajo', value: modoLabel }
     ];
 
@@ -140,7 +129,6 @@ async function onbFinish() {
     try {
         // Guardar configuración en el backend (nombre/tipo/tel ya guardados en el registro)
         await API_B2B.updateInstitucion({
-            stock_modelo:    _onbData.stock_modelo,
             shared_mode:     _onbData.modo_compartida,
             onboarding_done: true
         });

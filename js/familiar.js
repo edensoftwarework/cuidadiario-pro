@@ -158,7 +158,8 @@ function renderFamiliares(lista) {
                 </div>
                 <a href="paciente.html?id=${p.id}" class="btn btn-primary btn-sm btn-block" style="margin-top:10px">
                     Ver ficha completa →
-                </a>` : `
+                </a>
+                <div id="stockAlertFam_${p.id}" style="margin-top:10px"></div>` : `
                 <a href="paciente.html?id=${p.id}" class="btn btn-secondary btn-sm btn-block" style="margin-top:10px">
                     📋 Ver historial del paciente
                 </a>`}
@@ -182,6 +183,29 @@ function renderFamiliares(lista) {
     }
 
     grid.innerHTML = html || `<div class="empty-state"><div class="empty-icon">👤</div><h3>Sin familiares vinculados activos</h3></div>`;
+
+    // Load patient-specific stock alerts async per active patient
+    activos.forEach(p => _cargarStockAlertFamiliar(p.id));
+}
+
+async function _cargarStockAlertFamiliar(pacienteId) {
+    const el = document.getElementById(`stockAlertFam_${pacienteId}`);
+    if (!el) return;
+    try {
+        const items = await API_B2B.getCatalogo({ paciente_id: pacienteId });
+        const bajos = items.filter(c => c.stock_minimo != null && c.stock_actual <= c.stock_minimo);
+        if (bajos.length === 0) return;
+        el.innerHTML = `
+        <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 13px;margin-top:4px">
+            <div style="font-weight:700;font-size:.8rem;color:#92400E;margin-bottom:6px">⚠️ Insumos con stock bajo</div>
+            ${bajos.map(c => `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:3px 0;border-bottom:1px solid rgba(245,158,11,.2);color:#78350F">
+                <span>📦 ${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''}</span>
+                <span style="font-weight:700;color:#B45309">Stock: ${c.stock_actual}${c.unidad ? ' ' + escapeHtml(c.unidad) : ''}</span>
+            </div>`).join('')}
+            <div style="font-size:.75rem;color:#92400E;margin-top:6px">Avisá a la institución para reponer los insumos.</div>
+        </div>`;
+    } catch { /* silently ignore if not authorized */ }
 }
 
 function mostrarContactoInstitucion() {
