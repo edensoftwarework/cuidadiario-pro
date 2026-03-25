@@ -141,10 +141,10 @@
                         </div>
                     </div>
 
-                    <!-- Zona de peligro -->
+                    <!-- Administración avanzada -->
                     <div class="card admin-only">
                         <div class="card-header">
-                            <h3 class="card-title" style="color:var(--danger)">⚠️ Zona de peligro</h3>
+                            <h3 class="card-title">⚙️ Administración avanzada</h3>
                         </div>
                         <div class="card-body">
                             <div class="danger-zone">
@@ -156,10 +156,10 @@
                             </div>
                             <div class="danger-zone" style="margin-top:16px">
                                 <div>
-                                    <div style="font-weight:600;margin-bottom:4px;color:var(--danger)">Desactivar institución</div>
-                                    <div style="font-size:.85rem;color:var(--text-secondary)">Esta acción desactiva el acceso de todos los usuarios. Es reversible contactando soporte.</div>
+                                    <div style="font-weight:600;margin-bottom:4px">Desactivar institución</div>
+                                    <div style="font-size:.85rem;color:var(--text-secondary)">⚠️ Esta acción bloquea el acceso de todos los usuarios. Es reversible contactando soporte.</div>
                                 </div>
-                                <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Seguro que deseás desactivar la institución? Todos los accesos serán bloqueados.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
+                                <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Confirmar desactivación? Esta acción bloqueará el acceso a todos los usuarios de la institución. Para revertirlo deberás contactar soporte.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
                             </div>
                         </div>
                     </div>

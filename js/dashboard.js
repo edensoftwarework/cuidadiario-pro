@@ -86,6 +86,13 @@ function setVal(id, val) {
     if (el) el.textContent = val;
 }
 
+// Helper: abre el modal genérico "Ver todos" con el HTML pasado directamente
+function _openVerTodos(title, html) {
+    document.getElementById('modalVerTodosTitle').textContent = title;
+    document.getElementById('modalVerTodosBody').innerHTML = html;
+    openModal('modalVerTodos');
+}
+
 function renderCitasProximas(citas) {
     const container = document.getElementById('citasProximas');
     if (!container) return;
@@ -93,31 +100,40 @@ function renderCitasProximas(citas) {
         container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No hay citas en los próximos 7 días</p></div>`;
         return;
     }
-    container.innerHTML = citas.map(c => `
+    const MAX = 5;
+    const buildItems = (lista) => lista.map(c => `
         <div class="item-row">
             <div class="item-icon badge-blue">📅</div>
             <div class="item-body">
+                <div style="font-size:.8rem;font-weight:700;color:var(--pro-primary);margin-bottom:2px">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</div>
                 <div class="item-title">${escapeHtml(c.titulo)}</div>
-                <div class="item-subtitle">${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')} · ${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatDateTime(c.fecha)}</div>
+                <div class="item-subtitle">${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatDateTime(c.fecha)}</div>
                 ${c.medico ? `<div class="item-meta"><span class="badge badge-gray">🩺 ${escapeHtml(c.medico)}</span></div>` : ''}
             </div>
             <a href="paciente.html?id=${c.paciente_id}" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
+    const allHtml = buildItems(citas);
+    container.innerHTML = buildItems(citas.slice(0, MAX))
+        + (citas.length > MAX ? `<div style="padding:10px 0;text-align:center"><button class="btn btn-sm btn-secondary" id="btnVerTodosCitas">Ver todos (${citas.length})</button></div>` : '');
+    if (citas.length > MAX) {
+        container.querySelector('#btnVerTodosCitas').addEventListener('click', () => _openVerTodos('📅 Citas próximas (' + citas.length + ')', allHtml));
+    }
 }
 
 function renderSintomasRecientes(sintomas) {
     const container = document.getElementById('sintomasRecientes');
     if (!container) return;
     if (!sintomas || sintomas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🩺</div><p>Sin s\u00edntomas registrados en las \u00faltimas 24h</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🩺</div><p>Sin síntomas registrados en las últimas 24h</p></div>`;
         return;
     }
-    container.innerHTML = sintomas.map(s => `
+    const MAX = 5;
+    const buildItems = (lista) => lista.map(s => `
         <div class="item-row">
             <div class="item-icon badge-orange">🩺</div>
             <div class="item-body">
-                <div class="item-title">${escapeHtml(s.paciente_nombre)} ${escapeHtml(s.paciente_apellido || '')}</div>
-                <div class="item-subtitle">${escapeHtml(s.descripcion)}</div>
+                <div style="font-size:.8rem;font-weight:700;color:var(--pro-primary);margin-bottom:2px">👤 ${escapeHtml(s.paciente_nombre)} ${escapeHtml(s.paciente_apellido || '')}</div>
+                <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
                     ${s.intensidad ? `<span class="badge badge-orange">Intensidad: ${s.intensidad}/10</span>` : ''}
                     <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
@@ -126,6 +142,12 @@ function renderSintomasRecientes(sintomas) {
             </div>
             <a href="paciente.html?id=${s.paciente_id}&tab=sintomas" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
+    const allHtml = buildItems(sintomas);
+    container.innerHTML = buildItems(sintomas.slice(0, MAX))
+        + (sintomas.length > MAX ? `<div style="padding:10px 0;text-align:center"><button class="btn btn-sm btn-secondary" id="btnVerTodosSintomas">Ver todos (${sintomas.length})</button></div>` : '');
+    if (sintomas.length > MAX) {
+        container.querySelector('#btnVerTodosSintomas').addEventListener('click', () => _openVerTodos('🩺 Síntomas recientes (' + sintomas.length + ')', allHtml));
+    }
 }
 
 function renderNotasUrgentes(notas) {
@@ -135,12 +157,13 @@ function renderNotasUrgentes(notas) {
         container.innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><p>Sin notas urgentes</p></div>`;
         return;
     }
-    container.innerHTML = notas.map(n => `
+    const MAX = 5;
+    const buildItems = (lista) => lista.map(n => `
         <div class="item-row" style="border-left: 3px solid var(--pro-danger)">
             <div class="item-icon badge-red">🚨</div>
             <div class="item-body">
+                <div style="font-size:.8rem;font-weight:700;color:var(--pro-primary);margin-bottom:2px">👤 ${escapeHtml(n.paciente_nombre)} ${escapeHtml(n.paciente_apellido || '')}</div>
                 <div class="item-title urgente-flag">🚨 ${escapeHtml(n.titulo || 'Sin título')}</div>
-                <div class="item-subtitle">${escapeHtml(n.paciente_nombre)} ${escapeHtml(n.paciente_apellido || '')}</div>
                 <div class="item-subtitle mt-8">${escapeHtml(n.contenido || '')}</div>
                 <div class="item-meta">
                     <span class="badge badge-gray">por ${escapeHtml(n.autor_nombre || '—')}</span>
@@ -149,6 +172,12 @@ function renderNotasUrgentes(notas) {
             </div>
             <a href="paciente.html?id=${n.paciente_id}&tab=notas" class="btn btn-sm btn-danger">Ver</a>
         </div>`).join('');
+    const allHtml = buildItems(notas);
+    container.innerHTML = buildItems(notas.slice(0, MAX))
+        + (notas.length > MAX ? `<div style="padding:10px 0;text-align:center"><button class="btn btn-sm btn-danger" id="btnVerTodosNotas">Ver todos (${notas.length})</button></div>` : '');
+    if (notas.length > MAX) {
+        container.querySelector('#btnVerTodosNotas').addEventListener('click', () => _openVerTodos('🚨 Notas urgentes (' + notas.length + ')', allHtml));
+    }
 }
 function renderCumpleanosHoy(lista) {
     const container = document.getElementById('cumpleanosHoy');
@@ -157,7 +186,8 @@ function renderCumpleanosHoy(lista) {
         container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Sin cumpleaños hoy</p></div>`;
         return;
     }
-    container.innerHTML = lista.map(p => `
+    const MAX = 5;
+    const buildItems = (arr) => arr.map(p => `
         <div class="item-row">
             <div class="item-icon badge-purple">🎂</div>
             <div class="item-body">
@@ -166,16 +196,23 @@ function renderCumpleanosHoy(lista) {
             </div>
             <a href="paciente.html?id=${p.id}" class="btn btn-sm btn-secondary">Ver ficha</a>
         </div>`).join('');
+    const allHtml = buildItems(lista);
+    container.innerHTML = buildItems(lista.slice(0, MAX))
+        + (lista.length > MAX ? `<div style="padding:10px 0;text-align:center"><button class="btn btn-sm btn-secondary" id="btnVerTodosCumple">Ver todos (${lista.length})</button></div>` : '');
+    if (lista.length > MAX) {
+        container.querySelector('#btnVerTodosCumple').addEventListener('click', () => _openVerTodos('🎂 Cumpleaños hoy (' + lista.length + ')', allHtml));
+    }
 }
 
 function renderStockBajo(lista) {
     const container = document.getElementById('stockBajo');
     if (!container) return;
     if (!lista || lista.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">�</div><p>Todos los insumos tienen stock suficiente</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><p>Todos los insumos tienen stock suficiente</p></div>`;
         return;
     }
-    container.innerHTML = lista.map(m => {
+    const MAX = 5;
+    const buildItems = (arr) => arr.map(m => {
         const esPaciente = m.tipo === 'catalogo_paciente' || m.paciente_nombre;
         const pacienteBadge = esPaciente
             ? ` <span class="badge badge-purple" style="font-size:.65rem">👤 ${escapeHtml((m.paciente_nombre || '') + ' ' + (m.paciente_apellido || '')).trim()}</span>`
@@ -193,9 +230,14 @@ function renderStockBajo(lista) {
             <span class="badge badge-danger">Stock: ${m.stock}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
         </div>`;
     }).join('');
+    const allHtml = buildItems(lista);
+    container.innerHTML = buildItems(lista.slice(0, MAX))
+        + (lista.length > MAX ? `<div style="padding:10px 0;text-align:center"><button class="btn btn-sm btn-secondary" id="btnVerTodosStock">Ver todos (${lista.length})</button></div>` : '');
+    if (lista.length > MAX) {
+        container.querySelector('#btnVerTodosStock').addEventListener('click', () => _openVerTodos('⚠️ Insumos con stock bajo (' + lista.length + ')', allHtml));
+    }
 }
 
-// Muestra u oculta secciones del dashboard según las preferencias guardadas en la DB (sincronizadas al login)
 function _applyNotifPrefs() {
     try {
         // notif_prefs viene del usuario almacenado localmente (hidratado desde la DB en cada login)

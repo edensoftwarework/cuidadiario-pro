@@ -160,10 +160,11 @@ const API_B2B = {
     // ============================================
     // CITAS
     // ============================================
-    async getCitas(paciente_id)   { return this.get(`/api/b2b/citas?paciente_id=${paciente_id}`); },
-    async createCita(data)        { return this.post('/api/b2b/citas', data); },
-    async updateCita(id, data)    { return this.patch(`/api/b2b/citas/${id}`, data); },
-    async deleteCita(id)          { return this.del(`/api/b2b/citas/${id}`); },
+    async getCitas(paciente_id)          { return this.get(`/api/b2b/citas?paciente_id=${paciente_id}`); },
+    async createCita(data)               { return this.post('/api/b2b/citas', data); },
+    async updateCita(id, data)           { return this.patch(`/api/b2b/citas/${id}`, data); },
+    async deleteCita(id)                 { return this.del(`/api/b2b/citas/${id}`); },
+    async getCitasHistorial(paciente_id) { return this.get(`/api/b2b/citas/historial?paciente_id=${paciente_id}`); },
 
     // ============================================
     // TAREAS

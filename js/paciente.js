@@ -649,6 +649,48 @@ async function handleSaveEgreso(e) {
 let _citas = [];
 async function loadCitas() {
     try { _citas = await API_B2B.getCitas(_pacienteId); renderCitas(_citas); } catch (err) { console.error(err); }
+    await loadCitasHistorial();
+}
+
+let _citasHistorial = [];
+async function loadCitasHistorial() {
+    try {
+        _citasHistorial = await API_B2B.getCitasHistorial(_pacienteId);
+        renderCitasHistorial(_citasHistorial);
+    } catch (err) { console.error('loadCitasHistorial:', err); }
+}
+
+function renderCitasHistorial(lista) {
+    let el = document.getElementById('citasHistorialContent');
+    if (!el) {
+        // Inject below the main citas section
+        const parent = document.getElementById('citasContent');
+        if (!parent) return;
+        el = document.createElement('div');
+        el.id = 'citasHistorialContent';
+        parent.parentNode.insertBefore(el, parent.nextSibling);
+    }
+    if (!lista || lista.length === 0) { el.innerHTML = ''; return; }
+    const estadoColor = { pendiente: 'badge-orange', realizada: 'badge-green', cancelada: 'badge-red' };
+    el.innerHTML = `
+        <div style="margin-top:24px;margin-bottom:8px;font-weight:600;color:var(--text-secondary);font-size:.85rem;display:flex;align-items:center;gap:6px">
+            🕓 Historial de citas anteriores <span class="badge badge-gray">${lista.length}</span>
+        </div>
+        <div class="item-list">${lista.map(h => `
+        <div class="item-row" style="opacity:.8">
+            <div class="item-icon badge-gray">📋</div>
+            <div class="item-body">
+                <div class="item-title">${escapeHtml(h.titulo)}</div>
+                <div class="item-subtitle">📆 ${formatDateTime(h.fecha)} ${h.especialidad ? '· ' + escapeHtml(h.especialidad) : ''}</div>
+                ${h.medico ? `<div class="item-subtitle">🩺 Dr. ${escapeHtml(h.medico)}</div>` : ''}
+                ${h.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(h.lugar)}</div>` : ''}
+                <div class="item-meta">
+                    <span class="badge ${estadoColor[h.estado] || 'badge-gray'}">${h.estado || '—'}</span>
+                    <span class="badge badge-gray" style="font-size:.68rem">Archivada ${formatDateTime(h.archivado_en)}</span>
+                    ${h.archivado_por_nombre ? `<span class="badge badge-gray" style="font-size:.68rem">por ${escapeHtml(h.archivado_por_nombre)}</span>` : ''}
+                </div>
+            </div>
+        </div>`).join('')}</div>`;
 }
 
 function renderCitas(lista) {
@@ -680,11 +722,42 @@ function openModalCita(id) {
     document.getElementById('modalCitaTitle').textContent = id ? 'Editar Cita' : 'Nueva Cita';
     const f = document.getElementById('formCita');
     f.reset();
+    const btnReutilizar = document.getElementById('btnReutilizarCita');
     if (id) {
         const c = _citas.find(x => x.id === id);
-        if (c) { f.cTitulo.value = c.titulo || ''; f.cFecha.value = c.fecha ? c.fecha.slice(0,16) : ''; f.cEspecialidad.value = c.especialidad || ''; f.cMedico.value = c.medico || ''; f.cLugar.value = c.lugar || ''; f.cDescripcion.value = c.descripcion || ''; f.cEstado.value = c.estado || 'pendiente'; }
+        if (c) {
+            f.cTitulo.value = c.titulo || '';
+            f.cFecha.value = c.fecha ? c.fecha.slice(0,16) : '';
+            f.cEspecialidad.value = c.especialidad || '';
+            f.cMedico.value = c.medico || '';
+            f.cLugar.value = c.lugar || '';
+            f.cDescripcion.value = c.descripcion || '';
+            f.cEstado.value = c.estado || 'pendiente';
+            // Mostrar botón Reutilizar solo si la cita ya fue realizada
+            if (btnReutilizar) btnReutilizar.style.display = c.estado === 'realizada' ? '' : 'none';
+        }
+    } else {
+        if (btnReutilizar) btnReutilizar.style.display = 'none';
     }
     openModal('modalCita');
+}
+
+// Reutilizar cita: archiva la actual como historial y crea una nueva (pendiente) con los mismos datos
+async function handleReutilizarCita() {
+    if (!_editingCitaId) return;
+    const c = _citas.find(x => x.id === _editingCitaId);
+    if (!c) return;
+    // Pedir nueva fecha
+    const nuevaFecha = prompt('Ingresá la fecha para la nueva cita (YYYY-MM-DDTHH:MM):', '');
+    if (!nuevaFecha) return;
+    try {
+        // 1. Archivar la cita actual marcándola como "realizada" (ya lo está) — el PATCH la archiva automáticamente
+        await API_B2B.updateCita(_editingCitaId, { fecha: nuevaFecha, estado: 'pendiente' });
+        showToast('Cita reutilizada: la anterior quedó en el historial', 'success');
+        closeModal('modalCita');
+        await loadCitas();
+        await loadCitasHistorial();
+    } catch (err) { showToast('Error: ' + err.message, 'error'); }
 }
 
 async function handleSaveCita(e) {
