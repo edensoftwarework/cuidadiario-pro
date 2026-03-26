@@ -68,7 +68,30 @@ const API_B2B = {
         catch { throw new Error('Sin conexión. Verificá tu internet e intentá nuevamente.'); }
     },
 
-    async get(path)         { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() })); },
+    // ---------- Offline cache (localStorage) ----------
+    _offlineCache: {
+        _key(path) { return 'cd_api_' + path.replace(/[^a-z0-9_/-]/gi, '_'); },
+        get(path)        { try { const v = localStorage.getItem(this._key(path)); return v ? JSON.parse(v) : null; } catch { return null; } },
+        set(path, data)  { try { localStorage.setItem(this._key(path), JSON.stringify(data)); } catch {} }
+    },
+
+    async get(path) {
+        try {
+            const data = await this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
+            this._offlineCache.set(path, data); // guardar para uso offline
+            return data;
+        } catch (err) {
+            const isOffline = !navigator.onLine || (err.message && err.message.includes('Sin conexi'));
+            if (isOffline) {
+                const cached = this._offlineCache.get(path);
+                if (cached !== null) {
+                    console.info('[API offline] Sirviendo desde caché local:', path);
+                    return cached;
+                }
+            }
+            throw err;
+        }
+    },
     async post(path, body)  { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST',   headers: this.headers(), body: JSON.stringify(body) })); },
     async patch(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'PATCH',  headers: this.headers(), body: JSON.stringify(body) })); },
     async del(path)         { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'DELETE', headers: this.headers() })); },

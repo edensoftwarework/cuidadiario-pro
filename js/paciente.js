@@ -745,28 +745,21 @@ function renderCitasHistorial(lista) {
         parent.parentNode.insertBefore(el, parent.nextSibling);
     }
     if (!lista || lista.length === 0) { el.innerHTML = ''; return; }
-    const estadoColor = { pendiente: 'badge-orange', realizada: 'badge-green', cancelada: 'badge-red' };
     el.innerHTML = `
         <div style="margin-top:24px;margin-bottom:8px;font-weight:600;color:var(--text-secondary);font-size:.85rem;display:flex;align-items:center;gap:6px">
-            🕓 Historial de citas anteriores <span class="badge badge-gray">${lista.length}</span>
+            ⏳ Historial de citas realizadas <span class="badge badge-gray">${lista.length}</span>
         </div>
         <div class="item-list">${lista.map(h => `
         <div class="item-row" style="opacity:.85">
-            <div class="item-icon ${h.fuente === 'realizada' ? 'badge-green' : 'badge-gray'}">📋</div>
+            <div class="item-icon badge-green">📋</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(h.titulo)}</div>
                 <div class="item-subtitle">📆 ${formatDateTime(h.fecha)} ${h.especialidad ? '· ' + escapeHtml(h.especialidad) : ''}</div>
                 ${h.medico ? `<div class="item-subtitle">🩺 Dr. ${escapeHtml(h.medico)}</div>` : ''}
                 ${h.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(h.lugar)}</div>` : ''}
-                <div class="item-meta">
-                    <span class="badge ${estadoColor[h.estado] || 'badge-gray'}">${h.estado || '—'}</span>
-                    ${h.fuente === 'historial'
-                        ? `<span class="badge badge-gray" style="font-size:.68rem">Archivada ${formatDateTime(h.archivado_en)}</span>
-                           ${h.archivado_por_nombre ? `<span class="badge badge-gray" style="font-size:.68rem">por ${escapeHtml(h.archivado_por_nombre)}</span>` : ''}`
-                        : `<span class="badge badge-green" style="font-size:.68rem">✅ Realizada</span>`}
-                </div>
+                <div class="item-meta"><span class="badge badge-green">✅ Realizada</span></div>
             </div>
-            ${(!_isReadOnly && h.fuente === 'realizada') ? `
+            ${!_isReadOnly ? `
             <div class="item-actions">
                 <button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${h.id})" title="Reutilizar cita">🔁 Reutilizar</button>
             </div>` : ''}
@@ -792,8 +785,9 @@ function renderCitas(lista) {
                 <div class="item-meta"><span class="badge ${estadoColor[c.estado] || 'badge-gray'}">${c.estado || 'pendiente'}</span></div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCita(${c.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCita(${c.id})">🗑</button>` : ''}
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${c.id})" title="Reutilizar">🔁</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCita(${c.id})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCita(${c.id})">&#x1F5D1;</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -804,7 +798,6 @@ function openModalCita(id) {
     document.getElementById('modalCitaTitle').textContent = id ? 'Editar Cita' : 'Nueva Cita';
     const f = document.getElementById('formCita');
     f.reset();
-    const btnReutilizar = document.getElementById('btnReutilizarCita');
     if (id) {
         const c = _citas.find(x => x.id === id);
         if (c) {
@@ -815,78 +808,33 @@ function openModalCita(id) {
             f.cLugar.value = c.lugar || '';
             f.cDescripcion.value = c.descripcion || '';
             f.cEstado.value = c.estado || 'pendiente';
-            // Mostrar botón Reutilizar solo si la cita ya fue realizada
-            if (btnReutilizar) btnReutilizar.style.display = c.estado === 'realizada' ? '' : 'none';
         }
-    } else {
-        if (btnReutilizar) btnReutilizar.style.display = 'none';
     }
     openModal('modalCita');
 }
 
-// Acceso directo al modal de reutilizar desde el historial (citas con estado='realizada')
+// Reutilizar: abre el modal de cita con todos los campos pre-llenados, creando una NUEVA cita al guardar
 function openModalReutilizarCita(id) {
-    _editingCitaId = id;
-    handleReutilizarCita();
-}
-
-// Reutilizar cita: abre modal con date-picker amigable, luego archiva la actual y crea una nueva pendiente
-function handleReutilizarCita() {
-    if (!_editingCitaId) return;
-    const c = _citas.find(x => x.id === _editingCitaId);
-    if (!c) return;
-
-    // Mostrar info de la cita actual en el modal
-    const infoEl = document.getElementById('reutilizarCitaInfo');
-    if (infoEl) {
-        const fechaStr = c.fecha ? formatDateTime(c.fecha) : '—';
-        infoEl.innerHTML = `
-            <strong>${escapeHtml(c.titulo || 'Cita')}</strong><br>
-            ${c.especialidad ? `🩺 ${escapeHtml(c.especialidad)}` : ''}
-            ${c.medico ? ` · ${escapeHtml(c.medico)}` : ''}<br>
-            📅 Fecha anterior: <strong>${fechaStr}</strong>`;
-    }
-
-    // Prellenar con una fecha un mes después de la original
-    const fechaInput = document.getElementById('reutilizarFechaInput');
-    if (fechaInput) {
-        try {
-            const d = new Date(String(c.fecha).replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, ''));
-            d.setMonth(d.getMonth() + 1);
-            const pad = n => String(n).padStart(2, '0');
-            fechaInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        } catch { fechaInput.value = ''; }
-    }
-
-    const formR = document.getElementById('formReutilizarCita');
-    if (formR) {
-        const newForm = formR.cloneNode(true);
-        formR.replaceWith(newForm);
-        newForm.addEventListener('submit', _handleConfirmarReutilizarCita);
-    }
-
-    closeModal('modalCita');
-    openModal('modalReutilizarCita');
-}
-
-async function _handleConfirmarReutilizarCita(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('[type=submit]');
-    btn.disabled = true;
-    btn.textContent = 'Creando…';
-    const nuevaFecha = document.getElementById('reutilizarFechaInput')?.value;
-    if (!nuevaFecha) { btn.disabled = false; btn.textContent = 'Crear nueva cita 🔁'; return; }
+    const c = _citas.find(x => x.id === id) || _citasHistorial.find(x => x.id === id);
+    if (!c) { showToast('Cita no encontrada', 'error'); return; }
+    _editingCitaId = null; // null = crear nueva cita al guardar
+    document.getElementById('modalCitaTitle').textContent = '🔁 Reutilizar cita';
+    const f = document.getElementById('formCita');
+    f.reset();
+    f.cTitulo.value = c.titulo || '';
+    // Sugerir fecha 1 mes después de la original
     try {
-        await API_B2B.updateCita(_editingCitaId, { fecha: nuevaFecha, estado: 'pendiente' });
-        showToast('Cita reutilizada ✅ La anterior quedó en el historial', 'success', 4500);
-        closeModal('modalReutilizarCita');
-        await loadCitas();
-        await loadCitasHistorial();
-    } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Crear nueva cita 🔁';
-    }
+        const d = new Date(String(c.fecha).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, ''));
+        d.setMonth(d.getMonth() + 1);
+        const pad = n => String(n).padStart(2, '0');
+        f.cFecha.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch { f.cFecha.value = ''; }
+    f.cEspecialidad.value = c.especialidad || '';
+    f.cMedico.value = c.medico || '';
+    f.cLugar.value = c.lugar || '';
+    f.cDescripcion.value = c.descripcion || '';
+    f.cEstado.value = 'pendiente';
+    openModal('modalCita');
 }
 
 async function handleSaveCita(e) {

@@ -6,8 +6,8 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-const CACHE_NAME = 'cuidadiario-pro-v2';
-const CACHE_NAME_API = 'cuidadiario-pro-api-v2';
+const CACHE_NAME = 'cuidadiario-pro-v3';
+const CACHE_NAME_API = 'cuidadiario-pro-api-v3';
 
 const STATIC_ASSETS = [
     './',
@@ -42,11 +42,17 @@ const STATIC_ASSETS = [
     './manifest.json'
 ];
 
-// Instalación — cachear assets estáticos
+// Instalación — cachear assets estáticos (uno por uno para que un fallo no bloquee el resto)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(STATIC_ASSETS.map(url => new Request(url, { cache: 'reload' }))))
+            .then(cache => Promise.allSettled(
+                STATIC_ASSETS.map(url =>
+                    cache.add(new Request(url, { cache: 'reload' })).catch(err =>
+                        console.warn('[SW] No se pudo cachear:', url, err.message)
+                    )
+                )
+            ))
             .then(() => self.skipWaiting())
             .catch(err => console.warn('[SW] Error en install:', err))
     );
@@ -142,7 +148,18 @@ async function staleWhileRevalidate(request) {
         return response;
     }).catch(() => null);
 
-    return cached || fetchPromise || new Response('Página no disponible offline', { status: 503 });
+    // Si hay caché: devolver inmediatamente y actualizar en segundo plano
+    if (cached) {
+        fetchPromise.catch(() => {}); // actualizar en background sin bloquear
+        return cached;
+    }
+    // Sin caché: esperar red o devolver offline page
+    const response = await fetchPromise;
+    if (response) return response;
+    return new Response(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sin conexión</title></head><body style="font-family:system-ui;text-align:center;padding:60px 20px;color:#374151"><div style="font-size:3rem">📡</div><h2>Sin conexión</h2><p>Verificá tu internet e intentá nuevamente.<br>Si ya usaste la app antes, <a href="javascript:location.reload()">recargá la página</a>.</p></body></html>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
 }
 
 // Escuchar mensajes del cliente (para forzar update)

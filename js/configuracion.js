@@ -655,10 +655,12 @@ function renderPlanBadge(plan, trialStartedAt = null) {
         : 'Estás en el período de prueba gratuito de 60 días. Todas las funciones habilitadas. Al vencer, elegí el plan que mejor se adapte.';
 
     const configs = {
+        total:   { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">🚀 Plan Total activo</span>`,
+                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false },
         pro:     { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">⭐ Plan PRO activo</span>`,
-                   desc: 'Plan PRO activo — pacientes ilimitados, staff ilimitado, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false },
+                   desc: 'Plan PRO activo — hasta 30 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false },
         basico:  { badge: `<span class="badge badge-teal" style="font-size:.9rem;padding:6px 16px">✅ Plan Básico activo</span>`,
-                   desc: 'Plan Básico activo — hasta 20 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false },
+                   desc: 'Plan Básico activo — hasta 10 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false },
         trial:   { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
                    desc: trialDesc, showPRO: true, showBasico: true },
         free:    { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
@@ -675,7 +677,7 @@ function renderPlanBadge(plan, trialStartedAt = null) {
 }
 
 async function suscribirPlan(plan, testMode) {
-    const btn = document.getElementById(testMode ? null : (plan === 'pro' ? 'btnSuscribirPRO' : 'btnSuscribirBasico'));
+    const btn = document.getElementById(testMode ? null : (plan === 'total' ? 'btnSuscribirTotal' : plan === 'pro' ? 'btnSuscribirPRO' : 'btnSuscribirBasico'));
     if (btn) { btn.disabled = true; btn.textContent = 'Redirigiendo…'; }
     try {
         const res = await API_B2B.createSubscription(plan, testMode);

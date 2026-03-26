@@ -774,3 +774,27 @@ async function openWorkerSwitcher() {
 }
 
 function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
+
+// ============================================
+// OFFLINE BANNER
+// ============================================
+(function() {
+    function showOfflineBanner() {
+        let b = document.getElementById('_offlineBanner');
+        if (!b) {
+            b = document.createElement('div');
+            b.id = '_offlineBanner';
+            b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#374151;color:#fff;padding:10px 16px;text-align:center;font-size:.84rem;z-index:9999;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 -2px 8px rgba(0,0,0,.3)';
+            b.innerHTML = '\uD83D\uDCF5 Sin conexi\u00f3n \u2014 Mostrando datos guardados. Algunos cambios no estar\u00e1n disponibles.';
+            document.body.appendChild(b);
+        }
+        b.style.display = 'flex';
+    }
+    function hideOfflineBanner() {
+        const b = document.getElementById('_offlineBanner');
+        if (b) b.style.display = 'none';
+    }
+    window.addEventListener('offline', showOfflineBanner);
+    window.addEventListener('online', () => { hideOfflineBanner(); showToast && showToast('Conexi\u00f3n restablecida \u2705', 'success'); });
+    if (!navigator.onLine) showOfflineBanner();
+})();
