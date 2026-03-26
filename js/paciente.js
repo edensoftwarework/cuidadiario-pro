@@ -751,8 +751,8 @@ function renderCitasHistorial(lista) {
             🕓 Historial de citas anteriores <span class="badge badge-gray">${lista.length}</span>
         </div>
         <div class="item-list">${lista.map(h => `
-        <div class="item-row" style="opacity:.8">
-            <div class="item-icon badge-gray">📋</div>
+        <div class="item-row" style="opacity:.85">
+            <div class="item-icon ${h.fuente === 'realizada' ? 'badge-green' : 'badge-gray'}">📋</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(h.titulo)}</div>
                 <div class="item-subtitle">📆 ${formatDateTime(h.fecha)} ${h.especialidad ? '· ' + escapeHtml(h.especialidad) : ''}</div>
@@ -760,20 +760,28 @@ function renderCitasHistorial(lista) {
                 ${h.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(h.lugar)}</div>` : ''}
                 <div class="item-meta">
                     <span class="badge ${estadoColor[h.estado] || 'badge-gray'}">${h.estado || '—'}</span>
-                    <span class="badge badge-gray" style="font-size:.68rem">Archivada ${formatDateTime(h.archivado_en)}</span>
-                    ${h.archivado_por_nombre ? `<span class="badge badge-gray" style="font-size:.68rem">por ${escapeHtml(h.archivado_por_nombre)}</span>` : ''}
+                    ${h.fuente === 'historial'
+                        ? `<span class="badge badge-gray" style="font-size:.68rem">Archivada ${formatDateTime(h.archivado_en)}</span>
+                           ${h.archivado_por_nombre ? `<span class="badge badge-gray" style="font-size:.68rem">por ${escapeHtml(h.archivado_por_nombre)}</span>` : ''}`
+                        : `<span class="badge badge-green" style="font-size:.68rem">✅ Realizada</span>`}
                 </div>
             </div>
+            ${(!_isReadOnly && h.fuente === 'realizada') ? `
+            <div class="item-actions">
+                <button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${h.id})" title="Reutilizar cita">🔁 Reutilizar</button>
+            </div>` : ''}
         </div>`).join('')}</div>`;
 }
 
 function renderCitas(lista) {
     const el = document.getElementById('citasContent');
     if (!el) return;
-    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} cita${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalCita()">+ Agregar</button></div>`;
-    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📅</div><h3>Sin citas registradas</h3></div>`; return; }
+    // Las citas realizadas se muestran en el historial, no en la lista activa
+    const activas = lista.filter(c => c.estado !== 'realizada');
+    const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${activas.length} cita${activas.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalCita()">+ Agregar</button></div>`;
+    if (activas.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📅</div><h3>Sin citas registradas</h3></div>`; return; }
     const estadoColor = { pendiente: 'badge-orange', realizada: 'badge-green', cancelada: 'badge-red' };
-    el.innerHTML = toolbar + `<div class="item-list">${lista.map(c => `
+    el.innerHTML = toolbar + `<div class="item-list">${activas.map(c => `
         <div class="item-row">
             <div class="item-icon badge-blue">📅</div>
             <div class="item-body">
@@ -814,6 +822,12 @@ function openModalCita(id) {
         if (btnReutilizar) btnReutilizar.style.display = 'none';
     }
     openModal('modalCita');
+}
+
+// Acceso directo al modal de reutilizar desde el historial (citas con estado='realizada')
+function openModalReutilizarCita(id) {
+    _editingCitaId = id;
+    handleReutilizarCita();
 }
 
 // Reutilizar cita: abre modal con date-picker amigable, luego archiva la actual y crea una nueva pendiente

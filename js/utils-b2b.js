@@ -438,10 +438,12 @@ function formatDate(isoString, options) {
 function formatDateTime(isoString) {
     if (!isoString) return '—';
     try {
-        // Datetimes entered by users (e.g. citas) are stored in local time but node-postgres
-        // returns them with a Z suffix (treated as UTC), causing a -3h display offset in AR.
-        // Stripping the Z makes JS parse the value as local time — matching what was entered.
-        const s = String(isoString).replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
+        // El backend tiene SET TIME ZONE 'America/Argentina/Buenos_Aires', por lo que
+        // todos los TIMESTAMP (created_at, fecha) almacenan hora local de Argentina.
+        // node-postgres los serializa con sufijo Z (fake-UTC), así que al quitarlo
+        // JS los parsea como hora local del navegador → muestra la hora correcta.
+        // También se eliminan offsets ±HH:MM por si viene algún TIMESTAMPTZ.
+        const s = String(isoString).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
         return new Date(s).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     } catch { return isoString; }
 }
