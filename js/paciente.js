@@ -1261,7 +1261,6 @@ function initForms() {
     const pairs = [
         ['formMed', handleSaveMed],
         ['formCrearInsumoRapido', handleCrearInsumoRapido],
-        ['formReutilizarCita', _handleConfirmarReutilizarCita],
         ['formToma', handleSaveToma],
         ['formCita', handleSaveCita],
         ['formTarea', handleSaveTarea],

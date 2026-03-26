@@ -638,6 +638,7 @@ function renderPlanBadge(plan, trialStartedAt = null) {
     const desc      = document.getElementById('planDesc');
     const btnPRO    = document.getElementById('btnSuscribirPRO');
     const btnBasico = document.getElementById('btnSuscribirBasico');
+    const btnTotal  = document.getElementById('btnSuscribirTotal');
     const btnVerif  = document.getElementById('btnVerificarPlan');
     if (!wrap) return;
 
@@ -655,25 +656,26 @@ function renderPlanBadge(plan, trialStartedAt = null) {
         : 'Estás en el período de prueba gratuito de 60 días. Todas las funciones habilitadas. Al vencer, elegí el plan que mejor se adapte.';
 
     const configs = {
-        total:   { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">🚀 Plan Total activo</span>`,
-                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false },
+        total:   { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">Plan Total activo</span>`,
+                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false, showTotal: false },
         pro:     { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">⭐ Plan PRO activo</span>`,
-                   desc: 'Plan PRO activo — hasta 30 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false },
+                   desc: 'Plan PRO activo — hasta 30 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false, showTotal: true },
         basico:  { badge: `<span class="badge badge-teal" style="font-size:.9rem;padding:6px 16px">✅ Plan Básico activo</span>`,
-                   desc: 'Plan Básico activo — hasta 10 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false },
+                   desc: 'Plan Básico activo — hasta 10 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
         trial:   { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
-                   desc: trialDesc, showPRO: true, showBasico: true },
+                   desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
         free:    { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
-                   desc: trialDesc, showPRO: true, showBasico: true },
+                   desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
         expired: { badge: `<span class="badge badge-gray" style="font-size:.9rem;padding:6px 16px">🔒 Sin plan activo</span>`,
-                   desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: true, showBasico: true },
+                   desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: true, showBasico: true, showTotal: true },
     };
     const cfg = configs[plan] || configs.free;
     wrap.innerHTML = cfg.badge;
     if (desc) desc.textContent = cfg.desc;
     if (btnPRO)    btnPRO.style.display    = cfg.showPRO    ? '' : 'none';
     if (btnBasico) btnBasico.style.display = cfg.showBasico ? '' : 'none';
-    if (btnVerif)  btnVerif.style.display  = (plan !== 'pro') ? '' : 'none';
+    if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
+    if (btnVerif)  btnVerif.style.display  = (plan !== 'pro' && plan !== 'total') ? '' : 'none';
 }
 
 async function suscribirPlan(plan, testMode) {
@@ -685,11 +687,11 @@ async function suscribirPlan(plan, testMode) {
             window.location.href = res.init_point;
         } else {
             showToast('No se pudo obtener el link de pago', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+            if (btn) { btn.disabled = false; btn.textContent = plan === 'total' ? 'Contratar Plan Total' : plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
         }
     } catch (err) {
         showToast('Error: ' + (err.message || 'No se pudo crear la suscripción'), 'error');
-        if (btn) { btn.disabled = false; btn.textContent = plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+        if (btn) { btn.disabled = false; btn.textContent = plan === 'total' ? 'Contratar Plan Total' : plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
     }
 }
 
