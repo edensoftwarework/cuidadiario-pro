@@ -97,7 +97,7 @@ function renderCitasProximas(citas) {
     const container = document.getElementById('citasProximas');
     if (!container) return;
     if (!citas || citas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No hay citas en los próximos 7 días</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No hay citas en los próximos 15 días</p></div>`;
         return;
     }
     const MAX = 5;

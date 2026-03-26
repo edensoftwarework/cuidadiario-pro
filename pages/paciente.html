@@ -117,6 +117,11 @@
                     </select>
                 </div>
                 <div id="catLinkHint" class="form-hint" style="font-size:.8rem;margin-top:6px;display:none"></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color)">
+                    <span style="font-size:.75rem;color:var(--text-secondary)">¿No encontrás el insumo?</span>
+                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:.73rem;padding:3px 10px" onclick="openModalCrearInsumoRapido('inst')">+ Crear institucional</button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:.73rem;padding:3px 10px" onclick="openModalCrearInsumoRapido('pac')">+ Crear para este residente</button>
+                </div>
             </div>
         </div>
         <div class="form-grid">
@@ -135,6 +140,60 @@
         </div>
         <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalMed')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
     </form></div></div>
+</div>
+
+<!-- Crear insumo rápido desde modal de medicamento -->
+<div class="modal-overlay" id="modalCrearInsumoRapido">
+    <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+            <span class="modal-title" id="modalCrearInsumoTitle">Nuevo insumo institucional</span>
+            <button class="modal-close" onclick="closeModal('modalCrearInsumoRapido')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formCrearInsumoRapido">
+                <input type="hidden" id="crearInsumoTipo" value="inst">
+                <div class="form-grid">
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Nombre del insumo *</label>
+                        <input type="text" name="ciNombre" id="ciNombre" class="form-control" placeholder="Ej: Paracetamol, pañales, guantes…" required>
+                    </div>
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Principio activo / descripción</label>
+                        <input type="text" name="ciPrincipioActivo" class="form-control" placeholder="Ej: Paracetamol 500mg">
+                    </div>
+                    <div class="form-group form-col-2">
+                        <label class="form-label">Presentación</label>
+                        <input type="text" name="ciPresentacion" class="form-control" placeholder="Ej: Comprimidos x30">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unidad</label>
+                        <select name="ciUnidad" class="form-control">
+                            <option value="comprimido">Comprimido</option>
+                            <option value="cápsula">Cápsula</option>
+                            <option value="ampolla">Ampolla</option>
+                            <option value="frasco">Frasco</option>
+                            <option value="sobre">Sobre</option>
+                            <option value="parche">Parche</option>
+                            <option value="unidad">Unidad</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">&nbsp;</label></div>
+                    <div class="form-group">
+                        <label class="form-label">Stock inicial</label>
+                        <input type="number" name="ciStockActual" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stock mínimo (alerta ⚠️)</label>
+                        <input type="number" name="ciStockMinimo" class="form-control" min="0" value="5">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:12px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalCrearInsumoRapido')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">✅ Crear y seleccionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Registrar toma -->

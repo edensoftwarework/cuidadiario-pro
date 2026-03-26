@@ -310,6 +310,14 @@ function openModalCatalogoItem(id) {
     }
 
     openModal('modalCatalogoItem');
+
+    // Restock fields: only relevant when editing an existing item
+    const notasRestockGroup = document.getElementById('catNotasRestockGroup');
+    const historialBox      = document.getElementById('catRestockHistorialBox');
+    const historialList     = document.getElementById('catRestockHistorialList');
+    if (notasRestockGroup) notasRestockGroup.style.display = id ? '' : 'none';
+    if (historialBox)      historialBox.style.display      = id ? '' : 'none';
+    if (historialList)   { historialList.style.display = 'none'; historialList.innerHTML = ''; }
 }
 
 async function handleSaveCatalogoItem(e) {
@@ -335,7 +343,9 @@ async function handleSaveCatalogoItem(e) {
         stock_actual:     parseInt(f.querySelector('[name="cStockActual"]').value) || 0,
         stock_minimo:     parseInt(f.querySelector('[name="cStockMinimo"]').value) || 5,
         unidad:           f.querySelector('[name="cUnidad"]').value,
-        paciente_id:      pacienteId
+        paciente_id:      pacienteId,
+        // notas_restock se envía solo al editar (el backend lo usa si stock aumentó)
+        notas_restock:    _editingCatalogoId ? (f.querySelector('[name="cNotasRestock"]')?.value?.trim() || null) : undefined,
     };
     if (!data.nombre) { showToast('El nombre es obligatorio', 'warning'); btn.disabled = false; btn.textContent = 'Guardar'; return; }
 
@@ -380,3 +390,43 @@ async function deleteCatalogoItem(id) {
 }
 
 document.addEventListener('DOMContentLoaded', initCatalogo);
+
+// ============================================
+// HISTORIAL DE RESTOCK (por ítem del catálogo)
+// ============================================
+function toggleRestockHistorial() {
+    const list = document.getElementById('catRestockHistorialList');
+    if (!list) return;
+    if (list.style.display === 'none') {
+        list.style.display = 'block';
+        if (!list.innerHTML.trim()) loadRestockHistorial(_editingCatalogoId);
+    } else {
+        list.style.display = 'none';
+    }
+}
+
+async function loadRestockHistorial(catalogoId) {
+    const list = document.getElementById('catRestockHistorialList');
+    if (!list || !catalogoId) return;
+    list.innerHTML = '<div style="padding:8px;text-align:center"><div class="spinner spinner-sm spinner-dark"></div></div>';
+    try {
+        const historial = await API_B2B.getRestockHistorial({ catalogo_id: catalogoId });
+        if (!historial.length) {
+            list.innerHTML = '<p style="font-size:.8rem;color:var(--text-secondary);padding:6px 0;margin:0">Sin registros de restock aún.</p>';
+            return;
+        }
+        list.innerHTML = historial.map(h => `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:.79rem;gap:8px">
+                <div style="min-width:0">
+                    <strong style="color:var(--success)">+${h.cantidad_repuesta}</strong>
+                    <span style="color:var(--text-primary)"> ${escapeHtml(h.nombre_item)}</span>
+                    ${h.notas ? `<br><em style="color:var(--text-secondary)">${escapeHtml(h.notas)}</em>` : ''}
+                    <br><span style="color:var(--text-secondary)">${h.stock_anterior} → ${h.stock_nuevo} · ${escapeHtml(h.registrador || 'Sistema')}</span>
+                </div>
+                <span style="color:var(--text-secondary);white-space:nowrap;flex-shrink:0">${formatDate(h.created_at)}</span>
+            </div>
+        `).join('');
+    } catch (err) {
+        list.innerHTML = '<p style="font-size:.8rem;color:var(--danger);margin:0">Error al cargar historial.</p>';
+    }
+}

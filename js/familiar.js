@@ -192,10 +192,18 @@ async function _cargarStockAlertFamiliar(pacienteId) {
     const el = document.getElementById(`stockAlertFam_${pacienteId}`);
     if (!el) return;
     try {
-        const items = await API_B2B.getCatalogo({ paciente_id: pacienteId });
-        const bajos = items.filter(c => c.stock_minimo != null && c.stock_actual <= c.stock_minimo);
-        if (bajos.length === 0) return;
-        el.innerHTML = `
+        const [items, restockHist] = await Promise.allSettled([
+            API_B2B.getCatalogo({ paciente_id: pacienteId }),
+            API_B2B.getRestockHistorial({ paciente_id: pacienteId }),
+        ]);
+        const catalogoItems = items.status === 'fulfilled' ? items.value : [];
+        const restock       = restockHist.status === 'fulfilled' ? restockHist.value.slice(0, 5) : [];
+
+        const bajos = catalogoItems.filter(c => c.stock_minimo != null && c.stock_actual <= c.stock_minimo);
+
+        let html = '';
+        if (bajos.length > 0) {
+            html += `
         <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 13px;margin-top:4px">
             <div style="font-weight:700;font-size:.8rem;color:#92400E;margin-bottom:6px">⚠️ Insumos con stock bajo</div>
             ${bajos.map(c => `
@@ -205,6 +213,21 @@ async function _cargarStockAlertFamiliar(pacienteId) {
             </div>`).join('')}
             <div style="font-size:.75rem;color:#92400E;margin-top:6px">Avisá a la institución para reponer los insumos.</div>
         </div>`;
+        }
+
+        if (restock.length > 0) {
+            html += `
+        <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:10px 13px;margin-top:6px">
+            <div style="font-weight:700;font-size:.8rem;color:#166534;margin-bottom:6px">📦 Últimas reposiciones de insumos</div>
+            ${restock.map(h => `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:.79rem;padding:3px 0;border-bottom:1px solid rgba(134,239,172,.4);color:#14532D;gap:8px">
+                <span><strong>+${h.cantidad_repuesta}</strong> ${escapeHtml(h.nombre_item)}${h.notas ? ` · <em style="color:#166534">${escapeHtml(h.notas)}</em>` : ''}</span>
+                <span style="white-space:nowrap;flex-shrink:0;color:#166534">${formatDate(h.created_at)}</span>
+            </div>`).join('')}
+        </div>`;
+        }
+
+        if (html) el.innerHTML = html;
     } catch { /* silently ignore if not authorized */ }
 }
 

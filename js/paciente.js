@@ -560,6 +560,80 @@ async function handleSaveMed(e) {
     } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
+// ============================================
+// CREAR INSUMO RÁPIDO DESDE MODAL DE MEDICAMENTO
+// ============================================
+function openModalCrearInsumoRapido(tipo) {
+    // tipo: 'inst' = institucional, 'pac' = específico del paciente
+    document.getElementById('crearInsumoTipo').value = tipo;
+    const title = tipo === 'pac'
+        ? 'Nuevo insumo para este residente'
+        : 'Nuevo insumo institucional';
+    document.getElementById('modalCrearInsumoTitle').textContent = title;
+    const f = document.getElementById('formCrearInsumoRapido');
+    if (f) f.reset();
+    openModal('modalCrearInsumoRapido');
+}
+
+async function handleCrearInsumoRapido(e) {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('[type=submit]');
+    btn.disabled = true;
+    btn.textContent = 'Creando…';
+
+    const tipo = document.getElementById('crearInsumoTipo')?.value || 'inst';
+    const data = {
+        nombre:           f.ciNombre.value.trim(),
+        principio_activo: f.ciPrincipioActivo.value.trim() || null,
+        presentacion:     f.ciPresentacion.value.trim() || null,
+        unidad:           f.ciUnidad.value,
+        stock_actual:     parseInt(f.ciStockActual.value) || 0,
+        stock_minimo:     parseInt(f.ciStockMinimo.value) || 5,
+        paciente_id:      tipo === 'pac' ? (_pacienteId || null) : null,
+    };
+    if (!data.nombre) {
+        showToast('El nombre es obligatorio', 'warning');
+        btn.disabled = false; btn.textContent = 'Crear y seleccionar';
+        return;
+    }
+
+    try {
+        const newItem = await API_B2B.createCatalogoItem(data);
+        showToast(`Insumo "${newItem.nombre}" creado ✅`, 'success');
+        closeModal('modalCrearInsumoRapido');
+
+        // Reload catalogs and auto-select the new item
+        if (tipo === 'pac') {
+            _catalogoPaciente = await API_B2B.getCatalogo({ paciente_id: _pacienteId });
+            const sel = document.getElementById('mCatalogoPacSelect');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Sin vincular al del residente —</option>' +
+                    _catalogoPaciente.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${c.stock_actual ?? 0} ${escapeHtml(c.unidad || '')})</option>`).join('');
+                sel.value = String(newItem.id);
+                onCatalogoSelectChange('pac', sel);
+            }
+        } else {
+            _catalogo = await API_B2B.getCatalogo();
+            const sel = document.getElementById('mCatalogoInstSelect');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Sin vincular al institucional —</option>' +
+                    _catalogo.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${c.stock_actual ?? 0} ${escapeHtml(c.unidad || '')})</option>`).join('');
+                sel.value = String(newItem.id);
+                onCatalogoSelectChange('inst', sel);
+            }
+        }
+        // Pre-fill the medication name if not already set
+        const nomInput = document.querySelector('#formMed [name="mNombre"]');
+        if (nomInput && !nomInput.value.trim()) nomInput.value = newItem.nombre;
+    } catch (err) {
+        showToast('Error al crear insumo: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Crear y seleccionar';
+    }
+}
+
 function registrarToma(id, nombre) {
     // Block toma if stock is depleted
     const med = _meds.find(m => m.id === id);
@@ -1183,6 +1257,7 @@ async function handleEditPaciente(e) {
 function initForms() {
     const pairs = [
         ['formMed', handleSaveMed],
+        ['formCrearInsumoRapido', handleCrearInsumoRapido],
         ['formToma', handleSaveToma],
         ['formCita', handleSaveCita],
         ['formTarea', handleSaveTarea],

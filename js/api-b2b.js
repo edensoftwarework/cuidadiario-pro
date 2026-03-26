@@ -156,6 +156,19 @@ const API_B2B = {
     async createCatalogoItem(data)        { return this.post('/api/b2b/catalogo', data); },
     async updateCatalogoItem(id, data)    { return this.patch(`/api/b2b/catalogo/${id}`, data); },
     async deleteCatalogoItem(id)          { return this.del(`/api/b2b/catalogo/${id}`); },
+    async getRestockHistorial(params = {}) {
+        const qs = new URLSearchParams();
+        if (params.catalogo_id) qs.set('catalogo_id', params.catalogo_id);
+        if (params.paciente_id) qs.set('paciente_id', params.paciente_id);
+        const q = qs.toString();
+        return this.get('/api/b2b/catalogo/restock-historial' + (q ? '?' + q : ''));
+    },
+
+    // ============================================
+    // NOTIFICACIONES (campana)
+    // ============================================
+    async getNotificaciones()      { return this.get('/api/b2b/notificaciones'); },
+    async marcarNotifVistas()      { return this.post('/api/b2b/notificaciones/vistas', {}); },
 
     // ============================================
     // CITAS
