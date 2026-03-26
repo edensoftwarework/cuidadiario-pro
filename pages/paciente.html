@@ -289,7 +289,7 @@
     <div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="modalSintomaTitle">🩺 Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')">✕</button></div>
     <div class="modal-body"><form id="formSintoma">
         <div class="form-group"><label class="form-label">Descripción *</label><textarea name="sDesc" class="form-control" rows="3" required placeholder="Ej: Dolor de cabeza, fiebre 38.5°C..."></textarea></div>
-        <div class="form-group"><label class="form-label">Intensidad (1-10)</label><input type="range" name="sIntensidad" class="form-control" min="1" max="10" style="padding:6px 0"><div class="form-hint">1 = leve · 10 = muy intenso</div></div>
+        <div class="form-group"><label class="form-label">Intensidad (1-10)</label><select name="sIntensidad" class="form-control"><option value="">— Sin especificar —</option><option value="1">1 — Muy leve</option><option value="2">2 — Leve</option><option value="3">3 — Leve-moderada</option><option value="4">4 — Moderada</option><option value="5">5 — Moderada</option><option value="6">6 — Moderada-intensa</option><option value="7">7 — Intensa</option><option value="8">8 — Muy intensa</option><option value="9">9 — Severa</option><option value="10">10 — Muy severa</option></select><div class="form-hint">1 = muy leve · 10 = muy intensa</div></div>
         <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalSintoma')">Cancelar</button><button type="submit" class="btn btn-warning">Registrar síntoma</button></div>
     </form></div></div>
 </div>

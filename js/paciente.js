@@ -1060,7 +1060,7 @@ function openModalSintoma(id) {
     f.reset();
     if (id) {
         const s = _sintomas.find(x => x.id === id);
-        if (s) { f.sDesc.value = s.descripcion || ''; f.sIntensidad.value = s.intensidad ?? 5; }
+        if (s) { f.sDesc.value = s.descripcion || ''; f.sIntensidad.value = s.intensidad != null ? s.intensidad : ''; }
     }
     openModal('modalSintoma');
 }

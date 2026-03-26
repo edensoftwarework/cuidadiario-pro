@@ -180,6 +180,7 @@ function _initNotifBell() {
             '.notif-body{flex:1;min-width:0}',
             '.notif-title{font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.notif-desc{font-size:.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}',
+            '.notif-ts{font-size:.68rem;color:var(--text-secondary);opacity:.75;margin-top:2px;display:block}',
             '.notif-empty{padding:24px 16px;text-align:center;font-size:.84rem;color:var(--text-secondary)}',
         ].join('');
         document.head.appendChild(s);
@@ -260,6 +261,26 @@ function _closeNotifPanel() {
     bell?.classList.remove('active');
 }
 
+/** Formatea un timestamp como tiempo relativo corto: "hace 5 min", "hace 2h", "ayer", etc. */
+function _formatTsShort(ts) {
+    if (!ts) return '';
+    try {
+        const s = String(ts).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+        const d = new Date(s);
+        if (isNaN(d)) return '';
+        const diffMs  = Date.now() - d.getTime();
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1)  return 'ahora';
+        if (diffMin < 60) return `hace ${diffMin} min`;
+        const diffH = Math.floor(diffMin / 60);
+        if (diffH  < 24) return `hace ${diffH}h`;
+        const diffD = Math.floor(diffH  / 24);
+        if (diffD === 1) return 'ayer';
+        if (diffD  < 7)  return `hace ${diffD} días`;
+        return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    } catch { return ''; }
+}
+
 async function _renderNotifPanel() {
     const body = document.getElementById('notifPanelBody');
     if (!body) return;
@@ -274,12 +295,14 @@ async function _renderNotifPanel() {
         const inPages = window.location.pathname.includes('/pages/');
         const base    = inPages ? '' : 'pages/';
         body.innerHTML = items.map(n => {
-            const href = n.href ? base + n.href : '#';
+            const href  = n.href ? base + n.href : '#';
+            const tsStr = _formatTsShort(n.ts);
             return `<a class="notif-item${n.es_nuevo ? ' unread' : ''}" href="${escapeHtml(href)}">
                 <span class="notif-icon">${n.icono}</span>
                 <span class="notif-body">
                     <span class="notif-title">${escapeHtml(n.titulo)}</span>
                     <span class="notif-desc">${escapeHtml(n.descripcion || '')}</span>
+                    ${tsStr ? `<span class="notif-ts">🕐 ${tsStr}</span>` : ''}
                 </span>
             </a>`;
         }).join('');
