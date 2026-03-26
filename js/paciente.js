@@ -816,22 +816,63 @@ function openModalCita(id) {
     openModal('modalCita');
 }
 
-// Reutilizar cita: archiva la actual como historial y crea una nueva (pendiente) con los mismos datos
-async function handleReutilizarCita() {
+// Reutilizar cita: abre modal con date-picker amigable, luego archiva la actual y crea una nueva pendiente
+function handleReutilizarCita() {
     if (!_editingCitaId) return;
     const c = _citas.find(x => x.id === _editingCitaId);
     if (!c) return;
-    // Pedir nueva fecha
-    const nuevaFecha = prompt('Ingresá la fecha para la nueva cita (YYYY-MM-DDTHH:MM):', '');
-    if (!nuevaFecha) return;
+
+    // Mostrar info de la cita actual en el modal
+    const infoEl = document.getElementById('reutilizarCitaInfo');
+    if (infoEl) {
+        const fechaStr = c.fecha ? formatDateTime(c.fecha) : '—';
+        infoEl.innerHTML = `
+            <strong>${escapeHtml(c.titulo || 'Cita')}</strong><br>
+            ${c.especialidad ? `🩺 ${escapeHtml(c.especialidad)}` : ''}
+            ${c.medico ? ` · ${escapeHtml(c.medico)}` : ''}<br>
+            📅 Fecha anterior: <strong>${fechaStr}</strong>`;
+    }
+
+    // Prellenar con una fecha un mes después de la original
+    const fechaInput = document.getElementById('reutilizarFechaInput');
+    if (fechaInput) {
+        try {
+            const d = new Date(String(c.fecha).replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, ''));
+            d.setMonth(d.getMonth() + 1);
+            const pad = n => String(n).padStart(2, '0');
+            fechaInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } catch { fechaInput.value = ''; }
+    }
+
+    const formR = document.getElementById('formReutilizarCita');
+    if (formR) {
+        const newForm = formR.cloneNode(true);
+        formR.replaceWith(newForm);
+        newForm.addEventListener('submit', _handleConfirmarReutilizarCita);
+    }
+
+    closeModal('modalCita');
+    openModal('modalReutilizarCita');
+}
+
+async function _handleConfirmarReutilizarCita(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('[type=submit]');
+    btn.disabled = true;
+    btn.textContent = 'Creando…';
+    const nuevaFecha = document.getElementById('reutilizarFechaInput')?.value;
+    if (!nuevaFecha) { btn.disabled = false; btn.textContent = 'Crear nueva cita 🔁'; return; }
     try {
-        // 1. Archivar la cita actual marcándola como "realizada" (ya lo está) — el PATCH la archiva automáticamente
         await API_B2B.updateCita(_editingCitaId, { fecha: nuevaFecha, estado: 'pendiente' });
-        showToast('Cita reutilizada: la anterior quedó en el historial', 'success');
-        closeModal('modalCita');
+        showToast('Cita reutilizada ✅ La anterior quedó en el historial', 'success', 4500);
+        closeModal('modalReutilizarCita');
         await loadCitas();
         await loadCitasHistorial();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Crear nueva cita 🔁';
+    }
 }
 
 async function handleSaveCita(e) {
@@ -1258,6 +1299,7 @@ function initForms() {
     const pairs = [
         ['formMed', handleSaveMed],
         ['formCrearInsumoRapido', handleCrearInsumoRapido],
+        ['formReutilizarCita', _handleConfirmarReutilizarCita],
         ['formToma', handleSaveToma],
         ['formCita', handleSaveCita],
         ['formTarea', handleSaveTarea],
