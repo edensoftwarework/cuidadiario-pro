@@ -6,8 +6,8 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-const CACHE_NAME = 'cuidadiario-pro-v3';
-const CACHE_NAME_API = 'cuidadiario-pro-api-v3';
+const CACHE_NAME = 'cuidadiario-pro-v4';
+const CACHE_NAME_API = 'cuidadiario-pro-api-v4';
 
 const STATIC_ASSETS = [
     './',
@@ -141,7 +141,17 @@ async function networkFirstWithCache(request, cacheName) {
 
 async function staleWhileRevalidate(request) {
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request);
+
+    // For HTML pages with query strings (e.g. paciente.html?id=14),
+    // also try to match the URL without the query part so the cached shell is found.
+    let cached = await cache.match(request);
+    if (!cached && request.url.includes('?')) {
+        try {
+            const plainUrl = new URL(request.url);
+            plainUrl.search = '';
+            cached = await cache.match(plainUrl.toString());
+        } catch { /* ignore */ }
+    }
 
     const fetchPromise = fetch(request).then(response => {
         if (response.ok) cache.put(request, response.clone());

@@ -7,15 +7,22 @@
 
 const API_B2B = {
     BASE_URL: 'https://cuidadiario-backend-production.up.railway.app',
-    TOKEN_KEY: 'cd_pro_token',
-    USER_KEY:  'cd_pro_user',
+    TOKEN_KEY:     'cd_pro_token',
+    USER_KEY:      'cd_pro_user',
+    LAST_USER_KEY: 'cd_pro_last_user',   // survives token expiry — used for offline login recovery
 
     // ---------- Auth storage ----------
     getToken()  { return localStorage.getItem(this.TOKEN_KEY); },
     setToken(t) { localStorage.setItem(this.TOKEN_KEY, t); },
+    // removeToken: clears active session but keeps LAST_USER_KEY so offline login can recover
     removeToken(){ localStorage.removeItem(this.TOKEN_KEY); localStorage.removeItem(this.USER_KEY); },
-    getUser()   { const u = localStorage.getItem(this.USER_KEY); return u ? JSON.parse(u) : null; },
-    setUser(u)  { localStorage.setItem(this.USER_KEY, JSON.stringify(u)); },
+    getUser()      { const u = localStorage.getItem(this.USER_KEY);      return u ? JSON.parse(u) : null; },
+    getLastUser()  { const u = localStorage.getItem(this.LAST_USER_KEY); return u ? JSON.parse(u) : null; },
+    setUser(u)  {
+        const s = JSON.stringify(u);
+        localStorage.setItem(this.USER_KEY, s);
+        localStorage.setItem(this.LAST_USER_KEY, s); // always keep a persistent copy
+    },
     isAuth()    { return !!this.getToken(); },
 
     // ---------- Headers ----------
@@ -171,7 +178,7 @@ const API_B2B = {
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },
     async resetPassword(token, password) { return this.postNoAuth('/api/b2b/auth/reset-password', { token, password }); },
-    logout() { this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
+    logout() { localStorage.removeItem(this.LAST_USER_KEY); this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
 
     // ============================================
     // INSTITUCIÓN

@@ -658,17 +658,17 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
         : 'Estás en el período de prueba gratuito de 60 días. Todas las funciones habilitadas. Al vencer, elegí el plan que mejor se adapte.';
 
     const configs = {
-        total:   { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">Plan Total activo</span>`,
+        total:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#4C1D95;color:#fff;border-radius:20px">🏆 Plan Total activo</span>`,
                    desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false, showTotal: false },
-        pro:     { badge: `<span class="badge badge-primary" style="font-size:.9rem;padding:6px 16px">⭐ Plan PRO activo</span>`,
+        pro:     { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#1565C0;color:#fff;border-radius:20px">⭐ Plan PRO activo</span>`,
                    desc: 'Plan PRO activo — hasta 30 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false, showTotal: true },
-        basico:  { badge: `<span class="badge badge-teal" style="font-size:.9rem;padding:6px 16px">✅ Plan Básico activo</span>`,
+        basico:  { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#0D9488;color:#fff;border-radius:20px">✅ Plan Básico activo</span>`,
                    desc: 'Plan Básico activo — hasta 10 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
-        trial:   { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
+        trial:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
                    desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
-        free:    { badge: `<span class="badge badge-orange" style="font-size:.9rem;padding:6px 16px">${trialLabel}</span>`,
+        free:    { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
                    desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
-        expired: { badge: `<span class="badge badge-gray" style="font-size:.9rem;padding:6px 16px">🔒 Sin plan activo</span>`,
+        expired: { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#6B7280;color:#fff;border-radius:20px">🔒 Sin plan activo</span>`,
                    desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: true, showBasico: true, showTotal: true },
     };
     const cfg = configs[plan] || configs.free;

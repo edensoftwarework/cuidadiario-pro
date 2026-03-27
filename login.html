@@ -124,13 +124,16 @@
                 window.location.href = 'pages/dashboard.html';
             }
         } catch (err) {
-            // Sin conexión: si hay una sesión guardada para este mismo email, permitir acceso offline
-            const isOffline = !navigator.onLine || err.message?.includes('Sin conexi');
+            // Sin conexión: si hay una sesión guardada para este mismo email, permitir acceso offline.
+            // Usamos getLastUser() que sobrevive a la expiración del token (removeToken no la borra).
+            const isOffline = !navigator.onLine || (err.message && (err.message.includes('Sin conexi') || err.message.includes('offline') || err.message.includes('ERR_')));
             if (isOffline) {
-                const cachedUser = API_B2B.getUser();
+                const cachedUser = API_B2B.getLastUser();
                 const enteredEmail = f.email.value.trim().toLowerCase();
                 if (cachedUser && cachedUser.email?.toLowerCase() === enteredEmail) {
                     showAlert('📵 Sin conexión — Accediendo con la sesión guardada en este dispositivo. Algunas funciones requieren internet.', 'warning');
+                    // Restaurar el user en la sesión activa si fue borrado por expiración
+                    if (!API_B2B.getUser()) localStorage.setItem('cd_pro_user', localStorage.getItem('cd_pro_last_user'));
                     setTimeout(() => {
                         if (cachedUser.rol === 'cuidador_staff' || cachedUser.rol === 'medico') window.location.href = 'pages/cuidador.html';
                         else if (cachedUser.rol === 'familiar') window.location.href = 'pages/familiar.html';
