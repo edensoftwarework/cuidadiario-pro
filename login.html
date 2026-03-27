@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CuidaDiario PRO — Plataforma de gestión clínica para instituciones de cuidado y salud">
     <title>Iniciar sesión — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-512.svg">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/styles-b2b.css">
 </head>
@@ -74,6 +75,34 @@
         else if (u?.rol === 'admin_institucion' && !u?.onboarding_done) window.location.href = 'pages/onboarding.html';
         else window.location.href = 'pages/dashboard.html';
     }
+
+    // ── Offline auto-access ──────────────────────────────────────────────────
+    // If the device has no internet and there's a previously saved session,
+    // skip the login form entirely and open the app in read/write-offline mode.
+    // When internet returns, the first authenticated API call will redirect to
+    // login if the token expired (normal behavior).
+    function _offlineRedirectByRole(u) {
+        if (!API_B2B.getUser()) {
+            // Restore the user object so app pages can render (no token though)
+            localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
+        }
+        if (u.rol === 'cuidador_staff' || u.rol === 'medico') window.location.href = 'pages/cuidador.html';
+        else if (u.rol === 'familiar') window.location.href = 'pages/familiar.html';
+        else if (u.rol === 'admin_institucion' && !u.onboarding_done) window.location.href = 'pages/onboarding.html';
+        else window.location.href = 'pages/dashboard.html';
+    }
+    function _tryOfflineAccess() {
+        const lastUser = API_B2B.getLastUser();
+        if (!lastUser) return false;
+        showAlert('📵 Sin conexión — Abriendo acceso de emergencia con la sesión guardada en este dispositivo.', 'warning');
+        setTimeout(() => _offlineRedirectByRole(lastUser), 1400);
+        return true;
+    }
+    // Immediate check (page opened while already offline)
+    if (!navigator.onLine) _tryOfflineAccess();
+    // Also trigger if network drops while the user is on this page
+    window.addEventListener('offline', () => _tryOfflineAccess(), { once: true });
+    // ── End offline auto-access ──────────────────────────────────────────────
 
     // Mostrar aviso si la sesión expiró
     if (new URLSearchParams(window.location.search).get('expired') === '1') {

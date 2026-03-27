@@ -48,11 +48,24 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllMo
 // AUTH GUARD
 // ============================================
 function requireAuth(redirectTo = '../login.html') {
-    if (!API_B2B.isAuth()) {
-        window.location.href = redirectTo;
-        return false;
+    if (API_B2B.isAuth()) return true;
+
+    // Offline emergency access: if the user never explicitly logged out (getLastUser() returns
+    // something) and the device is currently offline, restore the cached session and allow access.
+    // When the network comes back, any API call that returns 401 will redirect to login as usual.
+    if (!navigator.onLine) {
+        const lastUser = API_B2B.getLastUser();
+        if (lastUser) {
+            // Restore user object to the active session key so pages can render correctly
+            if (!API_B2B.getUser()) {
+                localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
+            }
+            return true;
+        }
     }
-    return true;
+
+    window.location.href = redirectTo;
+    return false;
 }
 
 function requireRole(...roles) {

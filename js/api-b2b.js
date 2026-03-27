@@ -40,6 +40,10 @@ const API_B2B = {
     async handle(res) {
         if (res.status === 401) {
             if (this.getToken()) {
+                // Preserve user for offline recovery BEFORE wiping the session.
+                // This is the only moment cd_pro_user is guaranteed to still exist.
+                const currUser = localStorage.getItem(this.USER_KEY);
+                if (currUser) localStorage.setItem(this.LAST_USER_KEY, currUser);
                 // Sesión expirada mientras estaba autenticado — redirigir al login
                 this.removeToken();
                 const inPages = window.location.pathname.includes('/pages/');
