@@ -380,13 +380,13 @@ async function _showTrialExpiredOverlay(user) {
         } catch (e) { /* si falla, continuar con 0 */ }
     }
 
-    const canUseBasico = pacientesCount <= 20 && staffCount <= 5;
+    const canUseBasico = pacientesCount <= 10 && staffCount <= 5;
 
     // Construir mensaje de conteos si excede límites de Básico
     let countWarning = '';
     if (!canUseBasico) {
         const parts = [];
-        if (pacientesCount > 20) parts.push(`${pacientesCount} pacientes activos (máx. 20 en Básico)`);
+        if (pacientesCount > 10) parts.push(`${pacientesCount} pacientes activos (máx. 10 en Básico)`);
         if (staffCount > 5) parts.push(`${staffCount} miembros de staff (máx. 5 en Básico)`);
         countWarning = `
             <div style="margin:16px 0;padding:14px 16px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
@@ -800,7 +800,7 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
         showToast && showToast('Conexión restablecida ✅', 'success');
         // Sincronizar escrituras pendientes en cola
         if (typeof API_B2B !== 'undefined' && typeof API_B2B._syncOfflineQueue === 'function') {
-            setTimeout(() => API_B2B._syncOfflineQueue(), 1200);
+            setTimeout(() => API_B2B._syncOfflineQueue(), 3500);
         }
     });
     if (!navigator.onLine) showOfflineBanner();

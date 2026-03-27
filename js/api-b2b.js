@@ -115,7 +115,11 @@ const API_B2B = {
             } catch { failed++; }
         }
         if (synced > 0 && typeof showToast === 'function') showToast(`✅ ${synced} ${synced > 1 ? 'acciones sincronizadas' : 'acción sincronizada'} correctamente`, 'success');
-        if (failed > 0 && typeof showToast === 'function') showToast(`⚠️ ${failed} ${failed > 1 ? 'acciones no pudieron' : 'acción no pudo'} sincronizarse`, 'error');
+        if (failed > 0) {
+            if (typeof showToast === 'function') showToast(`⚠️ ${failed} ${failed > 1 ? 'acciones no pudieron' : 'acción no pudo'} sincronizarse. Reintentando en 30s…`, 'warning');
+            // Reintentar automáticamente en 30 segundos si la conexión sigue activa
+            setTimeout(() => { if (navigator.onLine) this._syncOfflineQueue(); }, 30_000);
+        }
     },
 
     async post(path, body) {

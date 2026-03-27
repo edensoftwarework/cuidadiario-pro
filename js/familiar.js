@@ -200,20 +200,23 @@ async function _cargarStockAlertFamiliar(pacienteId) {
         const restock       = restockHist.status === 'fulfilled' ? restockHist.value.slice(0, 5) : [];
 
         const bajos = catalogoItems.filter(c => c.stock_minimo != null && c.stock_actual <= c.stock_minimo);
+        const todos = catalogoItems.filter(c => c.stock_actual != null);
 
         let html = '';
-        if (bajos.length > 0) {
+        if (todos.length > 0) {
             html += `
-        <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 13px;margin-top:4px">
-            <div style="font-weight:700;font-size:.8rem;color:#92400E;margin-bottom:6px">⚠️ Insumos con stock bajo</div>
-            ${bajos.map(c => `
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:3px 0;border-bottom:1px solid rgba(245,158,11,.2);color:#78350F">
-                <span>📦 ${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''}</span>
-                <span style="font-weight:700;color:#B45309">Stock: ${c.stock_actual}${c.unidad ? ' ' + escapeHtml(c.unidad) : ''}</span>
-            </div>`).join('')}
-            <div style="font-size:.75rem;color:#92400E;margin-top:6px">Avisá a la institución para reponer los insumos.</div>
+        <div style="background:#F8F9FF;border:1px solid #C7D2FE;border-radius:8px;padding:10px 13px;margin-top:4px">
+            <div style="font-weight:700;font-size:.8rem;color:#3730A3;margin-bottom:6px">💊 Stock de medicación / insumos</div>
+            ${todos.map(c => {
+                const isBajo = c.stock_minimo != null && c.stock_actual <= c.stock_minimo;
+                return `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:4px 6px;border-radius:4px;margin-bottom:2px;background:${isBajo ? '#FEF9C3' : 'transparent'}">
+                <span style="color:${isBajo ? '#92400E' : '#374151'}">${isBajo ? '⚠️' : '💊'} ${escapeHtml(c.nombre)}${c.presentacion ? ' <span style="color:#6B7280;font-weight:400">— ' + escapeHtml(c.presentacion) + '</span>' : ''}</span>
+                <span style="font-weight:700;color:${isBajo ? '#B45309' : '#1F2937'};white-space:nowrap;margin-left:8px">${c.stock_actual}${c.unidad ? ' ' + escapeHtml(c.unidad) : ''}</span>
+            </div>`;
+            }).join('')}
+            ${bajos.length > 0 ? `<div style="font-size:.72rem;color:#92400E;margin-top:6px;padding-top:4px;border-top:1px solid #FDE68A">⚠️ Los insumos en amarillo tienen stock bajo. Avisá a la institución para reponerlos.</div>` : ''}
         </div>`;
-        }
 
         if (restock.length > 0) {
             html += `

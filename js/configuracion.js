@@ -627,13 +627,15 @@ async function cargarEstadoPlan() {
             trialEnd.setDate(trialEnd.getDate() + 60);
             if (trialEnd < new Date()) plan = 'expired';
         }
-        renderPlanBadge(plan, data.trial_started_at);
+        const pacientesCount = parseInt(data.pacientes_count) || 0;
+        const staffCount     = parseInt(data.staff_count)     || 0;
+        renderPlanBadge(plan, data.trial_started_at, pacientesCount, staffCount);
     } catch {
         renderPlanBadge('free');
     }
 }
 
-function renderPlanBadge(plan, trialStartedAt = null) {
+function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffCount = 0) {
     const wrap      = document.getElementById('planBadgeWrap');
     const desc      = document.getElementById('planDesc');
     const btnPRO    = document.getElementById('btnSuscribirPRO');
@@ -676,6 +678,40 @@ function renderPlanBadge(plan, trialStartedAt = null) {
     if (btnBasico) btnBasico.style.display = cfg.showBasico ? '' : 'none';
     if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
     if (btnVerif)  btnVerif.style.display  = (plan !== 'pro' && plan !== 'total') ? '' : 'none';
+
+    // Deshabilitar planes que no corresponden según los conteos actuales
+    // (familiares ya NO cuentan como staff — el backend los excluye)
+    const canBasico = pacientesCount <= 10 && staffCount <= 5;
+    const canPro    = pacientesCount <= 30 && staffCount <= 20;
+
+    // Limpiar warnings anteriores
+    ['_planWarnBasico', '_planWarnPRO'].forEach(id => document.getElementById(id)?.remove());
+
+    if (btnBasico && cfg.showBasico && !canBasico) {
+        btnBasico.disabled = true;
+        btnBasico.title = `Necesitás tener máx. 10 pacientes y 5 staff para usar el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        const warn = document.createElement('p');
+        warn.id = '_planWarnBasico';
+        warn.style.cssText = 'font-size:.78rem;color:#92400E;background:#FEF3C7;border-radius:6px;padding:7px 10px;margin-top:6px';
+        warn.innerHTML = `⚠️ No podés contratar el Plan Básico con ${pacientesCount} pacientes y ${staffCount} staff. El límite es 10 pac. / 5 staff. Eliminá registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
+        btnBasico.insertAdjacentElement('afterend', warn);
+    } else if (btnBasico) {
+        btnBasico.disabled = false;
+        btnBasico.title = '';
+    }
+
+    if (btnPRO && cfg.showPRO && !canPro) {
+        btnPRO.disabled = true;
+        btnPRO.title = `Necesitás tener máx. 30 pacientes y 20 staff para usar el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        const warn = document.createElement('p');
+        warn.id = '_planWarnPRO';
+        warn.style.cssText = 'font-size:.78rem;color:#1E40AF;background:#EFF6FF;border-radius:6px;padding:7px 10px;margin-top:6px';
+        warn.innerHTML = `ℹ️ Tu configuración actual (${pacientesCount} pac. / ${staffCount} staff) supera los límites del Plan PRO. Solo podés contratar el Plan Total.`;
+        btnPRO.insertAdjacentElement('afterend', warn);
+    } else if (btnPRO) {
+        btnPRO.disabled = false;
+        btnPRO.title = '';
+    }
 }
 
 async function suscribirPlan(plan, testMode) {

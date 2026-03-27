@@ -124,6 +124,22 @@
                 window.location.href = 'pages/dashboard.html';
             }
         } catch (err) {
+            // Sin conexión: si hay una sesión guardada para este mismo email, permitir acceso offline
+            const isOffline = !navigator.onLine || err.message?.includes('Sin conexi');
+            if (isOffline) {
+                const cachedUser = API_B2B.getUser();
+                const enteredEmail = f.email.value.trim().toLowerCase();
+                if (cachedUser && cachedUser.email?.toLowerCase() === enteredEmail) {
+                    showAlert('📵 Sin conexión — Accediendo con la sesión guardada en este dispositivo. Algunas funciones requieren internet.', 'warning');
+                    setTimeout(() => {
+                        if (cachedUser.rol === 'cuidador_staff' || cachedUser.rol === 'medico') window.location.href = 'pages/cuidador.html';
+                        else if (cachedUser.rol === 'familiar') window.location.href = 'pages/familiar.html';
+                        else if (cachedUser.rol === 'admin_institucion' && !cachedUser.onboarding_done) window.location.href = 'pages/onboarding.html';
+                        else window.location.href = 'pages/dashboard.html';
+                    }, 1800);
+                    return;
+                }
+            }
             showAlert(err.message);
             btn.disabled = false;
             btn.innerHTML = 'Iniciar sesión';
