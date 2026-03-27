@@ -795,6 +795,28 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
         if (b) b.style.display = 'none';
     }
     window.addEventListener('offline', showOfflineBanner);
-    window.addEventListener('online', () => { hideOfflineBanner(); showToast && showToast('Conexi\u00f3n restablecida \u2705', 'success'); });
+    window.addEventListener('online', () => {
+        hideOfflineBanner();
+        showToast && showToast('Conexión restablecida ✅', 'success');
+        // Sincronizar escrituras pendientes en cola
+        if (typeof API_B2B !== 'undefined' && typeof API_B2B._syncOfflineQueue === 'function') {
+            setTimeout(() => API_B2B._syncOfflineQueue(), 1200);
+        }
+    });
     if (!navigator.onLine) showOfflineBanner();
 })();
+
+/**
+ * Maneja errores de escritura offline (cola local).
+ * Devuelve true si el error fue manejado (era queued), false si es un error real.
+ * opts: { modal: 'modalId', form: HTMLFormElement }
+ */
+function handleOfflineWrite(err, opts = {}) {
+    if (err && err.queued) {
+        if (typeof showToast === 'function') showToast(err.message, 'warning');
+        if (opts.modal && typeof closeModal === 'function') closeModal(opts.modal);
+        if (opts.form) opts.form.reset();
+        return true;
+    }
+    return false;
+}

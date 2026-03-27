@@ -92,9 +92,56 @@ const API_B2B = {
             throw err;
         }
     },
-    async post(path, body)  { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST',   headers: this.headers(), body: JSON.stringify(body) })); },
-    async patch(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'PATCH',  headers: this.headers(), body: JSON.stringify(body) })); },
-    async del(path)         { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'DELETE', headers: this.headers() })); },
+    // ---------- Offline Write Queue ----------
+    _offlineQueue: {
+        _key: 'cd_offline_queue',
+        get()       { try { return JSON.parse(localStorage.getItem(this._key) || '[]'); } catch { return []; } },
+        add(op)     { const q = this.get(); q.push({ ...op, _qid: Date.now() + '_' + Math.random().toString(36).slice(2) }); try { localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
+        remove(qid) { try { const q = this.get().filter(o => o._qid !== qid); localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
+        count()     { return this.get().length; },
+    },
+
+    async _syncOfflineQueue() {
+        const queue = this._offlineQueue.get();
+        if (!queue.length) return;
+        let synced = 0, failed = 0;
+        for (const op of queue) {
+            try {
+                if      (op.method === 'POST')   await this.post(op.path, op.body);
+                else if (op.method === 'PATCH')  await this.patch(op.path, op.body);
+                else if (op.method === 'DELETE') await this.del(op.path);
+                this._offlineQueue.remove(op._qid);
+                synced++;
+            } catch { failed++; }
+        }
+        if (synced > 0 && typeof showToast === 'function') showToast(`✅ ${synced} ${synced > 1 ? 'acciones sincronizadas' : 'acción sincronizada'} correctamente`, 'success');
+        if (failed > 0 && typeof showToast === 'function') showToast(`⚠️ ${failed} ${failed > 1 ? 'acciones no pudieron' : 'acción no pudo'} sincronizarse`, 'error');
+    },
+
+    async post(path, body) {
+        if (!navigator.onLine) {
+            this._offlineQueue.add({ method: 'POST', path, body });
+            const e = new Error('Sin conexión — guardado localmente, se enviará al reconectarse.');
+            e.queued = true; throw e;
+        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) }));
+    },
+    async patch(path, body) {
+        if (!navigator.onLine) {
+            this._offlineQueue.add({ method: 'PATCH', path, body });
+            const e = new Error('Sin conexión — cambio guardado localmente, se enviará al reconectarse.');
+            e.queued = true; throw e;
+        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'PATCH', headers: this.headers(), body: JSON.stringify(body) }));
+    },
+    async del(path) {
+        if (!navigator.onLine) {
+            this._offlineQueue.add({ method: 'DELETE', path, body: null });
+            const e = new Error('Sin conexión — acción guardada localmente, se enviará al reconectarse.');
+            e.queued = true; throw e;
+        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'DELETE', headers: this.headers() }));
+    },
     async postNoAuth(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST', headers: this.headers(false), body: JSON.stringify(body) })); },
 
     // ============================================

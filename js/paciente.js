@@ -45,12 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTabs(params.get('tab'));
     initForms();
 
-    // Load both institutional and patient-specific catalogs (hybrid model)
+    // Load catalogs (familiar: solo catálogo del paciente; otros: ambos)
     try {
-        [_catalogo, _catalogoPaciente] = await Promise.all([
-            API_B2B.getCatalogo().catch(() => []),
-            API_B2B.getCatalogo({ paciente_id: _pacienteId }).catch(() => [])
-        ]);
+        if (_isReadOnly) {
+            _catalogoPaciente = await API_B2B.getCatalogo({ paciente_id: _pacienteId }).catch(() => []);
+        } else {
+            [_catalogo, _catalogoPaciente] = await Promise.all([
+                API_B2B.getCatalogo().catch(() => []),
+                API_B2B.getCatalogo({ paciente_id: _pacienteId }).catch(() => [])
+            ]);
+        }
     } catch(e) { /* silently continue */ }
 
     await loadPaciente();
@@ -557,7 +561,7 @@ async function handleSaveMed(e) {
         }
         closeModal('modalMed');
         await loadMedicamentos();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalMed', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 // ============================================
@@ -627,7 +631,7 @@ async function handleCrearInsumoRapido(e) {
         const nomInput = document.querySelector('#formMed [name="mNombre"]');
         if (nomInput && !nomInput.value.trim()) nomInput.value = newItem.nombre;
     } catch (err) {
-        showToast('Error al crear insumo: ' + err.message, 'error');
+        if (!handleOfflineWrite(err, { modal: 'modalCrearInsumoRapido', form: f })) showToast('Error al crear insumo: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = '✅ Crear y seleccionar';
@@ -667,13 +671,13 @@ async function handleSaveToma(e) {
         showToast('Toma registrada ✅', 'success');
         closeModal('modalToma');
         await loadMedicamentos(); // refresh stock display
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalToma', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteMed(id) {
     confirmDialog('¿Eliminar este medicamento?', async () => {
         try { await API_B2B.deleteMedicamento(id); showToast('Eliminado', 'success'); await loadMedicamentos(); }
-        catch (err) { showToast('Error: ' + err.message, 'error'); }
+        catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); }
     });
 }
 
@@ -714,7 +718,7 @@ async function handleSaveEgreso(e) {
         showToast('Paciente dado de alta ✅', 'success');
         closeModal('modalEgreso');
         await loadPaciente();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalEgreso', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 // ============================================
@@ -845,11 +849,11 @@ async function handleSaveCita(e) {
         if (_editingCitaId) { await API_B2B.updateCita(_editingCitaId, data); showToast('Cita actualizada', 'success'); }
         else { await API_B2B.createCita(data); showToast('Cita creada', 'success'); }
         closeModal('modalCita'); await loadCitas();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalCita', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteCita(id) {
-    confirmDialog('¿Eliminar esta cita?', async () => { try { await API_B2B.deleteCita(id); showToast('Eliminada', 'success'); await loadCitas(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta cita?', async () => { try { await API_B2B.deleteCita(id); showToast('Eliminada', 'success'); await loadCitas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -941,7 +945,7 @@ async function handleSaveTarea(e) {
         if (_editingTareaId) { await API_B2B.updateTarea(_editingTareaId, data); showToast('Tarea actualizada', 'success'); }
         else { await API_B2B.createTarea(data); showToast('Tarea creada', 'success'); }
         closeModal('modalTarea'); await loadTareas();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalTarea', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 function completarTarea(id, titulo) {
@@ -961,11 +965,11 @@ async function handleCompletarTarea(e) {
         showToast('Tarea completada ✅', 'success');
         closeModal('modalCompletarTarea');
         loadTareas(); // refresh list + historial (non-blocking)
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalCompletarTarea', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteTarea(id) {
-    confirmDialog('¿Eliminar esta tarea?', async () => { try { await API_B2B.deleteTarea(id); showToast('Eliminada', 'success'); await loadTareas(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta tarea?', async () => { try { await API_B2B.deleteTarea(id); showToast('Eliminada', 'success'); await loadTareas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1022,11 +1026,11 @@ async function handleSaveSintoma(e) {
         else { await API_B2B.createSintoma(data); showToast('S\u00edntoma registrado', 'success'); }
         closeModal('modalSintoma'); f.reset(); await loadSintomas();
     }
-    catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    catch (err) { if (!handleOfflineWrite(err, { modal: 'modalSintoma', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteSintoma(id) {
-    confirmDialog('¿Eliminar este síntoma?', async () => { try { await API_B2B.deleteSintoma(id); showToast('Eliminado', 'success'); await loadSintomas(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar este síntoma?', async () => { try { await API_B2B.deleteSintoma(id); showToast('Eliminado', 'success'); await loadSintomas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1037,7 +1041,15 @@ async function loadSignos() {
     try { _signos = await API_B2B.getSignos(_pacienteId); renderSignos(_signos); } catch (err) { console.error(err); }
 }
 
-const SIGNOS_TIPOS = [ { id: 'presion_arterial', label: 'Presión arterial', unidad: 'mmHg', icon: '🩸' }, { id: 'frecuencia_cardiaca', label: 'Frec. cardíaca', unidad: 'lpm', icon: '❤️' }, { id: 'temperatura', label: 'Temperatura', unidad: '°C', icon: '🌡️' }, { id: 'saturacion_oxigeno', label: 'Saturación O₂', unidad: '%', icon: '💨' }, { id: 'glucosa', label: 'Glucosa', unidad: 'mg/dL', icon: '🩸' }, { id: 'peso', label: 'Peso', unidad: 'kg', icon: '⚖️' }, { id: 'talla', label: 'Talla', unidad: 'cm', icon: '📏' } ];
+const SIGNOS_TIPOS = [
+    { id: 'presion_arterial',    label: 'Presión arterial',  unidad: 'mmHg',  icon: '🩸', placeholder: 'Ej: 120/80',   referencia: 'Normal: 90/60 – 120/80 mmHg' },
+    { id: 'frecuencia_cardiaca', label: 'Frec. cardíaca',    unidad: 'lpm',   icon: '❤️', placeholder: 'Ej: 75',       referencia: 'Normal: 60–100 lpm' },
+    { id: 'temperatura',         label: 'Temperatura',       unidad: '°C',    icon: '🌡️', placeholder: 'Ej: 36.8',     referencia: 'Normal: 36.1–37.2 °C' },
+    { id: 'saturacion_oxigeno',  label: 'Saturación O₂',     unidad: '%',     icon: '💨', placeholder: 'Ej: 98',       referencia: 'Normal: ≥95%' },
+    { id: 'glucosa',             label: 'Glucosa',           unidad: 'mg/dL', icon: '🩸', placeholder: 'Ej: 95',       referencia: 'Normal (ayunas): 70–100 mg/dL' },
+    { id: 'peso',                label: 'Peso',              unidad: 'kg',    icon: '⚖️', placeholder: 'Ej: 70.5',     referencia: null },
+    { id: 'talla',               label: 'Talla',             unidad: 'cm',    icon: '📏', placeholder: 'Ej: 170',      referencia: null },
+];
 
 function renderSignos(lista) {
     const el = document.getElementById('signosContent');
@@ -1083,18 +1095,26 @@ async function handleSaveSigno(e) {
     const tipoData = SIGNOS_TIPOS.find(t => t.id === tipo);
     const data = { paciente_id: _pacienteId, tipo, valor: f.gValor.value.trim(), unidad: tipoData?.unidad || f.gUnidad.value.trim(), notas: f.gNotas.value.trim(), _quien: getRegistrador() };
     try { await API_B2B.createSigno(data); showToast('Signo vital registrado', 'success'); closeModal('modalSigno'); f.reset(); await loadSignos(); }
-    catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    catch (err) { if (!handleOfflineWrite(err, { modal: 'modalSigno', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteSigno(id) {
-    confirmDialog('¿Eliminar este registro?', async () => { try { await API_B2B.deleteSigno(id); showToast('Eliminado', 'success'); await loadSignos(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar este registro?', async () => { try { await API_B2B.deleteSigno(id); showToast('Eliminado', 'success'); await loadSignos(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
-// Auto-fill unidad al seleccionar tipo
+// Auto-fill unidad + placeholder + referencia al seleccionar tipo
 function onSignoTipoChange(select) {
     const tipo = SIGNOS_TIPOS.find(t => t.id === select.value);
+    if (!tipo) return;
     const unidadInput = document.getElementById('gUnidad');
-    if (unidadInput && tipo) unidadInput.value = tipo.unidad;
+    const valorInput  = document.getElementById('gValor');
+    const refHint     = document.getElementById('gRefHint');
+    if (unidadInput) unidadInput.value      = tipo.unidad;
+    if (valorInput)  valorInput.placeholder  = tipo.placeholder || '';
+    if (refHint) {
+        refHint.textContent  = tipo.referencia ? '📊 Ref: ' + tipo.referencia : '';
+        refHint.style.display = tipo.referencia ? 'block' : 'none';
+    }
 }
 
 // ============================================
@@ -1149,11 +1169,11 @@ async function handleSaveContacto(e) {
         if (_editingContactoId) { await API_B2B.updateContacto(_editingContactoId, data); showToast('Contacto actualizado', 'success'); }
         else { await API_B2B.createContacto(data); showToast('Contacto agregado', 'success'); }
         closeModal('modalContacto'); await loadContactos();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalContacto', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteContacto(id) {
-    confirmDialog('¿Eliminar este contacto?', async () => { try { await API_B2B.deleteContacto(id); showToast('Eliminado', 'success'); await loadContactos(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar este contacto?', async () => { try { await API_B2B.deleteContacto(id); showToast('Eliminado', 'success'); await loadContactos(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1208,11 +1228,11 @@ async function handleSaveNota(e) {
         if (_editingNotaId) { await API_B2B.updateNota(_editingNotaId, data); showToast('Nota actualizada', 'success'); }
         else { await API_B2B.createNota(data); showToast('Nota guardada', 'success'); }
         closeModal('modalNota'); await loadNotas();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalNota', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteNota(id) {
-    confirmDialog('¿Eliminar esta nota?', async () => { try { await API_B2B.deleteNota(id); showToast('Eliminada', 'success'); await loadNotas(); } catch (err) { showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta nota?', async () => { try { await API_B2B.deleteNota(id); showToast('Eliminada', 'success'); await loadNotas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1251,7 +1271,7 @@ async function handleEditPaciente(e) {
         showToast('Paciente actualizado', 'success');
         closeModal('modalEditPaciente');
         await loadPaciente();
-    } catch (err) { showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
+    } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalEditPaciente', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 // ============================================
