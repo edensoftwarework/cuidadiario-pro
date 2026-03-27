@@ -800,7 +800,8 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
         showToast && showToast('Conexión restablecida ✅', 'success');
         // Sincronizar escrituras pendientes en cola
         if (typeof API_B2B !== 'undefined' && typeof API_B2B._syncOfflineQueue === 'function') {
-            setTimeout(() => API_B2B._syncOfflineQueue(), 3500);
+            // 5 s delay — Railway DNS typically needs ~4 s after a mobile reconnect
+            setTimeout(() => API_B2B._syncOfflineQueue(), 5000);
         }
     });
     if (!navigator.onLine) showOfflineBanner();
