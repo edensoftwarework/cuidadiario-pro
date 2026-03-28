@@ -629,7 +629,7 @@ async function cargarEstadoPlan() {
         }
         const pacientesCount = parseInt(data.pacientes_count) || 0;
         const staffCount     = parseInt(data.staff_count)     || 0;
-        renderPlanBadge(plan, data.trial_started_at, pacientesCount, staffCount, data.mp_preapproval_id || null);
+        renderPlanBadge(plan, data.trial_started_at, pacientesCount, staffCount, data.mp_preapproval_id || null, data.plan_manual_expires_at || null);
     } catch {
         renderPlanBadge('free');
     }
@@ -637,15 +637,21 @@ async function cargarEstadoPlan() {
 
 let _currentPlan = 'free'; // para detectar upgrades/downgrades en suscribirPlan
 
-function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffCount = 0, mpPreapprovalId = null) {
+function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffCount = 0, mpPreapprovalId = null, planExpiresAt = null) {
+    // Verificar expiración client-side de planes con fecha de vencimiento
+    if (['basico','pro','total'].includes(plan) && planExpiresAt) {
+        const expiry = new Date(planExpiresAt);
+        if (expiry < new Date()) { plan = 'expired'; planExpiresAt = null; }
+    }
     _currentPlan = plan;
-    const wrap      = document.getElementById('planBadgeWrap');
-    const desc      = document.getElementById('planDesc');
-    const btnPRO    = document.getElementById('btnSuscribirPRO');
-    const btnBasico = document.getElementById('btnSuscribirBasico');
-    const btnTotal  = document.getElementById('btnSuscribirTotal');
-    const btnVerif  = document.getElementById('btnVerificarPlan');
-    const btnCancel = document.getElementById('btnCancelarSuscripcion');
+    const wrap       = document.getElementById('planBadgeWrap');
+    const desc       = document.getElementById('planDesc');
+    const btnPRO     = document.getElementById('btnSuscribirPRO');
+    const btnBasico  = document.getElementById('btnSuscribirBasico');
+    const btnTotal   = document.getElementById('btnSuscribirTotal');
+    const btnVerif   = document.getElementById('btnVerificarPlan');
+    const btnCancel  = document.getElementById('btnCancelarSuscripcion');
+    const expiryInfo = document.getElementById('planExpiryInfo');
     if (!wrap) return;
 
     // Calcular días restantes de prueba
@@ -685,9 +691,36 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
     if (btnVerif)  btnVerif.style.display  = !['basico','pro','total'].includes(plan) ? '' : 'none';
 
-    // Botón cancelar: solo si hay suscripción MP activa (no para planes manuales)
+    // Botón cancelar: visible para TODOS los planes activos (tanto MP como manuales)
     const isPaidPlan = ['basico','pro','total'].includes(plan);
-    if (btnCancel) btnCancel.style.display = (isPaidPlan && mpPreapprovalId) ? '' : 'none';
+    if (btnCancel) {
+        btnCancel.style.display  = isPaidPlan ? '' : 'none';
+        btnCancel.textContent    = mpPreapprovalId ? '🚫 Cancelar suscripción' : '🚫 Dar de baja el plan';
+    }
+
+    // Información de vencimiento / próxima renovación
+    if (expiryInfo) {
+        if (planExpiresAt && isPaidPlan) {
+            const expDate   = new Date(planExpiresAt);
+            const daysToEx  = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+            const dateStr   = expDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+            const isUrgent  = daysToEx <= 7;
+            const label     = mpPreapprovalId ? 'Próxima renovación' : 'Vence el';
+            const icon      = isUrgent ? '⚠️' : '📅';
+            const style     = isUrgent
+                ? 'color:#92400E;background:#FEF3C7;border:1px solid #FDE68A'
+                : 'color:#065F46;background:#D1FAE5;border:1px solid #A7F3D0';
+            const dayLabel  = daysToEx > 0 ? ` — ${daysToEx} días` : ' — hoy';
+            expiryInfo.innerHTML = `<span style="display:inline-block;font-size:.83rem;padding:5px 14px;border-radius:12px;${style}">${icon} ${label}: ${dateStr}${dayLabel}</span>`;
+            expiryInfo.style.display = '';
+        } else if (isPaidPlan && mpPreapprovalId) {
+            // Suscripción MP sin fecha de renovación registrada aún (primer pago antes del webhook)
+            expiryInfo.innerHTML = `<span style="display:inline-block;font-size:.83rem;padding:5px 14px;border-radius:12px;color:#1E40AF;background:#EFF6FF;border:1px solid #BFDBFE">🔄 Suscripción activa — renovación mensual automática</span>`;
+            expiryInfo.style.display = '';
+        } else {
+            expiryInfo.style.display = 'none';
+        }
+    }
 
     // Etiquetas contextuales: upgrade vs downgrade
     if (btnBasico) btnBasico.textContent = (plan === 'pro' || plan === 'total') ? '↓ Cambiar a Plan Básico' : 'Contratar Plan Básico';

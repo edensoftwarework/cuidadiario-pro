@@ -139,6 +139,7 @@
                         <option value="total">🏆 Total — sin límites · $99.000/mes</option>
                         <option value="free">🔓 Free — período de prueba (sin plan pago)</option>
                     </select>
+                    <div id="planCompatWarn" style="display:none;font-size:.8rem;color:#92400E;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:7px 10px;margin-top:6px"></div>
                 </div>
             </div>
 
@@ -197,6 +198,7 @@
 <script>
     const BACKEND = 'https://cuidadiario-backend-production.up.railway.app';
     let _key = '';
+    let _lastQueryData = null; // última institución consultada (para validación de compatibilidad)
 
     // ── Auth ──
     function unlockPanel() {
@@ -220,10 +222,31 @@
         });
     }
 
-    // ── Ocultar campo meses si se elige Free ──
+    // ── Ocultar campo meses si se elige Free; advertencia de compatibilidad real-time ──
     function onPlanChange() {
         const plan = document.getElementById('planSelect').value;
         document.getElementById('monthsGroup').style.display = plan === 'free' ? 'none' : 'block';
+
+        const warn = document.getElementById('planCompatWarn');
+        if (!warn) return;
+        if (!_lastQueryData || plan === 'free' || plan === 'total') {
+            warn.style.display = 'none';
+            return;
+        }
+        const pac    = _lastQueryData.pacientes_count || 0;
+        const stf    = _lastQueryData.staff_count     || 0;
+        const limPac = plan === 'basico' ? 15 : 40;
+        const limStf = plan === 'basico' ? 8  : 20;
+        if (pac > limPac || stf > limStf) {
+            const parts = [];
+            if (pac > limPac) parts.push(`${pac} pacientes activos (máx. ${limPac})`);
+            if (stf > limStf) parts.push(`${stf} staff activo (máx. ${limStf})`);
+            const planLabel = plan === 'basico' ? 'Básico' : 'PRO';
+            warn.innerHTML  = `⚠️ La institución <strong>ID ${_lastQueryData.id}</strong> tiene ${parts.join(' y ')} — no puede usar Plan ${planLabel}. Asigná Plan Total.`;
+            warn.style.display = 'block';
+        } else {
+            warn.style.display = 'none';
+        }
     }
 
     // ── Consultar institución ──
@@ -243,6 +266,9 @@
             } else {
                 showResult(res, 'ok', `🏥 ${escHtml(data.nombre)}`, buildInstInfo(data));
                 addLog(`🔍 inst ${data.id} (${data.nombre}) → plan: ${data.plan}`, 'ok');
+                _lastQueryData = data;
+                document.getElementById('instId').value = data.id; // auto-completar en sección Asignar Plan
+                onPlanChange(); // re-chequear compatibilidad con plan seleccionado
             }
         } catch (e) {
             showResult(res, 'error', '❌ Sin conexión', e.message);
