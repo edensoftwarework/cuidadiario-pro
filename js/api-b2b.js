@@ -404,6 +404,9 @@ const API_B2B = {
             : '/api/b2b/verify-subscription';
         return this.get(url);
     },
+    async cancelSubscription() {
+        return this.post('/api/b2b/cancel-subscription', {});
+    },
 
     // ============================================
     // DOCUMENTOS ADJUNTOS

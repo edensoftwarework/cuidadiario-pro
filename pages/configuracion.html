@@ -252,11 +252,12 @@
                                     </div>
                                 </div>
 
-                                <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap">
-                                    <button class="btn btn-primary btn-sm" id="btnSuscribirTotal" onclick="suscribirPlan('total', false)" style="display:none">Contratar Plan Total</button>
+                                <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                                    <button class="btn btn-primary btn-sm" id="btnSuscribirTotal" onclick="suscribirPlan('total', false)" style="display:none">🏆 Contratar Plan Total</button>
                                     <button class="btn btn-primary btn-sm" id="btnSuscribirPRO" onclick="suscribirPlan('pro', false)" style="display:none">💳 Contratar Plan PRO</button>
                                     <button class="btn btn-secondary btn-sm" id="btnSuscribirBasico" onclick="suscribirPlan('basico', false)" style="display:none">Contratar Plan Básico</button>
                                     <button class="btn btn-secondary btn-sm" id="btnVerificarPlan" onclick="verificarPlan()" style="display:none">🔄 Verificar estado del pago</button>
+                                    <button class="btn btn-danger btn-sm" id="btnCancelarSuscripcion" onclick="cancelarSuscripcion()" style="display:none">🚫 Cancelar suscripción</button>
                                 </div>
 
                                 <!-- Zona de test (oculta por defecto, visible con ?test=1 en la URL) -->

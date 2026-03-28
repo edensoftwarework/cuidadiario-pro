@@ -629,19 +629,23 @@ async function cargarEstadoPlan() {
         }
         const pacientesCount = parseInt(data.pacientes_count) || 0;
         const staffCount     = parseInt(data.staff_count)     || 0;
-        renderPlanBadge(plan, data.trial_started_at, pacientesCount, staffCount);
+        renderPlanBadge(plan, data.trial_started_at, pacientesCount, staffCount, data.mp_preapproval_id || null);
     } catch {
         renderPlanBadge('free');
     }
 }
 
-function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffCount = 0) {
+let _currentPlan = 'free'; // para detectar upgrades/downgrades en suscribirPlan
+
+function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffCount = 0, mpPreapprovalId = null) {
+    _currentPlan = plan;
     const wrap      = document.getElementById('planBadgeWrap');
     const desc      = document.getElementById('planDesc');
     const btnPRO    = document.getElementById('btnSuscribirPRO');
     const btnBasico = document.getElementById('btnSuscribirBasico');
     const btnTotal  = document.getElementById('btnSuscribirTotal');
     const btnVerif  = document.getElementById('btnVerificarPlan');
+    const btnCancel = document.getElementById('btnCancelarSuscripcion');
     if (!wrap) return;
 
     // Calcular días restantes de prueba
@@ -659,9 +663,9 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     const configs = {
         total:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#4C1D95;color:#fff;border-radius:20px">🏆 Plan Total activo</span>`,
-                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false, showTotal: false },
+                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: true, showBasico: true, showTotal: false },
         pro:     { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#1565C0;color:#fff;border-radius:20px">⭐ Plan PRO activo</span>`,
-                   desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false, showTotal: true },
+                   desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: true, showTotal: true },
         basico:  { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#0D9488;color:#fff;border-radius:20px">✅ Plan Básico activo</span>`,
                    desc: 'Plan Básico activo — hasta 15 pacientes y 8 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
         trial:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
@@ -674,13 +678,23 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     const cfg = configs[plan] || configs.free;
     wrap.innerHTML = cfg.badge;
     if (desc) desc.textContent = cfg.desc;
+
+    // Mostrar/ocultar botones de plan
     if (btnPRO)    btnPRO.style.display    = cfg.showPRO    ? '' : 'none';
     if (btnBasico) btnBasico.style.display = cfg.showBasico ? '' : 'none';
     if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
-    if (btnVerif)  btnVerif.style.display  = (plan !== 'pro' && plan !== 'total') ? '' : 'none';
+    if (btnVerif)  btnVerif.style.display  = !['basico','pro','total'].includes(plan) ? '' : 'none';
 
-    // Deshabilitar planes que no corresponden según los conteos actuales
-    // (familiares ya NO cuentan como staff — el backend los excluye)
+    // Botón cancelar: solo si hay suscripción MP activa (no para planes manuales)
+    const isPaidPlan = ['basico','pro','total'].includes(plan);
+    if (btnCancel) btnCancel.style.display = (isPaidPlan && mpPreapprovalId) ? '' : 'none';
+
+    // Etiquetas contextuales: upgrade vs downgrade
+    if (btnBasico) btnBasico.textContent = (plan === 'pro' || plan === 'total') ? '↓ Cambiar a Plan Básico' : 'Contratar Plan Básico';
+    if (btnPRO)    btnPRO.textContent    = plan === 'total' ? '↓ Cambiar a Plan PRO' : '💳 Contratar Plan PRO';
+    if (btnTotal)  btnTotal.textContent  = '🏆 Contratar Plan Total';
+
+    // Deshabilitar planes que superan los límites de conteo
     const canBasico = pacientesCount <= 15 && staffCount <= 8;
     const canPro    = pacientesCount <= 40 && staffCount <= 20;
 
@@ -689,11 +703,11 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     if (btnBasico && cfg.showBasico && !canBasico) {
         btnBasico.disabled = true;
-        btnBasico.title = `Necesitás tener máx. 15 pacientes y 8 staff para usar el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        btnBasico.title = `Necesitás tener máx. 15 pac. y 8 staff para el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
         const warn = document.createElement('p');
         warn.id = '_planWarnBasico';
         warn.style.cssText = 'font-size:.78rem;color:#92400E;background:#FEF3C7;border-radius:6px;padding:7px 10px;margin-top:6px';
-        warn.innerHTML = `⚠️ No podés contratar el Plan Básico con ${pacientesCount} pacientes y ${staffCount} staff. El límite es 15 pac. / 8 staff. Eliminá registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
+        warn.innerHTML = `⚠️ No podés usar el Plan Básico con ${pacientesCount} pac. y ${staffCount} staff (límite: 15 pac. / 8 staff). Reducí registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
         btnBasico.insertAdjacentElement('afterend', warn);
     } else if (btnBasico) {
         btnBasico.disabled = false;
@@ -702,11 +716,11 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     if (btnPRO && cfg.showPRO && !canPro) {
         btnPRO.disabled = true;
-        btnPRO.title = `Necesitás tener máx. 40 pacientes y 20 staff para usar el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        btnPRO.title = `Necesitás tener máx. 40 pac. y 20 staff para el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
         const warn = document.createElement('p');
         warn.id = '_planWarnPRO';
         warn.style.cssText = 'font-size:.78rem;color:#1E40AF;background:#EFF6FF;border-radius:6px;padding:7px 10px;margin-top:6px';
-        warn.innerHTML = `ℹ️ Tu configuración actual (${pacientesCount} pac. / ${staffCount} staff) supera los límites del Plan PRO. Solo podés contratar el Plan Total.`;
+        warn.innerHTML = `ℹ️ Tu configuración (${pacientesCount} pac. / ${staffCount} staff) supera los límites del Plan PRO. Solo podés contratar el Plan Total.`;
         btnPRO.insertAdjacentElement('afterend', warn);
     } else if (btnPRO) {
         btnPRO.disabled = false;
@@ -715,7 +729,20 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 }
 
 async function suscribirPlan(plan, testMode) {
-    const btn = document.getElementById(testMode ? null : (plan === 'total' ? 'btnSuscribirTotal' : plan === 'pro' ? 'btnSuscribirPRO' : 'btnSuscribirBasico'));
+    // Confirmación cuando ya hay un plan activo (upgrade o downgrade)
+    if (['basico','pro','total'].includes(_currentPlan)) {
+        const isDowngrade = (_currentPlan === 'total' && (plan === 'pro' || plan === 'basico'))
+                         || (_currentPlan === 'pro'   && plan === 'basico');
+        const planLabel = { basico: 'Plan Básico', pro: 'Plan PRO', total: 'Plan Total' }[plan];
+        const msg = isDowngrade
+            ? `¿Confirmás el cambio a ${planLabel}?\n\nSe cancelará tu suscripción actual y comenzará una nueva por $${plan==='basico'?'29.000':plan==='pro'?'59.000':'99.000'}/mes. El cambio es inmediato.`
+            : `¿Confirmás el cambio a ${planLabel}?\n\nSe cancelará tu suscripción actual y comenzará una nueva con el precio del ${planLabel}.`;
+        if (!confirm(msg)) return;
+    }
+
+    const btnId = plan === 'total' ? 'btnSuscribirTotal' : plan === 'pro' ? 'btnSuscribirPRO' : 'btnSuscribirBasico';
+    const btn = document.getElementById(btnId);
+    const originalText = btn?.textContent || '';
     if (btn) { btn.disabled = true; btn.textContent = 'Redirigiendo…'; }
     try {
         const res = await API_B2B.createSubscription(plan, testMode);
@@ -723,11 +750,11 @@ async function suscribirPlan(plan, testMode) {
             window.location.href = res.init_point;
         } else {
             showToast('No se pudo obtener el link de pago', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = plan === 'total' ? 'Contratar Plan Total' : plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+            if (btn) { btn.disabled = false; btn.textContent = originalText; }
         }
     } catch (err) {
         showToast('Error: ' + (err.message || 'No se pudo crear la suscripción'), 'error');
-        if (btn) { btn.disabled = false; btn.textContent = plan === 'total' ? 'Contratar Plan Total' : plan === 'pro' ? '💳 Contratar Plan PRO' : 'Contratar Plan Básico'; }
+        if (btn) { btn.disabled = false; btn.textContent = originalText; }
     }
 }
 
@@ -767,6 +794,29 @@ async function verificarPlan(preapprovalId = null) {
         showToast('Error al verificar: ' + err.message, 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = '🔄 Verificar estado del pago'; }
+    }
+}
+
+async function cancelarSuscripcion() {
+    const planLabels = { basico: 'Plan Básico', pro: 'Plan PRO', total: 'Plan Total' };
+    const planLabel  = planLabels[_currentPlan] || 'tu plan actual';
+    if (!confirm(`¿Cancelar ${planLabel}?\n\nAl confirmar, tu suscripción se cancela de inmediato y el plan vuelve a Free. No se realizan reembolsos por el período no utilizado.`)) return;
+
+    const btn    = document.getElementById('btnCancelarSuscripcion');
+    const result = document.getElementById('planVerifyResult');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Cancelando…'; }
+    if (result) result.innerHTML = '';
+    try {
+        await API_B2B.cancelSubscription();
+        showToast('Suscripción cancelada ✅', 'success');
+        const user = API_B2B.getUser();
+        if (user) { user.plan = 'free'; API_B2B.setUser(user); }
+        await cargarEstadoPlan();
+        if (result) result.innerHTML = `<div class="alert alert-success" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">✅</span>Suscripción cancelada. Tu plan volvió a Free. Si querés reactivar el servicio, contratá un plan nuevo.</div>`;
+    } catch (err) {
+        showToast('Error al cancelar: ' + (err.message || 'Error desconocido'), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '🚫 Cancelar suscripción'; }
+        if (result) result.innerHTML = `<div class="alert alert-danger" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">❌</span>${escapeHtml(err.message || 'No se pudo cancelar la suscripción.')}</div>`;
     }
 }
 
