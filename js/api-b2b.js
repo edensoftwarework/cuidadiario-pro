@@ -114,7 +114,7 @@ const API_B2B = {
     _offlineQueue: {
         _key: 'cd_offline_queue',
         get()       { try { return JSON.parse(localStorage.getItem(this._key) || '[]'); } catch { return []; } },
-        add(op)     { const q = this.get(); q.push({ ...op, _qid: Date.now() + '_' + Math.random().toString(36).slice(2) }); try { localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
+        add(op)     { const q = this.get(); q.push({ ...op, _qid: Date.now() + '_' + Math.random().toString(36).slice(2), _queued_at: new Date().toISOString() }); try { localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
         remove(qid) { try { const q = this.get().filter(o => o._qid !== qid); localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
         count()     { return this.get().length; },
     },
@@ -129,7 +129,15 @@ const API_B2B = {
                 // post/patch/del which would re-queue the item and cause duplication.
                 const url  = `${this.BASE_URL}${op.path}`;
                 const opts = { method: op.method, headers: this.headers() };
-                if (op.body && op.method !== 'DELETE') opts.body = JSON.stringify(op.body);
+                if (op.body && op.method !== 'DELETE') {
+                    // Inject the original registration timestamp so the backend
+                    // can store when the action was actually performed offline,
+                    // not when the sync request arrives at the server.
+                    const bodyWithTs = op._queued_at
+                        ? { ...op.body, _offline_ts: op._queued_at }
+                        : op.body;
+                    opts.body = JSON.stringify(bodyWithTs);
+                }
                 const res = await this._fetch(url, opts);
                 // 401 mid-sync → token expired — stop without redirecting; items stay in queue.
                 // The user will see a toast and can re-login to trigger sync again.
@@ -237,7 +245,7 @@ const API_B2B = {
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },
     async resetPassword(token, password) { return this.postNoAuth('/api/b2b/auth/reset-password', { token, password }); },
-    logout() { localStorage.removeItem(this.LAST_USER_KEY); this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
+    logout() { this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
 
     // ============================================
     // INSTITUCIÓN

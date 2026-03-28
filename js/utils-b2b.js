@@ -481,7 +481,7 @@ function formatDateTime(isoString) {
         // JS los parsea como hora local del navegador → muestra la hora correcta.
         // También se eliminan offsets ±HH:MM por si viene algún TIMESTAMPTZ.
         const s = String(isoString).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
-        return new Date(s).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        return new Date(s).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
     } catch { return isoString; }
 }
 function calcEdad(fechaNacimiento) {

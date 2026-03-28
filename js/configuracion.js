@@ -387,7 +387,7 @@ function fDate(iso) {
 }
 function fDateTime(iso) {
     if (!iso) return '—';
-    try { return new Date(iso).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso; }
+    try { return new Date(iso).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}); } catch { return iso; }
 }
 function tipoLabel(t) {
     const m = {geriatrico:'Geriátrico',discapacidad:'Centro discapacidad',salud_mental:'Salud mental',rehabilitacion:'Rehabilitación',oncologia:'Oncológico',dialisis:'Diálisis',hogar_convivencial:'Hogar convivencial',pediatrico_especial:'Pediátrico especial',cuidado_domiciliario:'Cuidado domiciliario',clinica:'Clínica',otro:'Otro'};
