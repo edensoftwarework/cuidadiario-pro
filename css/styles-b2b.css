@@ -794,8 +794,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     flex-shrink: 0;
 }
 .paciente-card-body { flex: 1; min-width: 0; }
-.paciente-card-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
-.paciente-card-meta { font-size: 0.78rem; color: var(--text-secondary); }
+.paciente-card-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paciente-card-meta { font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .paciente-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .paciente-card-action { color: var(--pro-primary); font-size: 1.1rem; flex-shrink: 0; }
 

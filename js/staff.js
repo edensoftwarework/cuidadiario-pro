@@ -49,11 +49,11 @@ function renderStaff(lista) {
     tbody.innerHTML = lista.map(s => `
         <tr>
             <td>
-                <div class="d-flex align-center gap-8">
-                    <div class="sidebar-avatar" style="width:34px;height:34px;font-size:.85rem">${(s.nombre || 'U').charAt(0).toUpperCase()}</div>
-                    <div>
-                        <div class="fw-bold">${escapeHtml(s.nombre)}</div>
-                        <div class="text-muted" style="font-size:.78rem">${escapeHtml(s.email)}</div>
+                <div class="d-flex align-center gap-8" style="min-width:0">
+                    <div class="sidebar-avatar" style="width:34px;height:34px;font-size:.85rem;flex-shrink:0">${(s.nombre || 'U').charAt(0).toUpperCase()}</div>
+                    <div style="min-width:0">
+                        <div class="fw-bold" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${escapeHtml(s.nombre)}</div>
+                        <div class="text-muted" style="font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${escapeHtml(s.email)}</div>
                     </div>
                 </div>
             </td>

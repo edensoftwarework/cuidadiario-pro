@@ -94,7 +94,7 @@ function renderFamiliares(lista) {
                     ${isEgresado ? '🚪' : (p.nombre || 'P').charAt(0).toUpperCase()}
                 </div>
                 <div style="flex:1;min-width:0">
-                    <div style="color:#fff;font-weight:700;font-size:1.05rem">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
+                    <div style="color:#fff;font-weight:700;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                     <div style="color:rgba(255,255,255,0.72);font-size:.8rem;margin-top:2px">${edadStr} ${isEgresado ? '' : habitacionStr}</div>
                 </div>
                 <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap">${isEgresado ? 'Egresado' : 'Solo lectura'}</span>
