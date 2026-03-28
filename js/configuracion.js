@@ -661,9 +661,9 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
         total:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#4C1D95;color:#fff;border-radius:20px">🏆 Plan Total activo</span>`,
                    desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: false, showTotal: false },
         pro:     { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#1565C0;color:#fff;border-radius:20px">⭐ Plan PRO activo</span>`,
-                   desc: 'Plan PRO activo — hasta 30 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false, showTotal: true },
+                   desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: false, showTotal: true },
         basico:  { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#0D9488;color:#fff;border-radius:20px">✅ Plan Básico activo</span>`,
-                   desc: 'Plan Básico activo — hasta 10 pacientes y 5 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
+                   desc: 'Plan Básico activo — hasta 15 pacientes y 8 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
         trial:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
                    desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
         free:    { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
@@ -681,19 +681,19 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     // Deshabilitar planes que no corresponden según los conteos actuales
     // (familiares ya NO cuentan como staff — el backend los excluye)
-    const canBasico = pacientesCount <= 10 && staffCount <= 5;
-    const canPro    = pacientesCount <= 30 && staffCount <= 20;
+    const canBasico = pacientesCount <= 15 && staffCount <= 8;
+    const canPro    = pacientesCount <= 40 && staffCount <= 20;
 
     // Limpiar warnings anteriores
     ['_planWarnBasico', '_planWarnPRO'].forEach(id => document.getElementById(id)?.remove());
 
     if (btnBasico && cfg.showBasico && !canBasico) {
         btnBasico.disabled = true;
-        btnBasico.title = `Necesitás tener máx. 10 pacientes y 5 staff para usar el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        btnBasico.title = `Necesitás tener máx. 15 pacientes y 8 staff para usar el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
         const warn = document.createElement('p');
         warn.id = '_planWarnBasico';
         warn.style.cssText = 'font-size:.78rem;color:#92400E;background:#FEF3C7;border-radius:6px;padding:7px 10px;margin-top:6px';
-        warn.innerHTML = `⚠️ No podés contratar el Plan Básico con ${pacientesCount} pacientes y ${staffCount} staff. El límite es 10 pac. / 5 staff. Eliminá registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
+        warn.innerHTML = `⚠️ No podés contratar el Plan Básico con ${pacientesCount} pacientes y ${staffCount} staff. El límite es 15 pac. / 8 staff. Eliminá registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
         btnBasico.insertAdjacentElement('afterend', warn);
     } else if (btnBasico) {
         btnBasico.disabled = false;
@@ -702,7 +702,7 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     if (btnPRO && cfg.showPRO && !canPro) {
         btnPRO.disabled = true;
-        btnPRO.title = `Necesitás tener máx. 30 pacientes y 20 staff para usar el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        btnPRO.title = `Necesitás tener máx. 40 pacientes y 20 staff para usar el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
         const warn = document.createElement('p');
         warn.id = '_planWarnPRO';
         warn.style.cssText = 'font-size:.78rem;color:#1E40AF;background:#EFF6FF;border-radius:6px;padding:7px 10px;margin-top:6px';

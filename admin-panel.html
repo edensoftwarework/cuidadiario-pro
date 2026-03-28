@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EDEN SoftWork — Panel Admin CuidaDiario</title>
+    <title>EDEN SoftWork — Admin Panel · CuidaDiario PRO</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -15,11 +15,8 @@
             justify-content: center;
             padding: 40px 16px;
         }
-        .container { width: 100%; max-width: 520px; }
-        .header {
-            text-align: center;
-            margin-bottom: 28px;
-        }
+        .container { width: 100%; max-width: 560px; }
+        .header { text-align: center; margin-bottom: 28px; }
         .header h1 { font-size: 1.4rem; font-weight: 800; color: #1E293B; }
         .header p  { font-size: .82rem; color: #64748B; margin-top: 4px; }
         .card {
@@ -31,6 +28,8 @@
         }
         .card h2 { font-size: .95rem; font-weight: 700; color: #1E293B; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; }
         .form-group { margin-bottom: 16px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
         label { display: block; font-size: .78rem; font-weight: 600; color: #475569; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
         input, select, textarea {
             width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1;
@@ -48,13 +47,15 @@
         .btn:hover { opacity: .88; }
         .btn-primary { background: #4F46E5; color: #fff; }
         .btn-danger  { background: #DC2626; color: #fff; margin-top: 8px; }
+        .btn-warning { background: #F59E0B; color: #fff; margin-top: 8px; }
+        .btn-sm { padding: 9px 16px; font-size: .85rem; width: auto; }
         .result {
             margin-top: 18px; padding: 14px 16px; border-radius: 10px;
-            font-size: .86rem; line-height: 1.6; display: none;
+            font-size: .86rem; line-height: 1.7; display: none;
         }
         .result.ok    { background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; }
         .result.error { background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; }
-        .result .res-title { font-weight: 700; margin-bottom: 4px; }
+        .result .res-title { font-weight: 700; margin-bottom: 6px; font-size: .92rem; }
         .plan-badge {
             display: inline-block; padding: 3px 10px; border-radius: 20px;
             font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
@@ -62,19 +63,28 @@
         .plan-free   { background: #E2E8F0; color: #475569; }
         .plan-basico { background: #D1FAE5; color: #065F46; }
         .plan-pro    { background: #EDE9FE; color: #5B21B6; }
+        .plan-total  { background: #FEF3C7; color: #92400E; }
         .log {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;
-            padding: 12px; max-height: 180px; overflow-y: auto;
-            font-family: monospace; font-size: .76rem; color: #475569; margin-top: 16px;
+            padding: 12px; max-height: 200px; overflow-y: auto;
+            font-family: monospace; font-size: .76rem; color: #475569; margin-top: 0;
         }
         .log-entry { padding: 3px 0; border-bottom: 1px solid #F1F5F9; }
         .log-entry:last-child { border-bottom: none; }
         .log-ok  { color: #059669; }
         .log-err { color: #DC2626; }
-        .divider { height: 1px; background: #E2E8F0; margin: 18px 0; }
-        .note { font-size: .76rem; color: #94A3B8; margin-top: 8px; }
+        .note { font-size: .76rem; color: #94A3B8; margin-top: 6px; }
+        code { background: #F1F5F9; padding: 1px 5px; border-radius: 4px; font-size: .82rem; }
         #mainSection { display: none; }
-        .key-saved { font-size: .8rem; color: #059669; margin-top: 6px; display: none; }
+        .divider { border: none; border-top: 1px solid #E2E8F0; margin: 16px 0; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: .85rem; }
+        .info-row { display: flex; flex-direction: column; gap: 2px; }
+        .info-label { font-size: .72rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: .04em; }
+        .info-val { color: #1E293B; font-weight: 500; }
+        .expiry-warn { color: #D97706; font-weight: 700; }
+        .expiry-ok   { color: #059669; }
+        .btn-group { display: flex; gap: 10px; margin-top: 16px; }
+        .btn-group .btn { flex: 1; margin-top: 0; }
     </style>
 </head>
 <body>
@@ -84,42 +94,70 @@
         <p>Panel privado de EDEN SoftWork · No compartir</p>
     </div>
 
-    <!-- SECCIÓN: Ingresar clave -->
+    <!-- LOGIN -->
     <div class="card" id="keySection">
         <h2>🔑 Clave de administrador</h2>
         <div class="form-group">
-            <label>SUPERADMIN_KEY (la que pusiste en Railway)</label>
+            <label>SUPERADMIN_KEY (la que configuraste en Railway)</label>
             <input type="password" id="adminKey" placeholder="••••••••••••••••" autocomplete="off">
         </div>
         <button class="btn btn-primary" onclick="unlockPanel()">Ingresar →</button>
-        <p class="note">La clave nunca se envía al servidor hasta que realizás una acción. Se guarda solo en esta pestaña.</p>
+        <p class="note">La clave nunca se envía al servidor hasta que realizás una acción real.</p>
     </div>
 
-    <!-- SECCIÓN PRINCIPAL -->
+    <!-- PANEL PRINCIPAL -->
     <div id="mainSection">
 
-        <!-- Activar / cambiar plan -->
+        <!-- Consultar institución -->
         <div class="card">
-            <h2>💳 Activar o cambiar plan de institución</h2>
+            <h2>🔍 Consultar institución por ID</h2>
+            <div style="display:flex;gap:10px;align-items:flex-end">
+                <div class="form-group" style="flex:1;margin:0">
+                    <label>ID de institución</label>
+                    <input type="number" id="queryId" placeholder="Ej: 5" min="1">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="queryInst()">Consultar</button>
+            </div>
+            <div id="queryResult" class="result" style="margin-top:14px"></div>
+        </div>
 
-            <div class="form-group">
-                <label>ID de la institución</label>
-                <input type="number" id="instId" placeholder="Ej: 5" min="1">
-                <p class="note">Lo encontrás en los logs de Railway o consultando la tabla <code>instituciones_b2b</code>.</p>
+        <!-- Asignar plan -->
+        <div class="card">
+            <h2>💳 Asignar plan manualmente</h2>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ID de la institución</label>
+                    <input type="number" id="instId" placeholder="Ej: 5" min="1">
+                    <p class="note">Consultala con el buscador de arriba.</p>
+                </div>
+                <div class="form-group">
+                    <label>Plan a asignar</label>
+                    <select id="planSelect" onchange="onPlanChange()">
+                        <option value="basico">✅ Básico — hasta 15 pac · 8 staff · $29.000/mes</option>
+                        <option value="pro">⭐ PRO — hasta 40 pac · 20 staff · $59.000/mes</option>
+                        <option value="total">🏆 Total — sin límites · $99.000/mes</option>
+                        <option value="free">🔓 Free — período de prueba (sin plan pago)</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Plan a asignar</label>
-                <select id="planSelect">
-                    <option value="pro">⭐ PRO — Pacientes ilimitados</option>
-                    <option value="basico">✅ Básico — Hasta 20 pacientes</option>
-                    <option value="free">🔓 Free — Período de prueba</option>
+            <div class="form-group" id="monthsGroup">
+                <label>Duración (meses)</label>
+                <select id="monthsSelect">
+                    <option value="1">1 mes</option>
+                    <option value="2">2 meses</option>
+                    <option value="3" selected>3 meses</option>
+                    <option value="6">6 meses</option>
+                    <option value="12">12 meses (1 año)</option>
+                    <option value="0">Sin vencimiento (acceso permanente)</option>
                 </select>
+                <p class="note">Al vencer, el sistema revierte automáticamente a Free.</p>
             </div>
 
             <div class="form-group">
                 <label>Nota interna (opcional)</label>
-                <textarea id="planNote" placeholder="Ej: Transferencia Banco Nación $15.000 — 21/03/2026"></textarea>
+                <textarea id="planNote" placeholder="Ej: Transferencia Banco Nación $29.000 — 28/03/2026"></textarea>
             </div>
 
             <button class="btn btn-primary" onclick="setPlan()">✅ Activar plan</button>
@@ -127,17 +165,24 @@
             <div id="planResult" class="result"></div>
         </div>
 
-        <!-- Consultar institución -->
+        <!-- Quitar plan -->
         <div class="card">
-            <h2>🔍 Consultar institución por ID</h2>
-            <div style="display:flex;gap:10px">
-                <input type="number" id="queryId" placeholder="ID de institución" min="1" style="flex:1">
-                <button class="btn btn-primary" style="width:auto;padding:10px 20px;white-space:nowrap" onclick="queryInst()">Consultar</button>
+            <h2>🚫 Quitar plan (volver a Free)</h2>
+            <p style="font-size:.85rem;color:#475569;margin-bottom:14px">
+                Usa esto si el cliente dejó de pagar, solicitó baja, o si necesitás revocar el acceso manualmente.
+                La institución quedará en modo <strong>Free / período de prueba expirado</strong> (solo lectura).
+            </p>
+            <div class="form-group" style="margin-bottom:0">
+                <label>ID de la institución</label>
+                <input type="number" id="removeId" placeholder="Ej: 5" min="1">
             </div>
-            <div id="queryResult" class="result" style="margin-top:14px"></div>
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="removePlan()">🚫 Quitar plan</button>
+            </div>
+            <div id="removeResult" class="result"></div>
         </div>
 
-        <!-- Log de acciones -->
+        <!-- Log de sesión -->
         <div class="card">
             <h2>📋 Historial de esta sesión</h2>
             <div class="log" id="actionLog">
@@ -153,6 +198,7 @@
     const BACKEND = 'https://cuidadiario-backend-production.up.railway.app';
     let _key = '';
 
+    // ── Auth ──
     function unlockPanel() {
         const k = document.getElementById('adminKey').value.trim();
         if (!k) { alert('Ingresá la clave.'); return; }
@@ -162,37 +208,123 @@
         addLog('✅ Sesión iniciada', 'ok');
     }
 
-    async function setPlan() {
-        const id   = document.getElementById('instId').value.trim();
-        const plan = document.getElementById('planSelect').value;
-        const note = document.getElementById('planNote').value.trim();
-        const res  = document.getElementById('planResult');
+    function cerrarSesion() {
+        _key = '';
+        document.getElementById('mainSection').style.display = 'none';
+        document.getElementById('keySection').style.display = 'block';
+        document.getElementById('adminKey').value = '';
+        document.getElementById('actionLog').innerHTML = '<div class="log-entry" style="color:#94A3B8">Sin acciones aún.</div>';
+        ['planResult','queryResult','removeResult'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
 
-        if (!id) { showResult(res, 'error', '⚠️ Error', 'Ingresá el ID de la institución.'); return; }
+    // ── Ocultar campo meses si se elige Free ──
+    function onPlanChange() {
+        const plan = document.getElementById('planSelect').value;
+        document.getElementById('monthsGroup').style.display = plan === 'free' ? 'none' : 'block';
+    }
+
+    // ── Consultar institución ──
+    async function queryInst() {
+        const id  = document.getElementById('queryId').value.trim();
+        const res = document.getElementById('queryResult');
+        if (!id) return;
+        res.style.display = 'none';
+        try {
+            const r = await fetch(`${BACKEND}/api/admin/institucion/${encodeURIComponent(id)}`, {
+                headers: { 'X-Admin-Key': _key }
+            });
+            const data = await r.json();
+            if (!r.ok) {
+                showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
+                addLog(`❌ query inst ${id} — ${data.error}`, 'err');
+            } else {
+                showResult(res, 'ok', `🏥 ${escHtml(data.nombre)}`, buildInstInfo(data));
+                addLog(`🔍 inst ${data.id} (${data.nombre}) → plan: ${data.plan}`, 'ok');
+            }
+        } catch (e) {
+            showResult(res, 'error', '❌ Sin conexión', e.message);
+        }
+    }
+
+    function buildInstInfo(d) {
+        const planLabel = planText(d.plan);
+        const planBadge = `<span class="plan-badge plan-${d.plan}">${planLabel}</span>`;
+
+        let expiryLine = '';
+        if (d.plan !== 'free' && d.plan_manual_expires_at) {
+            const exp = new Date(d.plan_manual_expires_at);
+            const daysLeft = Math.ceil((exp - Date.now()) / 86400000);
+            const cls = daysLeft <= 7 ? 'expiry-warn' : 'expiry-ok';
+            const label = daysLeft > 0
+                ? `<span class="${cls}">Vence ${exp.toLocaleDateString('es-AR')} (en ${daysLeft} días)</span>`
+                : `<span class="expiry-warn">⚠️ Venció el ${exp.toLocaleDateString('es-AR')}</span>`;
+            expiryLine = `<div class="info-row"><span class="info-label">Vencimiento</span><span class="info-val">${label}</span></div>`;
+        } else if (d.plan !== 'free') {
+            expiryLine = `<div class="info-row"><span class="info-label">Vencimiento</span><span class="info-val expiry-ok">Sin vencimiento</span></div>`;
+        }
+
+        let trialLine = '';
+        if (d.plan === 'free' && d.trial_started_at) {
+            const started = new Date(d.trial_started_at);
+            const daysUsed = Math.floor((Date.now() - started) / 86400000);
+            const trialLeft = 60 - daysUsed;
+            const cls = trialLeft <= 0 ? 'expiry-warn' : (trialLeft <= 7 ? 'expiry-warn' : 'expiry-ok');
+            trialLine = trialLeft > 0
+                ? `<div class="info-row"><span class="info-label">Trial</span><span class="info-val ${cls}">Quedan ${trialLeft} días de prueba</span></div>`
+                : `<div class="info-row"><span class="info-label">Trial</span><span class="info-val expiry-warn">⚠️ Trial expirado (${Math.abs(trialLeft)} días hace)</span></div>`;
+        }
+
+        return `
+        <div class="info-grid">
+            <div class="info-row"><span class="info-label">ID</span><span class="info-val">${d.id}</span></div>
+            <div class="info-row"><span class="info-label">Tipo</span><span class="info-val">${escHtml(d.tipo || '—')}</span></div>
+            <div class="info-row"><span class="info-label">Plan activo</span><span class="info-val">${planBadge}</span></div>
+            <div class="info-row"><span class="info-label">Estado</span><span class="info-val">${d.activa ? '🟢 Activa' : '🔴 Inactiva'}</span></div>
+            <div class="info-row"><span class="info-label">Pacientes activos</span><span class="info-val">${d.pacientes_count ?? '—'}</span></div>
+            <div class="info-row"><span class="info-label">Staff activo</span><span class="info-val">${d.staff_count ?? '—'}</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-val">${escHtml(d.email || '—')}</span></div>
+            <div class="info-row"><span class="info-label">Teléfono</span><span class="info-val">${escHtml(d.telefono || '—')}</span></div>
+            ${expiryLine}
+            ${trialLine}
+        </div>
+        ${d.mp_preapproval_id ? `<p class="note" style="margin-top:10px">Suscripción MP: <code>${escHtml(d.mp_preapproval_id)}</code></p>` : ''}`;
+    }
+
+    // ── Activar plan ──
+    async function setPlan() {
+        const id     = document.getElementById('instId').value.trim();
+        const plan   = document.getElementById('planSelect').value;
+        const months = plan === 'free' ? 0 : parseInt(document.getElementById('monthsSelect').value);
+        const note   = document.getElementById('planNote').value.trim();
+        const res    = document.getElementById('planResult');
+
+        if (!id) { showResult(res, 'error', '⚠️ Falta el ID', 'Ingresá el ID de la institución.'); return; }
 
         res.style.display = 'none';
         try {
             const r = await fetch(`${BACKEND}/api/admin/set-plan`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Admin-Key': _key
-                },
-                body: JSON.stringify({ institucion_id: parseInt(id), plan, note: note || undefined })
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': _key },
+                body: JSON.stringify({ institucion_id: parseInt(id), plan, months, note: note || undefined })
             });
             const data = await r.json();
             if (!r.ok) {
                 showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
-                addLog(`❌ set-plan inst ${id} → ${plan} — Error: ${data.error}`, 'err');
+                addLog(`❌ set-plan inst ${id} → ${plan} — ${data.error}`, 'err');
             } else {
-                const planLabel = { pro: '⭐ PRO', basico: '✅ Básico', free: '🔓 Free' }[data.plan] || data.plan;
-                showResult(res, 'ok',
-                    `✅ Plan activado correctamente`,
+                const expStr = data.plan_manual_expires_at
+                    ? ` · Vence el ${new Date(data.plan_manual_expires_at).toLocaleDateString('es-AR')}`
+                    : (plan !== 'free' ? ' · Sin vencimiento' : '');
+                showResult(res, 'ok', '✅ Plan activado',
                     `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
-                     Plan asignado: <span class="plan-badge plan-${data.plan}">${planLabel}</span>
-                     ${note ? `<br><span style="color:#6B7280;font-size:.8rem">Nota: ${escHtml(note)}</span>` : ''}`
+                     Plan: <span class="plan-badge plan-${data.plan}">${planText(data.plan)}</span>${expStr}
+                     ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
                 );
-                addLog(`✅ inst ${data.institucion_id} (${data.nombre}) → ${data.plan}${note ? ' | ' + note : ''}`, 'ok');
+                const expiryLog = data.plan_manual_expires_at ? ` | vence ${new Date(data.plan_manual_expires_at).toLocaleDateString('es-AR')}` : '';
+                addLog(`✅ inst ${data.institucion_id} (${data.nombre}) → ${plan}${expiryLog}${note ? ' | ' + note : ''}`, 'ok');
                 document.getElementById('instId').value = '';
                 document.getElementById('planNote').value = '';
             }
@@ -202,47 +334,43 @@
         }
     }
 
-    async function queryInst() {
-        const id  = document.getElementById('queryId').value.trim();
-        const res = document.getElementById('queryResult');
-        if (!id) return;
+    // ── Quitar plan ──
+    async function removePlan() {
+        const id  = document.getElementById('removeId').value.trim();
+        const res = document.getElementById('removeResult');
+        if (!id) { showResult(res, 'error', '⚠️ Falta el ID', 'Ingresá el ID de la institución.'); return; }
+        if (!confirm(`¿Confirmás que querés quitar el plan de la institución ID ${id} y dejarla en Free?`)) return;
+
         res.style.display = 'none';
         try {
-            // Usamos el endpoint /api/admin/set-plan con el mismo plan que ya tiene para "leer" — no, mejor
-            // hacemos una petición a set-plan con el mismo plan. Pero mejor: buscamos la lista de instituciones.
-            // Como no hay un GET /api/admin/institucion, vamos a intentar set-plan con plan vacío para obtener el error
-            // En su lugar, usamos el endpoint de login como alternativa o hacemos una consulta GET directa.
-            // De hecho, podemos verificar via set-plan con plan actual. Pero si no sabemos el plan, no funciona.
-            // Lo más limpio: agregar GET /api/admin/institucion — pero por ahora, usamos este truco:
-            const r = await fetch(`${BACKEND}/api/admin/institucion/${encodeURIComponent(id)}`, {
-                headers: { 'X-Admin-Key': _key }
+            const r = await fetch(`${BACKEND}/api/admin/set-plan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': _key },
+                body: JSON.stringify({ institucion_id: parseInt(id), plan: 'free', months: 0, note: 'Plan removido manualmente desde Admin Panel' })
             });
             const data = await r.json();
             if (!r.ok) {
                 showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
+                addLog(`❌ remove-plan inst ${id} — ${data.error}`, 'err');
             } else {
-                const planLabel = { pro: '⭐ PRO', basico: '✅ Básico', free: '🔓 Free (período de prueba)' }[data.plan] || data.plan;
-                showResult(res, 'ok', `🏥 ${escHtml(data.nombre)}`,
-                    `ID: ${data.id} &nbsp;|&nbsp; Tipo: ${escHtml(data.tipo)}<br>
-                     Plan: <span class="plan-badge plan-${data.plan}">${planLabel}</span><br>
-                     Email: ${escHtml(data.email || '—')}<br>
-                     Tel: ${escHtml(data.telefono || '—')}`
+                showResult(res, 'ok', '🚫 Plan removido correctamente',
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id}) ahora está en modo <span class="plan-badge plan-free">Free</span>.<br>
+                     <span style="font-size:.82rem;color:#6B7280">La institución puede seguir accediendo en modo lectura. Para reactivarla, asignale un plan nuevo.</span>`
                 );
+                addLog(`🚫 inst ${data.institucion_id} (${data.nombre}) → plan removido (free)`, 'ok');
+                document.getElementById('removeId').value = '';
             }
         } catch (e) {
             showResult(res, 'error', '❌ Sin conexión', e.message);
+            addLog(`❌ Error de red: ${e.message}`, 'err');
         }
     }
 
-    function cerrarSesion() {
-        _key = '';
-        document.getElementById('mainSection').style.display = 'none';
-        document.getElementById('keySection').style.display = 'block';
-        document.getElementById('adminKey').value = '';
-        document.getElementById('actionLog').innerHTML = '<div class="log-entry" style="color:#94A3B8">Sin acciones aún.</div>';
+    // ── Helpers ──
+    function planText(plan) {
+        return { free: '🔓 Free', basico: '✅ Básico', pro: '⭐ PRO', total: '🏆 Total' }[plan] || plan;
     }
 
-    // ── Helpers ──
     function showResult(el, type, title, body) {
         el.className = `result ${type}`;
         el.innerHTML = `<div class="res-title">${title}</div>${body}`;
@@ -251,7 +379,7 @@
 
     function addLog(msg, type) {
         const log = document.getElementById('actionLog');
-        const now = new Date().toLocaleTimeString('es-AR');
+        const now = new Date().toLocaleTimeString('es-AR', { hour12: false });
         if (log.children.length === 1 && log.children[0].style.color === 'rgb(148, 163, 184)') {
             log.innerHTML = '';
         }
@@ -266,7 +394,7 @@
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // Enter en campo de clave
+    // Enter en login
     document.addEventListener('keydown', e => {
         if (e.key === 'Enter' && document.getElementById('keySection').style.display !== 'none') unlockPanel();
     });

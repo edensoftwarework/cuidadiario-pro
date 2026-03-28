@@ -394,14 +394,14 @@ async function _showTrialExpiredOverlay(user) {
         } catch (e) { /* si falla, continuar con 0 */ }
     }
 
-    const canUseBasico = pacientesCount <= 10 && staffCount <= 5;
+    const canUseBasico = pacientesCount <= 15 && staffCount <= 8;
 
     // Construir mensaje de conteos si excede límites de Básico
     let countWarning = '';
     if (!canUseBasico) {
         const parts = [];
-        if (pacientesCount > 10) parts.push(`${pacientesCount} pacientes activos (máx. 10 en Básico)`);
-        if (staffCount > 5) parts.push(`${staffCount} miembros de staff (máx. 5 en Básico)`);
+        if (pacientesCount > 15) parts.push(`${pacientesCount} pacientes activos (máx. 15 en Básico)`);
+        if (staffCount > 8) parts.push(`${staffCount} miembros de staff (máx. 8 en Básico)`);
         countWarning = `
             <div style="margin:16px 0;padding:14px 16px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
                 <p style="font-weight:700;color:#92400E;margin-bottom:6px;font-size:.9rem">⚠️ Para contratar el Plan Básico necesitás reducir:</p>
@@ -430,7 +430,7 @@ async function _showTrialExpiredOverlay(user) {
                 </a>
                 ${canUseBasico
                     ? `<a href="configuracion.html" style="display:block;background:#fff;color:#0F172A;padding:11px 20px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.9rem;border:1.5px solid #CBD5E1">
-                           Contratar Plan Básico (hasta 20 pac. · 5 staff)
+                           Contratar Plan Básico (hasta 15 pac. · 8 staff)
                        </a>`
                     : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:11px 20px;border-radius:10px;font-weight:600;font-size:.9rem;border:1.5px solid #E2E8F0;cursor:not-allowed">
                            Plan Básico — Reducí pacientes/staff primero

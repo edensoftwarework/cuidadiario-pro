@@ -193,6 +193,17 @@ async function loadAllData() {
     ]);
 }
 
+// Refresh all data when offline queue syncs successfully (e.g. toma/tarea registrado sin internet)
+window.addEventListener('offlinesynccomplete', () => {
+    if (!_pacienteId) return;
+    loadMedicamentos();
+    loadTareas();
+    loadSintomas();
+    loadSignos();
+    loadNotas();
+    loadCitas();
+});
+
 // ============================================
 // DOCUMENTOS ADJUNTOS
 // ============================================
