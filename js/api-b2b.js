@@ -162,6 +162,9 @@ const API_B2B = {
             }
         }
         if (synced > 0 && typeof showToast === 'function') showToast(`✅ ${synced} ${synced > 1 ? 'acciones sincronizadas' : 'acción sincronizada'} correctamente`, 'success');
+        // After syncing, mark notifications as seen so the user who registered the
+        // offline actions doesn't see them as "new" alerts when opening the bell.
+        if (synced > 0) { try { await this.marcarNotifVistas(); } catch {} }
         if (failed > 0) {
             if (typeof showToast === 'function') showToast(`⚠️ ${failed} ${failed > 1 ? 'acciones no pudieron' : 'acción no pudo'} sincronizarse. Reintentando en 30s…`, 'warning');
             setTimeout(() => { if (navigator.onLine) this._syncOfflineQueue(); }, 30_000);

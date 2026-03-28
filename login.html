@@ -98,10 +98,10 @@
         return true;
     }
 
-    // Show a persistent "access offline" banner whenever a stored session exists.
-    // The user clicks it to enter without needing to type credentials.
+    // Show a persistent "access offline" banner ONLY when the network is unavailable
+    // and a stored session exists. Online users should not see this.
     const _lastUser = API_B2B.getLastUser();
-    if (_lastUser) {
+    if (_lastUser && !navigator.onLine) {
         const _ob = document.createElement('div');
         _ob.id = '_offlineHint';
         _ob.style.cssText = 'margin-top:12px;padding:12px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:.83rem;color:#166534;display:flex;align-items:center;justify-content:space-between;gap:10px';
@@ -109,8 +109,22 @@
         document.getElementById('alertMsg').after(_ob);
     }
 
-    // Also auto-trigger when offline event fires (e.g. network drops while on this page)
-    window.addEventListener('offline', () => _tryOfflineAccess(), { once: true });
+    // If we go offline while on the login page, show the banner dynamically
+    window.addEventListener('offline', () => {
+        if (document.getElementById('_offlineHint')) return; // already shown
+        const lu = API_B2B.getLastUser();
+        if (!lu) return;
+        const _ob = document.createElement('div');
+        _ob.id = '_offlineHint';
+        _ob.style.cssText = 'margin-top:12px;padding:12px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:.83rem;color:#166534;display:flex;align-items:center;justify-content:space-between;gap:10px';
+        _ob.innerHTML = `<span>📵 ¿Sin conexión? Tenés una sesión guardada como <strong>${lu.nombre || lu.email}</strong>.</span><button onclick="_tryOfflineAccess()" style="white-space:nowrap;background:#16A34A;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer">Entrar sin internet</button>`;
+        document.getElementById('alertMsg').after(_ob);
+    });
+    // Hide the banner if connection is restored while on this page
+    window.addEventListener('online', () => {
+        const el = document.getElementById('_offlineHint');
+        if (el) el.remove();
+    });
     // ── End offline auto-access ──────────────────────────────────────────────
 
     // Mostrar aviso si la sesión expiró
