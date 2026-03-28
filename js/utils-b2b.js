@@ -50,18 +50,19 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllMo
 function requireAuth(redirectTo = '../login.html') {
     if (API_B2B.isAuth()) return true;
 
-    // Offline emergency access: if the user never explicitly logged out (getLastUser() returns
-    // something) and the device is currently offline, restore the cached session and allow access.
-    // When the network comes back, any API call that returns 401 will redirect to login as usual.
-    if (!navigator.onLine) {
-        const lastUser = API_B2B.getLastUser();
-        if (lastUser) {
-            // Restore user object to the active session key so pages can render correctly
-            if (!API_B2B.getUser()) {
-                localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
-            }
-            return true;
+    // No valid token — allow access if the user hasn't explicitly logged out.
+    // getLastUser() returns null only after logout(); after token expiry it still has the user.
+    // Without a token, all server API calls will either:
+    //   · Offline → return cached data (get()) or queue writes (post/patch/del)
+    //   · Online  → return 401, which handle() will redirect to login automatically
+    // So this is safe: navigator.onLine is NOT checked because it's unreliable on mobile.
+    const lastUser = API_B2B.getLastUser();
+    if (lastUser) {
+        // Restore user object so pages can render role-specific UI
+        if (!API_B2B.getUser()) {
+            localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
         }
+        return true;
     }
 
     window.location.href = redirectTo;
@@ -818,6 +819,15 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
         }
     });
     if (!navigator.onLine) showOfflineBanner();
+
+    // On every page load: sync pending queue items if we came back online between sessions.
+    // The 'online' event doesn't fire when the app is opened fresh while already connected.
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof API_B2B === 'undefined') return;
+        if (API_B2B._offlineQueue.count() > 0 && navigator.onLine) {
+            setTimeout(() => API_B2B._syncOfflineQueue(), 3000);
+        }
+    });
 })();
 
 /**

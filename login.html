@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CuidaDiario PRO — Plataforma de gestión clínica para instituciones de cuidado y salud">
     <title>Iniciar sesión — CuidaDiario PRO</title>
-    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icons/icon-512.svg">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-512.png">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/styles-b2b.css">
 </head>
@@ -77,13 +77,12 @@
     }
 
     // ── Offline auto-access ──────────────────────────────────────────────────
-    // If the device has no internet and there's a previously saved session,
-    // skip the login form entirely and open the app in read/write-offline mode.
-    // When internet returns, the first authenticated API call will redirect to
-    // login if the token expired (normal behavior).
+    // When the network is unavailable and there's a previously saved session,
+    // bypass the login form and open the app directly.
+    // NOTE: we do NOT rely on navigator.onLine because it is unreliable on mobile
+    // (often reports true even when there is no real connectivity).
     function _offlineRedirectByRole(u) {
         if (!API_B2B.getUser()) {
-            // Restore the user object so app pages can render (no token though)
             localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
         }
         if (u.rol === 'cuidador_staff' || u.rol === 'medico') window.location.href = 'pages/cuidador.html';
@@ -98,9 +97,19 @@
         setTimeout(() => _offlineRedirectByRole(lastUser), 1400);
         return true;
     }
-    // Immediate check (page opened while already offline)
-    if (!navigator.onLine) _tryOfflineAccess();
-    // Also trigger if network drops while the user is on this page
+
+    // Show a persistent "access offline" banner whenever a stored session exists.
+    // The user clicks it to enter without needing to type credentials.
+    const _lastUser = API_B2B.getLastUser();
+    if (_lastUser) {
+        const _ob = document.createElement('div');
+        _ob.id = '_offlineHint';
+        _ob.style.cssText = 'margin-top:12px;padding:12px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:.83rem;color:#166534;display:flex;align-items:center;justify-content:space-between;gap:10px';
+        _ob.innerHTML = `<span>📵 ¿Sin conexión? Tenés una sesión guardada como <strong>${_lastUser.nombre || _lastUser.email}</strong>.</span><button onclick="_tryOfflineAccess()" style="white-space:nowrap;background:#16A34A;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer">Entrar sin internet</button>`;
+        document.getElementById('alertMsg').after(_ob);
+    }
+
+    // Also auto-trigger when offline event fires (e.g. network drops while on this page)
     window.addEventListener('offline', () => _tryOfflineAccess(), { once: true });
     // ── End offline auto-access ──────────────────────────────────────────────
 

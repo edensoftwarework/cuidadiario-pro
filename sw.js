@@ -6,8 +6,8 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-const CACHE_NAME = 'cuidadiario-pro-v5';
-const CACHE_NAME_API = 'cuidadiario-pro-api-v5';
+const CACHE_NAME = 'cuidadiario-pro-v6';
+const CACHE_NAME_API = 'cuidadiario-pro-api-v6';
 
 const STATIC_ASSETS = [
     './',
@@ -41,8 +41,8 @@ const STATIC_ASSETS = [
     './js/configuracion.js',
     './manifest.json',
     './login.html',
-    './icons/icon-192.svg',
-    './icons/icon-512.svg'
+    './icons/icon-192.png',
+    './icons/icon-512.png'
 ];
 
 // Instalación — cachear assets estáticos (uno por uno para que un fallo no bloquee el resto)

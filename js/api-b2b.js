@@ -39,17 +39,20 @@ const API_B2B = {
     // ---------- Error handler ----------
     async handle(res) {
         if (res.status === 401) {
-            if (this.getToken()) {
-                // Preserve user for offline recovery BEFORE wiping the session.
-                // This is the only moment cd_pro_user is guaranteed to still exist.
-                const currUser = localStorage.getItem(this.USER_KEY);
-                if (currUser) localStorage.setItem(this.LAST_USER_KEY, currUser);
-                // Sesión expirada mientras estaba autenticado — redirigir al login
-                this.removeToken();
+            // Always preserve the user for offline recovery before clearing the session.
+            const currUser = localStorage.getItem(this.USER_KEY);
+            if (currUser) localStorage.setItem(this.LAST_USER_KEY, currUser);
+            this.removeToken();
+
+            // If NOT on login page → session expired while using the app → redirect to login.
+            // If ON login page → this is a wrong-credentials error, show it to the user.
+            const isLoginPage = window.location.pathname.endsWith('login.html');
+            if (!isLoginPage) {
                 const inPages = window.location.pathname.includes('/pages/');
                 window.location.href = (inPages ? '../' : '') + 'login.html?expired=1';
+                throw new Error('Sesión expirada.'); // prevent caller from continuing
             }
-            // Login fallido o credenciales inválidas — mostrar mensaje del backend
+
             let msg = 'Email o contraseña incorrectos. Verificá tus datos.';
             try { const e = await res.json(); msg = e.error || msg; } catch {}
             throw new Error(msg);
@@ -128,6 +131,12 @@ const API_B2B = {
                 const opts = { method: op.method, headers: this.headers() };
                 if (op.body && op.method !== 'DELETE') opts.body = JSON.stringify(op.body);
                 const res = await this._fetch(url, opts);
+                // 401 mid-sync → token expired — stop without redirecting; items stay in queue.
+                // The user will see a toast and can re-login to trigger sync again.
+                if (res.status === 401) {
+                    if (typeof showToast === 'function') showToast('⚠️ Sesión expirada. Iniciá sesión para sincronizar los cambios pendientes.', 'warning');
+                    return;
+                }
                 // 404 on DELETE → item already gone from server, treat as success
                 if (op.method === 'DELETE' && res.status === 404) {
                     this._offlineQueue.remove(op._qid); synced++; continue;
