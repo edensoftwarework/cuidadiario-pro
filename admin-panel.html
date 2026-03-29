@@ -137,9 +137,13 @@
                         <option value="basico">✅ Básico — hasta 15 pac · 8 staff · $29.000/mes</option>
                         <option value="pro">⭐ PRO — hasta 40 pac · 20 staff · $59.000/mes</option>
                         <option value="total">🏆 Total — sin límites · $99.000/mes</option>
-                        <option value="free">🔓 Free — período de prueba (sin plan pago)</option>
+                        <option value="free">🔓 Free — período de prueba activo</option>
+                        <option value="free_expired">🧪 [TEST] Free vencido — simula trial expirado</option>
                     </select>
                     <div id="planCompatWarn" style="display:none;font-size:.8rem;color:#92400E;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:7px 10px;margin-top:6px"></div>
+                    <div id="planTestWarn" style="display:none;font-size:.8rem;color:#5B21B6;background:#EDE9FE;border:1px solid #C4B5FD;border-radius:6px;padding:7px 10px;margin-top:6px">
+                        🧪 <strong>Modo test:</strong> Setea <code>trial_started_at</code> a 61 días atrás — la institución verá la pantalla de plan vencido. Para revertir, asigná cualquier plan real.
+                    </div>
                 </div>
             </div>
 
@@ -225,11 +229,15 @@
     // ── Ocultar campo meses si se elige Free; advertencia de compatibilidad real-time ──
     function onPlanChange() {
         const plan = document.getElementById('planSelect').value;
-        document.getElementById('monthsGroup').style.display = plan === 'free' ? 'none' : 'block';
+        const isFreeVariant = plan === 'free' || plan === 'free_expired';
+        document.getElementById('monthsGroup').style.display = isFreeVariant ? 'none' : 'block';
+
+        const testWarn = document.getElementById('planTestWarn');
+        if (testWarn) testWarn.style.display = plan === 'free_expired' ? 'block' : 'none';
 
         const warn = document.getElementById('planCompatWarn');
         if (!warn) return;
-        if (!_lastQueryData || plan === 'free' || plan === 'total') {
+        if (!_lastQueryData || isFreeVariant || plan === 'total') {
             warn.style.display = 'none';
             return;
         }
@@ -340,6 +348,16 @@
             if (!r.ok) {
                 showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
                 addLog(`❌ set-plan inst ${id} → ${plan} — ${data.error}`, 'err');
+            } else if (data.test_mode) {
+                showResult(res, 'ok', '🧪 Plan de test activado',
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
+                     Plan: <span class="plan-badge" style="background:#EDE9FE;color:#5B21B6">Free vencido (test)</span><br>
+                     <span style="font-size:.82rem;color:#5B21B6">La institución verá la pantalla de trial expirado. Para revertir, asigná un plan real.</span>
+                     ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
+                );
+                addLog(`🧪 TEST inst ${data.institucion_id} (${data.nombre}) → free_expired`, 'ok');
+                document.getElementById('instId').value = '';
+                document.getElementById('planNote').value = '';
             } else {
                 const expStr = data.plan_manual_expires_at
                     ? ` · Vence el ${new Date(data.plan_manual_expires_at).toLocaleDateString('es-AR')}`
