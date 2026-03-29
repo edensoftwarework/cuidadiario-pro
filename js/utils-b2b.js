@@ -656,7 +656,7 @@ function _actualizarWorkerChip() {
     // Topbar chip
     const chip = document.getElementById('workerChip');
     if (chip) {
-        chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nombreHtml}</span>`;
+        chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${nombreHtml}</span>`;
         chip.title = `Registrando como: ${nombre}\nTocá para cambiar`;
     }
 

@@ -138,11 +138,15 @@
                         <option value="pro">⭐ PRO — hasta 40 pac · 20 staff · $59.000/mes</option>
                         <option value="total">🏆 Total — sin límites · $99.000/mes</option>
                         <option value="free">🔓 Free — período de prueba activo</option>
+                        <option value="free_trial">🔄 Reiniciar trial — 60 días nuevos desde hoy</option>
                         <option value="free_expired">🧪 [TEST] Free vencido — simula trial expirado</option>
                     </select>
                     <div id="planCompatWarn" style="display:none;font-size:.8rem;color:#92400E;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:7px 10px;margin-top:6px"></div>
                     <div id="planTestWarn" style="display:none;font-size:.8rem;color:#5B21B6;background:#EDE9FE;border:1px solid #C4B5FD;border-radius:6px;padding:7px 10px;margin-top:6px">
                         🧪 <strong>Modo test:</strong> Setea <code>trial_started_at</code> a 61 días atrás — la institución verá la pantalla de plan vencido. Para revertir, asigná cualquier plan real.
+                    </div>
+                    <div id="planTrialWarn" style="display:none;font-size:.8rem;color:#065F46;background:#ECFDF5;border:1px solid #6EE7B7;border-radius:6px;padding:7px 10px;margin-top:6px">
+                        🔄 <strong>Reinicio de trial:</strong> Setea <code>trial_started_at</code> a ahora — la institución tendrá 60 días completos nuevos desde hoy. Útil para onboarding demorado o acuerdo especial.
                     </div>
                 </div>
             </div>
@@ -229,11 +233,13 @@
     // ── Ocultar campo meses si se elige Free; advertencia de compatibilidad real-time ──
     function onPlanChange() {
         const plan = document.getElementById('planSelect').value;
-        const isFreeVariant = plan === 'free' || plan === 'free_expired';
+        const isFreeVariant = plan === 'free' || plan === 'free_expired' || plan === 'free_trial';
         document.getElementById('monthsGroup').style.display = isFreeVariant ? 'none' : 'block';
 
-        const testWarn = document.getElementById('planTestWarn');
-        if (testWarn) testWarn.style.display = plan === 'free_expired' ? 'block' : 'none';
+        const testWarn  = document.getElementById('planTestWarn');
+        const trialWarn = document.getElementById('planTrialWarn');
+        if (testWarn)  testWarn.style.display  = plan === 'free_expired' ? 'block' : 'none';
+        if (trialWarn) trialWarn.style.display = plan === 'free_trial'   ? 'block' : 'none';
 
         const warn = document.getElementById('planCompatWarn');
         if (!warn) return;
@@ -331,7 +337,8 @@
     async function setPlan() {
         const id     = document.getElementById('instId').value.trim();
         const plan   = document.getElementById('planSelect').value;
-        const months = plan === 'free' ? 0 : parseInt(document.getElementById('monthsSelect').value);
+        const isFreeVariant = plan === 'free' || plan === 'free_expired' || plan === 'free_trial';
+        const months = isFreeVariant ? 0 : parseInt(document.getElementById('monthsSelect').value);
         const note   = document.getElementById('planNote').value.trim();
         const res    = document.getElementById('planResult');
 
@@ -356,6 +363,18 @@
                      ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
                 );
                 addLog(`🧪 TEST inst ${data.institucion_id} (${data.nombre}) → free_expired`, 'ok');
+                document.getElementById('instId').value = '';
+                document.getElementById('planNote').value = '';
+            } else if (data.trial_reset) {
+                const trialEnd = new Date(data.trial_started_at);
+                trialEnd.setDate(trialEnd.getDate() + 60);
+                showResult(res, 'ok', '🔄 Trial reiniciado',
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
+                     Plan: <span class="plan-badge plan-free">Free (trial activo)</span><br>
+                     <span style="font-size:.82rem;color:#065F46">Nuevo vencimiento del trial: <strong>${trialEnd.toLocaleDateString('es-AR')}</strong></span>
+                     ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
+                );
+                addLog(`🔄 TRIAL RESET inst ${data.institucion_id} (${data.nombre}) → vence ${trialEnd.toLocaleDateString('es-AR')}`, 'ok');
                 document.getElementById('instId').value = '';
                 document.getElementById('planNote').value = '';
             } else {

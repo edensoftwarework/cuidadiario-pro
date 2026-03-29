@@ -678,7 +678,7 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
         total:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#4C1D95;color:#fff;border-radius:20px">🏆 Plan Total activo</span>`,
                    desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: true, showBasico: true, showTotal: false },
         pro:     { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#1565C0;color:#fff;border-radius:20px">⭐ Plan PRO activo</span>`,
-                   desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF y soporte prioritario.', showPRO: false, showBasico: true, showTotal: true },
+                   desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF.', showPRO: false, showBasico: true, showTotal: true },
         basico:  { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#0D9488;color:#fff;border-radius:20px">✅ Plan Básico activo</span>`,
                    desc: 'Plan Básico activo — hasta 15 pacientes y 8 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
         trial:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
@@ -838,7 +838,7 @@ async function verificarPlan(preapprovalId = null) {
         // 'current' = solo consulta sin cambios (no se pasó preapproval_id)
         if (res.status === 'current') {
             renderPlanBadge(plan);
-            const planLabels = { pro: 'Plan PRO', basico: 'Plan Básico', free: 'Período de prueba', expired: 'Sin plan activo' };
+            const planLabels = { pro: 'Plan PRO', basico: 'Plan Básico', total: 'Plan Total', free: 'Período de prueba', expired: 'Sin plan activo' };
             if (result) result.innerHTML = `<div class="alert alert-info" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">ℹ️</span>Tu plan actual es: <strong>${planLabels[plan] || plan}</strong>. Si ya realizaste un pago, aguardá la confirmación de MercadoPago o usá el enlace de verificación que llegó a tu email.</div>`;
             showToast('Plan consultado', 'info');
             return;
@@ -849,9 +849,9 @@ async function verificarPlan(preapprovalId = null) {
         const user = API_B2B.getUser();
         if (user) { user.plan = plan; API_B2B.setUser(user); }
 
-        const isOk  = plan === 'pro' || plan === 'basico';
+        const isOk  = plan === 'pro' || plan === 'basico' || plan === 'total';
         const msgs  = {
-            authorized: plan === 'pro' ? '✅ ¡Plan PRO activo! Todos los beneficios habilitados.' : '✅ Plan Básico activo.',
+            authorized: plan === 'total' ? '✅ ¡Plan Total activo! Sin límites habilitados.' : plan === 'pro' ? '✅ ¡Plan PRO activo! Todos los beneficios habilitados.' : '✅ Plan Básico activo.',
             pending:    '⏳ El pago está siendo procesado. Puede demorar unos minutos.',
         };
         const statusMsg = msgs[res.status] || res.message || (isOk ? 'Plan activado correctamente.' : 'Sin suscripción activa.');
