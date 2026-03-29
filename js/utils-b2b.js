@@ -750,9 +750,9 @@ async function openWorkerSwitcher() {
     // IMPORTANTE: NO usar onclick inline con nombres — se usan data-worker + addEventListener
     const recBtns = recientes.map(n => {
         const active = n === currentWorker ? ' active' : '';
-        return `<button class="worker-btn${active}" data-worker="${escapeHtml(n)}">
-            <span class="worker-btn-av">${escapeHtml(n.charAt(0).toUpperCase())}</span>
-            <span>${escapeHtml(n)}</span>
+        return `<button class="worker-btn${active}" data-worker="${escapeHtml(n)}" style="display:flex;align-items:center;gap:8px;overflow:hidden;min-width:0;width:100%">
+            <span class="worker-btn-av" style="flex-shrink:0">${escapeHtml(n.charAt(0).toUpperCase())}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${escapeHtml(n)}</span>
         </button>`;
     }).join('');
 

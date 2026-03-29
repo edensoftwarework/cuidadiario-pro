@@ -656,7 +656,6 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     const btnPRO     = document.getElementById('btnSuscribirPRO');
     const btnBasico  = document.getElementById('btnSuscribirBasico');
     const btnTotal   = document.getElementById('btnSuscribirTotal');
-    const btnVerif   = document.getElementById('btnVerificarPlan');
     const btnCancel  = document.getElementById('btnCancelarSuscripcion');
     const expiryInfo = document.getElementById('planExpiryInfo');
     if (!wrap) return;
@@ -696,18 +695,18 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     if (btnPRO)    btnPRO.style.display    = cfg.showPRO    ? '' : 'none';
     if (btnBasico) btnBasico.style.display = cfg.showBasico ? '' : 'none';
     if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
-    if (btnVerif)  btnVerif.style.display  = !['basico','pro','total'].includes(plan) ? '' : 'none';
 
     // Botón cancelar y etiqueta de vencimiento según estado
     const isPaidPlan = ['basico','pro','total'].includes(plan);
 
-    // 3 estados posibles para un plan activo:
-    // A) mp_preapproval_id existe         → suscripción MP activa, puede cancelar
-    // B) no preapproval + fecha vencim.   → ya canceló, acceso hasta la fecha
-    // C) no preapproval + sin fecha       → plan manual sin vencimiento, puede dar de baja
-    const stateCancelable = isPaidPlan && !!mpPreapprovalId;                     // A
-    const stateBajaPendiente = isPaidPlan && !mpPreapprovalId && !!planExpiresAt; // B
-    const stateDarBaja = isPaidPlan && !mpPreapprovalId && !planExpiresAt;        // C
+    // 4 estados posibles para un plan activo:
+    // A) mp_preapproval_id = ID real de MP         → suscripción activa, puede cancelar
+    // B) mp_preapproval_id = 'baja_programada'     → baja ya solicitada, acceso hasta fecha
+    // C) mp_preapproval_id = null, sin fecha       → plan manual admin, puede dar de baja
+    // D) mp_preapproval_id = null, con fecha       → plan admin con vencimiento, puede dar de baja
+    const stateCancelable    = isPaidPlan && !!mpPreapprovalId && mpPreapprovalId !== 'baja_programada'; // A
+    const stateBajaPendiente = isPaidPlan && mpPreapprovalId === 'baja_programada';                     // B
+    const stateDarBaja       = isPaidPlan && !mpPreapprovalId;                                          // C + D
 
     if (btnCancel) {
         if (stateCancelable) {
@@ -719,7 +718,7 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
             btnCancel.textContent   = '🚫 Dar de baja el plan';
             btnCancel.disabled      = false;
         } else {
-            // stateBajaPendiente: ya solicitó baja, no mostrar botón
+            // stateBajaPendiente: baja ya solicitada, no mostrar botón
             btnCancel.style.display = 'none';
         }
     }
@@ -868,7 +867,7 @@ async function verificarPlan(preapprovalId = null) {
 async function cancelarSuscripcion() {
     const planLabels = { basico: 'Plan Básico', pro: 'Plan PRO', total: 'Plan Total' };
     const planLabel  = planLabels[_currentPlan] || 'tu plan actual';
-    if (!confirm(`¿Cancelar ${planLabel}?\n\nAl confirmar, tu suscripción se cancela de inmediato y el plan vuelve a Free. No se realizan reembolsos por el período no utilizado.`)) return;
+    if (!confirm(`¿Cancelar ${planLabel}?\n\nAl confirmar, se cancela la suscripción automática — no habrá más cobros. Tu acceso sigue activo hasta el vencimiento del período ya pagado.`)) return;
 
     const btn    = document.getElementById('btnCancelarSuscripcion');
     const result = document.getElementById('planVerifyResult');
