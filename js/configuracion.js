@@ -691,11 +691,30 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     if (btnTotal)  btnTotal.style.display  = cfg.showTotal  ? '' : 'none';
     if (btnVerif)  btnVerif.style.display  = !['basico','pro','total'].includes(plan) ? '' : 'none';
 
-    // Botón cancelar: visible para TODOS los planes activos (tanto MP como manuales)
+    // Botón cancelar y etiqueta de vencimiento según estado
     const isPaidPlan = ['basico','pro','total'].includes(plan);
+
+    // 3 estados posibles para un plan activo:
+    // A) mp_preapproval_id existe         → suscripción MP activa, puede cancelar
+    // B) no preapproval + fecha vencim.   → ya canceló, acceso hasta la fecha
+    // C) no preapproval + sin fecha       → plan manual sin vencimiento, puede dar de baja
+    const stateCancelable = isPaidPlan && !!mpPreapprovalId;                     // A
+    const stateBajaPendiente = isPaidPlan && !mpPreapprovalId && !!planExpiresAt; // B
+    const stateDarBaja = isPaidPlan && !mpPreapprovalId && !planExpiresAt;        // C
+
     if (btnCancel) {
-        btnCancel.style.display  = isPaidPlan ? '' : 'none';
-        btnCancel.textContent    = mpPreapprovalId ? '🚫 Cancelar suscripción' : '🚫 Dar de baja el plan';
+        if (stateCancelable) {
+            btnCancel.style.display = '';
+            btnCancel.textContent   = '🚫 Cancelar suscripción';
+            btnCancel.disabled      = false;
+        } else if (stateDarBaja) {
+            btnCancel.style.display = '';
+            btnCancel.textContent   = '🚫 Dar de baja el plan';
+            btnCancel.disabled      = false;
+        } else {
+            // stateBajaPendiente: ya solicitó baja, no mostrar botón
+            btnCancel.style.display = 'none';
+        }
     }
 
     // Información de vencimiento / próxima renovación
@@ -705,16 +724,25 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
             const daysToEx  = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
             const dateStr   = expDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
             const isUrgent  = daysToEx <= 7;
-            const label     = mpPreapprovalId ? 'Próxima renovación' : 'Vence el';
-            const icon      = isUrgent ? '⚠️' : '📅';
-            const style     = isUrgent
-                ? 'color:#92400E;background:#FEF3C7;border:1px solid #FDE68A'
-                : 'color:#065F46;background:#D1FAE5;border:1px solid #A7F3D0';
-            const dayLabel  = daysToEx > 0 ? ` — ${daysToEx} días` : ' — hoy';
+            let   label, icon, style;
+            if (stateBajaPendiente) {
+                // Baja ya solicitada — mostrar fecha de acceso final
+                icon  = '⏳';
+                label = 'Baja solicitada — acceso hasta el';
+                style = 'color:#92400E;background:#FEF3C7;border:1px solid #FDE68A';
+            } else if (mpPreapprovalId) {
+                icon  = isUrgent ? '⚠️' : '📅';
+                label = 'Próxima renovación';
+                style = isUrgent ? 'color:#92400E;background:#FEF3C7;border:1px solid #FDE68A' : 'color:#065F46;background:#D1FAE5;border:1px solid #A7F3D0';
+            } else {
+                icon  = isUrgent ? '⚠️' : '📅';
+                label = 'Vence el';
+                style = isUrgent ? 'color:#92400E;background:#FEF3C7;border:1px solid #FDE68A' : 'color:#065F46;background:#D1FAE5;border:1px solid #A7F3D0';
+            }
+            const dayLabel = daysToEx > 0 ? ` — ${daysToEx} días` : ' — hoy';
             expiryInfo.innerHTML = `<span style="display:inline-block;font-size:.83rem;padding:5px 14px;border-radius:12px;${style}">${icon} ${label}: ${dateStr}${dayLabel}</span>`;
             expiryInfo.style.display = '';
         } else if (isPaidPlan && mpPreapprovalId) {
-            // Suscripción MP sin fecha de renovación registrada aún (primer pago antes del webhook)
             expiryInfo.innerHTML = `<span style="display:inline-block;font-size:.83rem;padding:5px 14px;border-radius:12px;color:#1E40AF;background:#EFF6FF;border:1px solid #BFDBFE">🔄 Suscripción activa — renovación mensual automática</span>`;
             expiryInfo.style.display = '';
         } else {
@@ -840,12 +868,20 @@ async function cancelarSuscripcion() {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Cancelando…'; }
     if (result) result.innerHTML = '';
     try {
-        await API_B2B.cancelSubscription();
-        showToast('Suscripción cancelada ✅', 'success');
+        const data = await API_B2B.cancelSubscription();
+        const accessDate = data.access_until
+            ? new Date(data.access_until).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+            : null;
+        showToast('Baja solicitada ✅ — seguís con acceso hasta el vencimiento', 'success');
+        // Actualizar usuario en local para reflejar que ya no tiene mp_preapproval
         const user = API_B2B.getUser();
-        if (user) { user.plan = 'free'; API_B2B.setUser(user); }
+        if (user) { user.mp_preapproval_id = null; API_B2B.setUser(user); }
         await cargarEstadoPlan();
-        if (result) result.innerHTML = `<div class="alert alert-success" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">✅</span>Suscripción cancelada. Tu plan volvió a Free. Si querés reactivar el servicio, contratá un plan nuevo.</div>`;
+        if (result) result.innerHTML = accessDate
+            ? `<div class="alert alert-success" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">✅</span>
+               <strong>Baja solicitada.</strong> Tu suscripción automática está cancelada — no se realizarán más cobros.<br>
+               Tu plan sigue activo hasta el <strong>${accessDate}</strong>. Después de esa fecha, la cuenta pasa a Free automáticamente.</div>`
+            : `<div class="alert alert-success" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">✅</span>Baja solicitada. No se realizarán más cobros.</div>`;
     } catch (err) {
         showToast('Error al cancelar: ' + (err.message || 'Error desconocido'), 'error');
         if (btn) { btn.disabled = false; btn.textContent = '🚫 Cancelar suscripción'; }
