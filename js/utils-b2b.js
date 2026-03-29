@@ -338,9 +338,15 @@ function _checkTrialBanner(user) {
 
     if (daysLeft > 15) return; // más de 15 días — no molestar
 
-    // --- Trial expirado: overlay de bloqueo total ---
+    // --- Trial expirado ---
     if (daysLeft <= 0) {
-        _showTrialExpiredOverlay(user);
+        // Mostrar overlay solo UNA vez por sesión (al primer inicio de sesión)
+        // Las acciones bloqueadas muestran el overlay vía el handler de API error.
+        const sessionKey = 'cd_trial_expired_shown';
+        if (!sessionStorage.getItem(sessionKey)) {
+            sessionStorage.setItem(sessionKey, '1');
+            _showTrialExpiredOverlay(user);
+        }
         return;
     }
 
@@ -378,12 +384,16 @@ async function _showTrialExpiredOverlay(user) {
     // Evitar múltiples overlays
     if (document.getElementById('trialExpiredOverlay')) return;
 
-    // Páginas permitidas aun con trial expirado (para reducir conteos)
-    const allowedPages = ['pacientes.html', 'staff.html', 'configuracion.html'];
+    // En configuracion.html no mostrar el overlay — el usuario ya está en la página
+    // correcta para contratar un plan y no hay que bloquear los botones de planes.
     const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage === 'configuracion.html') return;
+
+    // Páginas donde se puede navegar libremente (para reducir conteos)
+    const allowedPages = ['pacientes.html', 'staff.html'];
     const isAllowedPage = allowedPages.includes(currentPage);
 
-    // Obtener conteos actuales (usar los del error si ya vienen, si no fetch)
+    // Obtener conteos actuales
     let pacientesCount = user._pacientes_count !== undefined ? user._pacientes_count : 0;
     let staffCount = user._staff_count !== undefined ? user._staff_count : 0;
     if (user._pacientes_count === undefined) {
@@ -395,67 +405,57 @@ async function _showTrialExpiredOverlay(user) {
     }
 
     const canUseBasico = pacientesCount <= 15 && staffCount <= 8;
+    const canUsePro    = pacientesCount <= 40 && staffCount <= 20;
 
-    // Construir mensaje de conteos si excede límites de Básico
+    // Advertencia de conteos solo si excede límites de Básico
     let countWarning = '';
     if (!canUseBasico) {
         const parts = [];
         if (pacientesCount > 15) parts.push(`${pacientesCount} pacientes activos (máx. 15 en Básico)`);
-        if (staffCount > 8) parts.push(`${staffCount} miembros de staff (máx. 8 en Básico)`);
+        if (staffCount > 8)      parts.push(`${staffCount} miembros de staff (máx. 8 en Básico)`);
         countWarning = `
-            <div style="margin:16px 0;padding:14px 16px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
-                <p style="font-weight:700;color:#92400E;margin-bottom:6px;font-size:.9rem">⚠️ Para contratar el Plan Básico necesitás reducir:</p>
-                <ul style="margin:0;padding-left:20px;color:#78350F;font-size:.85rem;line-height:1.8">
+            <div style="margin:14px 0 0;padding:12px 14px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
+                <p style="font-weight:700;color:#92400E;margin-bottom:6px;font-size:.85rem">⚠️ Para el Plan Básico necesitás reducir:</p>
+                <ul style="margin:0;padding-left:18px;color:#78350F;font-size:.82rem;line-height:1.8">
                     ${parts.map(p => `<li>${p}</li>`).join('')}
                 </ul>
-                <p style="font-size:.8rem;color:#92400E;margin-top:8px;margin-bottom:0">Podés archivar o dar de alta pacientes desde <a href="pacientes.html" style="color:#92400E;font-weight:700">Pacientes</a> y gestionar el staff desde <a href="staff.html" style="color:#92400E;font-weight:700">Staff</a>.</p>
+                <p style="font-size:.78rem;color:#92400E;margin-top:6px;margin-bottom:0">Gestioná desde <a href="pacientes.html" style="color:#92400E;font-weight:700">Pacientes</a> y <a href="staff.html" style="color:#92400E;font-weight:700">Staff</a>.</p>
             </div>`;
     }
+
+    // Botón Básico
+    const btnBasico = canUseBasico
+        ? `<a href="configuracion.html?autoplan=basico" style="display:block;background:#fff;color:#0F172A;padding:10px 18px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.88rem;border:1.5px solid #CBD5E1">Contratar Plan Básico — $29.000/mes</a>`
+        : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:10px 18px;border-radius:10px;font-weight:600;font-size:.88rem;border:1.5px solid #E2E8F0;cursor:not-allowed">Plan Básico — Reducí pacientes/staff primero</button>`;
+
+    // Botón PRO
+    const btnPro = canUsePro
+        ? `<a href="configuracion.html?autoplan=pro" style="display:block;background:#1565C0;color:#fff;padding:11px 18px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.92rem">⭐ Contratar Plan PRO — $59.000/mes</a>`
+        : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:11px 18px;border-radius:10px;font-weight:600;font-size:.92rem;border:1.5px solid #E2E8F0;cursor:not-allowed">Plan PRO — Reducí pacientes/staff primero</button>`;
 
     const overlay = document.createElement('div');
     overlay.id = 'trialExpiredOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
     overlay.innerHTML = `
-        <div style="position:relative;background:#fff;border-radius:16px;max-width:500px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,.4)">
-            <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#0F172A;margin-bottom:8px">Tu período de prueba venció</h2>
-            <p style="color:#64748B;font-size:.9rem;line-height:1.6;margin-bottom:4px">
-                Los 60 días de prueba gratuita de <strong>CuidaDiario PRO</strong> terminaron.<br>
+        <div style="position:relative;background:#fff;border-radius:16px;max-width:480px;width:100%;padding:30px 26px;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,.4)">
+            <button id="trialOverlayDismiss" style="position:absolute;top:12px;right:12px;background:#F1F5F9;border:none;cursor:pointer;color:#64748B;font-size:1rem;line-height:1;padding:5px 9px;border-radius:6px" title="Cerrar">✕</button>
+            <div style="font-size:2.2rem;margin-bottom:10px">🔒</div>
+            <h2 style="font-size:1.15rem;font-weight:800;color:#0F172A;margin-bottom:8px">Tu período de prueba venció</h2>
+            <p style="color:#64748B;font-size:.87rem;line-height:1.6;margin-bottom:0">
+                Los 60 días de prueba de <strong>CuidaDiario PRO</strong> terminaron.<br>
                 Elegí un plan para continuar usando todas las funciones.
             </p>
             ${countWarning}
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
-                <a href="configuracion.html" style="display:block;background:#0F172A;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">
-                    💳 Contratar Plan PRO — Ilimitado
-                </a>
-                ${canUseBasico
-                    ? `<a href="configuracion.html" style="display:block;background:#fff;color:#0F172A;padding:11px 20px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.9rem;border:1.5px solid #CBD5E1">
-                           Contratar Plan Básico (hasta 15 pac. · 8 staff)
-                       </a>`
-                    : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:11px 20px;border-radius:10px;font-weight:600;font-size:.9rem;border:1.5px solid #E2E8F0;cursor:not-allowed">
-                           Plan Básico — Reducí pacientes/staff primero
-                       </button>`
-                }
+            <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
+                <a href="configuracion.html?autoplan=total" style="display:block;background:#4C1D95;color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">🏆 Contratar Plan Total — $99.000/mes</a>
+                ${btnPro}
+                ${btnBasico}
             </div>
-            ${isAllowedPage ? `
-            <button id="trialOverlayDismiss" style="position:absolute;top:14px;right:14px;background:#F1F5F9;border:none;cursor:pointer;color:#64748B;font-size:1.1rem;line-height:1;padding:5px 9px;border-radius:6px" title="Cerrar (podés seguir en esta página)">✕</button>
-            <p style="margin-top:18px;font-size:.78rem;color:#94A3B8">
-                Podés gestionar pacientes y staff en esta sección para ajustar tu plan.
-            </p>` : `
-            <p style="margin-top:18px;font-size:.78rem;color:#94A3B8">
-                Podés seguir accediendo a
-                <a href="pacientes.html" style="color:#64748B">Pacientes</a>,
-                <a href="staff.html" style="color:#64748B">Staff</a> y
-                <a href="configuracion.html" style="color:#64748B">Configuración</a>
-                para gestionar tu cuenta.
-            </p>`}
+            <p style="margin-top:14px;font-size:.76rem;color:#94A3B8">Podés seguir accediendo a <a href="pacientes.html" style="color:#64748B">Pacientes</a>, <a href="staff.html" style="color:#64748B">Staff</a> y <a href="configuracion.html" style="color:#64748B">Configuración</a>.</p>
         </div>`;
 
     document.body.appendChild(overlay);
-
-    // Dismiss solo en páginas permitidas
-    const dismissBtn = overlay.querySelector('#trialOverlayDismiss');
-    if (dismissBtn) dismissBtn.onclick = () => overlay.remove();
+    overlay.querySelector('#trialOverlayDismiss').onclick = () => overlay.remove();
 }
 
 // ============================================

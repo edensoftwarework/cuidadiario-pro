@@ -39,7 +39,14 @@ async function initConfiguracion() {
     if (isAdmin) {
         cargarInstitucion();
         loadPermisos();
-        cargarEstadoPlan();
+        await cargarEstadoPlan();
+        // Si llegamos desde el overlay de trial vencido con ?autoplan=xxx,
+        // disparar la suscripción automáticamente sin que el usuario tenga que
+        // buscar el botón correcto.
+        const _autoplan = new URLSearchParams(window.location.search).get('autoplan');
+        if (_autoplan && ['basico', 'pro', 'total'].includes(_autoplan)) {
+            setTimeout(() => suscribirPlan(_autoplan, false), 300);
+        }
     }
     loadNotifPrefs();
     loadSharedMode();
