@@ -155,6 +155,22 @@ function populateSidebarUser() {
             });
         }
     }
+    // Inject "Mis residentes" sidebar link for medico/cuidador_staff on ALL pages
+    // (prevents the link from disappearing when navigating away from pacientes.html)
+    if ((user.rol === 'cuidador_staff' || user.rol === 'medico') &&
+        !document.getElementById('navMisResidentes')) {
+        const nav = document.querySelector('.sidebar-nav');
+        const pacientesLink = nav?.querySelector('a[href="pacientes.html"]');
+        if (pacientesLink) {
+            const miRes = document.createElement('a');
+            miRes.id = 'navMisResidentes';
+            miRes.href = 'cuidador.html';
+            miRes.className = 'nav-item';
+            miRes.innerHTML = '<span class="nav-icon">🗂️</span><span class="nav-label">Mis residentes</span>';
+            if (window.location.pathname.endsWith('cuidador.html')) miRes.classList.add('active');
+            pacientesLink.insertAdjacentElement('beforebegin', miRes);
+        }
+    }
     // Shared station mode: inject worker chip only for non-familiar roles
     // Familiares are read-only and must not have access to worker switching
     if (user.rol !== 'familiar') initSharedStationUI();
@@ -557,6 +573,7 @@ function toggleEgresadosSection(toggleEl) {
 const _PERM_DEFAULTS = {
     crear_paciente:    { medico: true,  cuidador_staff: true  },
     editar_paciente:   { medico: true,  cuidador_staff: true  },
+    ver_todos_pacientes: { medico: true, cuidador_staff: true },
     dar_alta:          { medico: true,  cuidador_staff: false },
     eliminar_paciente: { medico: false, cuidador_staff: false },
 };

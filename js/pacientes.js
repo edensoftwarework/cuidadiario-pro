@@ -26,18 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Mostrar botón Nuevo Paciente según permisos
     const btnNuevo = document.getElementById('btnNuevoPaciente');
     if (btnNuevo) btnNuevo.style.display = canDo('crear_paciente') ? '' : 'none';
-    // Staff y médicos: agregar enlace "Mis residentes" (cuidador.html) antes del enlace Pacientes
-    if (user?.rol === 'cuidador_staff' || user?.rol === 'medico') {
-        const nav = document.querySelector('.sidebar-nav');
-        const pacientesLink = nav?.querySelector('a[href="pacientes.html"]');
-        if (pacientesLink && nav) {
-            const li = document.createElement('a');
-            li.href = 'cuidador.html';
-            li.className = 'nav-item';
-            li.innerHTML = '<span class="nav-icon">🗂️</span><span class="nav-label">Mis residentes</span>';
-            pacientesLink.insertAdjacentElement('beforebegin', li);
-        }
-    }
+    // Nota: el link "Mis residentes" en el sidebar lo inyecta populateSidebarUser() en utils-b2b.js
+    // para todos los rol cuidador_staff/medico en TODAS las páginas, sin duplicados.
     initModalForm();
 });
 

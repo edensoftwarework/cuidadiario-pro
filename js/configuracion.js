@@ -306,21 +306,25 @@ function toggleSharedMode(enabled) {
 // PERMISOS DEL EQUIPO (configurable por admin)
 // ============================================
 const PERM_KEYS = [
+    'medico_ver_todos_pacientes',
     'medico_crear_paciente',
     'medico_editar_paciente',
     'medico_dar_alta',
+    'cuidador_staff_ver_todos_pacientes',
     'cuidador_staff_crear_paciente',
     'cuidador_staff_editar_paciente',
     'cuidador_staff_dar_alta',
 ];
 
 const PERM_DEFAULTS = {
-    medico_crear_paciente:           true,
-    medico_editar_paciente:          true,
-    medico_dar_alta:                 true,
-    cuidador_staff_crear_paciente:   true,
-    cuidador_staff_editar_paciente:  true,
-    cuidador_staff_dar_alta:         false,
+    medico_ver_todos_pacientes:       true,
+    medico_crear_paciente:            true,
+    medico_editar_paciente:           true,
+    medico_dar_alta:                  true,
+    cuidador_staff_ver_todos_pacientes: true,
+    cuidador_staff_crear_paciente:    true,
+    cuidador_staff_editar_paciente:   true,
+    cuidador_staff_dar_alta:          false,
 };
 
 function _loadPermisosFromObj(perms) {
