@@ -633,15 +633,24 @@ function getRegistrador() {
     return API_B2B.getUser()?.nombre || '';
 }
 
+/**
+ * Clave de localStorage para los trabajadores recientes, con scope por institución.
+ * Evita que una institución vea los workers de otra en el mismo dispositivo.
+ */
+function _workersKey() {
+    const instId = API_B2B.getUser()?.institucion_id || 'anon';
+    return `cd_workers_recientes_${instId}`;
+}
+
 /** Guarda quién está trabajando ahora en este dispositivo */
 function setActiveWorker(nombre) {
     sessionStorage.setItem('cd_active_worker', nombre);
-    // Mantener lista de personas recientes (max 8) en localStorage
+    // Mantener lista de personas recientes (max 8) en localStorage, con scope por institución
     try {
-        const recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+        const recientes = JSON.parse(localStorage.getItem(_workersKey()) || '[]');
         const filtrados = recientes.filter(n => n !== nombre);
         filtrados.unshift(nombre);
-        localStorage.setItem('cd_workers_recientes', JSON.stringify(filtrados.slice(0, 8)));
+        localStorage.setItem(_workersKey(), JSON.stringify(filtrados.slice(0, 8)));
     } catch {}
     _actualizarWorkerChip();
     closeModal('workerSwitcherModal');
@@ -727,14 +736,14 @@ async function openWorkerSwitcher() {
     const currentWorker = sessionStorage.getItem('cd_active_worker') || '';
     const jwtNombre = API_B2B.getUser()?.nombre || '';
 
-    // Unificar: recientes locales + staff activo de la DB
-    let recientes = JSON.parse(localStorage.getItem('cd_workers_recientes') || '[]');
+    // Unificar: recientes locales (scoped por institución) + staff activo de la DB
+    let recientes = JSON.parse(localStorage.getItem(_workersKey()) || '[]');
     try {
         const staffList = await API_B2B.getStaff();
         staffList.filter(s => s.activo && s.rol !== 'familiar').forEach(s => {
             if (!recientes.includes(s.nombre)) recientes.push(s.nombre);
         });
-        localStorage.setItem('cd_workers_recientes', JSON.stringify(recientes.slice(0, 12)));
+        localStorage.setItem(_workersKey(), JSON.stringify(recientes.slice(0, 12)));
     } catch (_) { /* sin staff disponible, continuar con recientes */ }
     // Asegurar que el admin siempre aparezca
     if (jwtNombre && !recientes.includes(jwtNombre)) recientes.unshift(jwtNombre);

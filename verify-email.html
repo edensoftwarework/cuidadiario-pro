@@ -85,13 +85,22 @@
             const data = await res.json().catch(() => ({}));
 
             if (res.ok) {
-                // Update localStorage user object so the gate in onboarding.js lifts immediately
+                // El backend ahora devuelve un JWT fresco con email_verified=true.
+                // Guardarlo evita el loop de onboarding → 401 → login → onboarding.
                 try {
-                    const raw  = localStorage.getItem('cd_pro_user');
-                    if (raw) {
-                        const u = JSON.parse(raw);
-                        u.email_verified = true;
-                        localStorage.setItem('cd_pro_user', JSON.stringify(u));
+                    if (data.token && data.user) {
+                        localStorage.setItem('cd_pro_token', data.token);
+                        const userStr = JSON.stringify(data.user);
+                        localStorage.setItem('cd_pro_user',      userStr);
+                        localStorage.setItem('cd_pro_last_user', userStr);
+                    } else {
+                        // Fallback para versiones antiguas del backend sin token fresco
+                        const raw = localStorage.getItem('cd_pro_user');
+                        if (raw) {
+                            const u = JSON.parse(raw);
+                            u.email_verified = true;
+                            localStorage.setItem('cd_pro_user', JSON.stringify(u));
+                        }
                     }
                 } catch (_) {}
                 showSuccess();
