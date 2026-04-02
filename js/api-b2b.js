@@ -267,7 +267,7 @@ const API_B2B = {
     // ============================================
     // PACIENTES
     // ============================================
-    async getPacientes()          { return this.get('/api/b2b/pacientes'); },
+    async getPacientes(params)    { const qs = params ? '?' + new URLSearchParams(params).toString() : ''; return this.get('/api/b2b/pacientes' + qs); },
     async getPaciente(id)         { return this.get(`/api/b2b/pacientes/${id}`); },
     async createPaciente(data)    { return this.post('/api/b2b/pacientes', data); },
     async updatePaciente(id, d)   { return this.patch(`/api/b2b/pacientes/${id}`, d); },

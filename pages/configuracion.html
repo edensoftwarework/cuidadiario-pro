@@ -309,16 +309,34 @@
                         </div>
                     </div>
 
-                    <!-- Permisos del equipo (solo admin, no en modo estación compartida) -->
-                    <div class="card admin-only" id="permisosCard">
+                    <!-- Catálogo de insumos (siempre activo — modelo híbrido) -->
+                    <div class="card admin-only" id="catalogoCard">
                         <div class="card-header">
-                            <h3 class="card-title">🔐 Permisos del equipo</h3>
+                            <h3 class="card-title">📦 Catálogo de insumos</h3>
+                            <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
                         </div>
                         <div class="card-body">
-                            <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px">Define qué puede hacer cada rol cuando inician sesión de forma individual. Los permisos no aplican en modo Estación Compartida (el admin siempre está activo en ese caso).</p>
+                            <p style="font-size:.88rem;color:var(--text-secondary)">CuidaDiario PRO usa un <strong>modelo híbrido</strong>: catálogo institucional para los insumos que provee la institución, e insumos específicos por residente para lo que aporta cada familia. Gestioná ambos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
+                        </div>
+                    </div>
 
+                </div><!-- /settings-col 2 -->
+
+            </div><!-- /settings-grid -->
+
+            <!-- Permisos del equipo — ancho completo (solo admin, no en modo estación compartida) -->
+            <div class="card admin-only" id="permisosCard" style="margin-top:20px">
+                <div class="card-header">
+                    <h3 class="card-title">🔐 Permisos del equipo</h3>
+                </div>
+                <div class="card-body">
+                    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:20px">Define qué puede hacer cada rol cuando inician sesión de forma individual. Los permisos no aplican en modo Estación Compartida (el admin siempre está activo en ese caso).</p>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+                        <div>
                             <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🩺 Médico / Profesional</p>
-                            <div class="toggle-list" style="margin-bottom:20px">
+                            <div class="toggle-list">
                                 <label class="toggle-item">
                                     <div>
                                         <div class="toggle-title">Puede ver todos los pacientes</div>
@@ -362,7 +380,9 @@
                                     <label class="switch"><input type="checkbox" id="perm_medico_ver_staff"><span class="switch-slider"></span></label>
                                 </label>
                             </div>
+                        </div>
 
+                        <div>
                             <p style="font-weight:700;font-size:.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">👤 Personal / Operativo</p>
                             <div class="toggle-list">
                                 <label class="toggle-item">
@@ -408,25 +428,14 @@
                                     <label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_staff"><span class="switch-slider"></span></label>
                                 </label>
                             </div>
-
-                            <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:18px" onclick="guardarPermisos()">🔐 Guardar permisos</button>
                         </div>
-                    </div>
 
-                    <!-- Catálogo de insumos (siempre activo — modelo híbrido) -->
-                    <div class="card admin-only" id="catalogoCard">
-                        <div class="card-header">
-                            <h3 class="card-title">📦 Catálogo de insumos</h3>
-                            <a href="catalogo.html" class="btn btn-sm btn-primary">📦 Ir al Catálogo</a>
-                        </div>
-                        <div class="card-body">
-                            <p style="font-size:.88rem;color:var(--text-secondary)">CuidaDiario PRO usa un <strong>modelo híbrido</strong>: catálogo institucional para los insumos que provee la institución, e insumos específicos por residente para lo que aporta cada familia. Gestioná ambos desde la sección <strong>Catálogo</strong> en el menú lateral.</p>
-                        </div>
-                    </div>
+                    </div><!-- /permisos 2-col grid -->
 
-                </div><!-- /settings-col 2 -->
+                    <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:24px" onclick="guardarPermisos()">🔐 Guardar permisos</button>
+                </div>
+            </div>
 
-            </div><!-- /settings-grid -->
         </div>
     </main>
 </div>

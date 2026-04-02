@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadMisPacientes() {
     showLoader(true);
     try {
-        _misPacientes = await API_B2B.getPacientes();
+        _misPacientes = await API_B2B.getPacientes({ mis_asignados: 1 });
         renderMisPacientes(_misPacientes);
     } catch (err) {
         showToast('Error al cargar tus pacientes: ' + err.message, 'error');
