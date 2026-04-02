@@ -22,6 +22,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     _isAdmin = user?.rol === 'admin_institucion';
     _isReadOnly = user?.rol === 'familiar';
 
+    // M8: Actualizar institucion_permisos desde el servidor (pueden haber cambiado sin que el usuario haya vuelto a iniciar sesión)
+    if (user?.rol !== 'admin_institucion') {
+        API_B2B.get('/api/b2b/auth/me').then(fresh => {
+            if (fresh?.institucion_permisos) {
+                const stored = API_B2B.getUser() || {};
+                stored.institucion_permisos = fresh.institucion_permisos;
+                API_B2B.setUser(stored);
+            }
+        }).catch(() => {});
+    }
+
     initSidebar();
     populateSidebarUser();
 
@@ -371,7 +382,11 @@ async function loadMedicamentos() {
         _meds = await API_B2B.getMedicamentos(_pacienteId);
         renderMedicamentos(_meds);
         loadHistorialTomas(); // non-blocking, refresh alongside stock
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error(err);
+        const el = document.getElementById('medsContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar medicamentos</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 // ============================================
@@ -778,7 +793,11 @@ async function handleSaveEgreso(e) {
 // ============================================
 let _citas = [];
 async function loadCitas() {
-    try { _citas = await API_B2B.getCitas(_pacienteId); renderCitas(_citas); } catch (err) { console.error(err); }
+    try { _citas = await API_B2B.getCitas(_pacienteId); renderCitas(_citas); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('citasContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar citas</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
     await loadCitasHistorial();
 }
 
@@ -913,7 +932,11 @@ async function deleteCita(id) {
 // ============================================
 let _tareas = [];
 async function loadTareas() {
-    try { _tareas = await API_B2B.getTareas(_pacienteId); renderTareas(_tareas); loadHistorialTareas(); } catch (err) { console.error(err); }
+    try { _tareas = await API_B2B.getTareas(_pacienteId); renderTareas(_tareas); loadHistorialTareas(); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('tareasContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar tareas</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 
@@ -1029,7 +1052,11 @@ async function deleteTarea(id) {
 // ============================================
 let _sintomas = [];
 async function loadSintomas() {
-    try { _sintomas = await API_B2B.getSintomas(_pacienteId); renderSintomas(_sintomas); } catch (err) { console.error(err); }
+    try { _sintomas = await API_B2B.getSintomas(_pacienteId); renderSintomas(_sintomas); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('sintomasContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar síntomas</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 function renderSintomas(lista) {
@@ -1090,7 +1117,11 @@ async function deleteSintoma(id) {
 // ============================================
 let _signos = [];
 async function loadSignos() {
-    try { _signos = await API_B2B.getSignos(_pacienteId); renderSignos(_signos); } catch (err) { console.error(err); }
+    try { _signos = await API_B2B.getSignos(_pacienteId); renderSignos(_signos); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('signosContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar signos vitales</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 const SIGNOS_TIPOS = [
@@ -1174,7 +1205,11 @@ function onSignoTipoChange(select) {
 // ============================================
 let _contactos = [];
 async function loadContactos() {
-    try { _contactos = await API_B2B.getContactos(_pacienteId); renderContactos(_contactos); } catch (err) { console.error(err); }
+    try { _contactos = await API_B2B.getContactos(_pacienteId); renderContactos(_contactos); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('contactosContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar contactos</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 function renderContactos(lista) {
@@ -1233,7 +1268,11 @@ async function deleteContacto(id) {
 // ============================================
 let _notas = [];
 async function loadNotas() {
-    try { _notas = await API_B2B.getNotas(_pacienteId); renderNotas(_notas); } catch (err) { console.error(err); }
+    try { _notas = await API_B2B.getNotas(_pacienteId); renderNotas(_notas); } catch (err) {
+        console.error(err);
+        const el = document.getElementById('notasContent');
+        if (el) el.innerHTML = `<div class="empty-state"><h3>Error al cargar notas</h3><p class="text-muted">Verificá tu conexión e intentá nuevamente.</p></div>`;
+    }
 }
 
 function renderNotas(lista) {
