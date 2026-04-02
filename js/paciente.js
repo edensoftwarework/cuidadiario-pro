@@ -379,13 +379,27 @@ function renderHistorialTomas(lista) {
         <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-color)">
             <span style="flex-shrink:0;margin-top:1px;font-size:.95rem">✅</span>
             <div style="flex:1;min-width:0">
-                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}</div>
+                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${(t.cantidad && t.cantidad > 1) ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${t.cantidad}</span>` : ''}</div>
                 <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
                     ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
                 </div>
             </div>
         </div>`).join('');
     el.innerHTML = header + `<div>${rows}</div>`;
+}
+
+// Pluraliza unidades de forma inteligente para el badge de stock.
+// "unidad" → "unidades"; "comprimido" → "comprimidos"; "ml/mg/g" → sin cambio, etc.
+function _pluralUnidad(u) {
+    if (!u) return '';
+    const s = u.trim();
+    const l = s.toLowerCase();
+    if (l === 'unidad') return 'unidades';
+    if (l.endsWith('es') || l.endsWith('os') || l.endsWith('as') || l.endsWith('is')) return s; // ya plural
+    if (s.length <= 3 && /^[a-zA-Z]+$/.test(s)) return s; // abreviatura (ml, mg, g, kg, cc…)
+    const last = l[l.length - 1];
+    if ('aeiouáéíóú'.includes(last)) return s + 's';
+    return s + 'es';
 }
 
 function renderMedicamentos(lista) {
@@ -410,7 +424,7 @@ function renderMedicamentos(lista) {
                 <div class="item-meta">
                     ${ !_isReadOnly ? (
                         m.catalogo_id
-                            ? `<span class="badge ${(m.catalogo_stock??0) <= 0 ? 'badge-red' : (m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${m.catalogo_stock??0}${m.catalogo_unidad ? ' '+m.catalogo_unidad+'s' : ''}${(m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? ' ⚠️' : ''}</span>`
+                            ? `<span class="badge ${(m.catalogo_stock??0) <= 0 ? 'badge-red' : (m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${m.catalogo_stock??0}${m.catalogo_unidad ? ' '+_pluralUnidad(m.catalogo_unidad) : ''}${(m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? ' ⚠️' : ''}</span>`
                             : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : '<span class="badge badge-gray" style="opacity:.65">Sin stock</span>')
                     ) : '' }
                 </div>
@@ -668,6 +682,13 @@ function registrarToma(id, nombre) {
     document.getElementById('tomaMedId').value = id;
     document.getElementById('formToma').reset();
     document.getElementById('tomaMedId').value = id;
+    // Pre-set cantidad to 1 and cap max at available stock for UX
+    const _cantInput = document.getElementById('tomaCantidad');
+    if (_cantInput) {
+        _cantInput.value = 1;
+        const _stockDisp = med?.catalogo_id ? (med.catalogo_stock ?? 0) : (med?.stock ?? 0);
+        _cantInput.max = _stockDisp > 0 ? _stockDisp : '';
+    }
     openModal('modalToma');
 }
 
@@ -677,9 +698,10 @@ async function handleSaveToma(e) {
     const btn = f.querySelector('[type=submit]');
     btn.disabled = true;
     const id = parseInt(document.getElementById('tomaMedId').value);
+    const cantidad = Math.max(1, parseInt(f.tomaCantidad?.value) || 1);
     try {
-        await API_B2B.registrarToma(id, f.tomaNotas.value.trim(), getRegistrador());
-        showToast('Toma registrada ✅', 'success');
+        await API_B2B.registrarToma(id, f.tomaNotas.value.trim(), getRegistrador(), cantidad);
+        showToast(`Toma registrada ✅${cantidad > 1 ? ` (${cantidad} unidades)` : ''}`, 'success');
         closeModal('modalToma');
         await loadMedicamentos(); // refresh stock display
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalToma', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
