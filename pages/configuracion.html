@@ -388,6 +388,22 @@
                         <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_ver_staff"><span class="switch-slider"></span></label></div>
                         <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_staff"><span class="switch-slider"></span></label></div>
 
+                        <!-- Fila 7: agregar nuevo personal -->
+                        <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
+                            <div class="toggle-title">Agregar nuevo personal</div>
+                            <div class="toggle-desc">Permite crear nuevos miembros del equipo (cuidadores, médicos, familiares). Desactivado por defecto</div>
+                        </div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_crear_staff"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_staff"><span class="switch-slider"></span></label></div>
+
+                        <!-- Fila 8: asignar residentes al personal -->
+                        <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
+                            <div class="toggle-title">Asignar residentes al personal</div>
+                            <div class="toggle-desc">Permite vincular y desvincular residentes con miembros del equipo. Desactivado por defecto</div>
+                        </div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_asignar_paciente"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_asignar_paciente"><span class="switch-slider"></span></label></div>
+
                     </div><!-- /permisos tabla -->
 
                     <button type="button" id="btnGuardarPermisos" class="btn btn-primary" style="margin-top:18px" onclick="guardarPermisos()">🔐 Guardar permisos</button>

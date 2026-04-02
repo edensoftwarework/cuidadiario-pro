@@ -318,6 +318,10 @@ const PERM_KEYS = [
     'cuidador_staff_dar_alta',
     'cuidador_staff_gestionar_catalogo',
     'cuidador_staff_ver_staff',
+    'medico_crear_staff',
+    'medico_asignar_paciente',
+    'cuidador_staff_crear_staff',
+    'cuidador_staff_asignar_paciente',
     // permisos del familiar (secciones visibles en la ficha)
     'familiar_ver_medicamentos',
     'familiar_ver_citas',
@@ -342,6 +346,10 @@ const PERM_DEFAULTS = {
     cuidador_staff_dar_alta:          false,
     cuidador_staff_gestionar_catalogo: false,
     cuidador_staff_ver_staff:          false,
+    medico_crear_staff:              false,
+    medico_asignar_paciente:         false,
+    cuidador_staff_crear_staff:      false,
+    cuidador_staff_asignar_paciente: false,
     // familiar defaults
     familiar_ver_medicamentos:        true,
     familiar_ver_citas:               true,

@@ -7,26 +7,32 @@ let _staffList = [];
 let _pacientesList = [];
 let _asignaciones = [];
 let _editingStaffId = null;
-let _staffReadOnly = false; // true para medico/cuidador_staff con permiso ver_staff
+let _staffReadOnly = false;      // true para medico/cuidador_staff (no puede editar/desactivar staff existente)
+let _canCrearStaff = false;      // puede crear nuevo personal
+let _canAsignarPaciente = false; // puede gestionar asignaciones
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
     const _currentUser = API_B2B.getUser();
     if (_currentUser?.rol !== 'admin_institucion') {
-        if (!canDo('ver_staff')) {
+        const _canVer = canDo('ver_staff');
+        _canCrearStaff     = canDo('crear_staff');
+        _canAsignarPaciente = canDo('asignar_paciente');
+        if (!_canVer && !_canCrearStaff && !_canAsignarPaciente) {
             showToast('No tenés permisos para acceder a esta sección', 'error');
             setTimeout(() => window.location.href = 'dashboard.html', 1500);
             return;
         }
         _staffReadOnly = true;
+        if (!_canCrearStaff)       document.getElementById('btnNuevoStaff')?.setAttribute('style', 'display:none');
+        if (!_canAsignarPaciente)  document.getElementById('btnNuevaAsignacion')?.setAttribute('style', 'display:none');
+    } else {
+        _canCrearStaff = true;
+        _canAsignarPaciente = true;
     }
     initSidebar();
     populateSidebarUser();
-    if (!_staffReadOnly) initForms();
-    // En modo lectura: ocultar botones de alta de personal y de nueva asignación
-    if (_staffReadOnly) {
-        document.querySelectorAll('#btnNuevoStaff, #btnNuevaAsignacion').forEach(el => { if (el) el.style.display = 'none'; });
-    }
+    if (!_staffReadOnly || _canCrearStaff || _canAsignarPaciente) initForms();
     await Promise.all([loadStaff(), loadPacientes(), loadAsignaciones()]);
 });
 
@@ -94,7 +100,7 @@ function renderAsignaciones(lista) {
             <td>${escapeHtml(a.paciente_nombre)} ${escapeHtml(a.paciente_apellido || '')} ${a.habitacion ? `<span class="badge badge-gray">Hab. ${a.habitacion}</span>` : ''}</td>
             <td>${escapeHtml(a.cuidador_nombre)} ${rolBadge(a.cuidador_rol)}</td>
             <td class="text-muted" style="font-size:.78rem">${formatDate(a.created_at)}</td>
-            <td>${_staffReadOnly ? '—' : `<button class="btn btn-sm btn-danger" onclick="removeAsignacion(${a.id})">🗑 Quitar</button>`}</td>
+            <td>${(!_staffReadOnly || _canAsignarPaciente) ? `<button class="btn btn-sm btn-danger" onclick="removeAsignacion(${a.id})">🗑 Quitar</button>` : '—'}</td>
         </tr>`).join('');
 }
 
