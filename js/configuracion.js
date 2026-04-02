@@ -311,11 +311,13 @@ const PERM_KEYS = [
     'medico_editar_paciente',
     'medico_dar_alta',
     'medico_gestionar_catalogo',
+    'medico_ver_staff',
     'cuidador_staff_ver_todos_pacientes',
     'cuidador_staff_crear_paciente',
     'cuidador_staff_editar_paciente',
     'cuidador_staff_dar_alta',
     'cuidador_staff_gestionar_catalogo',
+    'cuidador_staff_ver_staff',
 ];
 
 const PERM_DEFAULTS = {
@@ -324,11 +326,13 @@ const PERM_DEFAULTS = {
     medico_editar_paciente:           true,
     medico_dar_alta:                  true,
     medico_gestionar_catalogo:        false,
+    medico_ver_staff:                 false,
     cuidador_staff_ver_todos_pacientes: true,
     cuidador_staff_crear_paciente:    true,
     cuidador_staff_editar_paciente:   true,
     cuidador_staff_dar_alta:          false,
     cuidador_staff_gestionar_catalogo: false,
+    cuidador_staff_ver_staff:          false,
 };
 
 function _loadPermisosFromObj(perms) {

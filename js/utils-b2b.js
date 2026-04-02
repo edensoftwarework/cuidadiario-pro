@@ -160,6 +160,12 @@ function populateSidebarUser() {
                 el.style.display = '';
             });
         }
+        // Mostrar Staff si el permiso ver_staff está activado para este rol
+        if ((user.rol === 'medico' || user.rol === 'cuidador_staff') && canDo('ver_staff')) {
+            document.querySelectorAll('.sidebar-nav a[href="staff.html"]').forEach(el => {
+                el.style.display = '';
+            });
+        }
     }
     // Inject "Mis residentes" sidebar link for medico/cuidador_staff on ALL pages
     // (prevents the link from disappearing when navigating away from pacientes.html)
@@ -583,6 +589,7 @@ const _PERM_DEFAULTS = {
     dar_alta:            { medico: true,  cuidador_staff: false },
     eliminar_paciente:   { medico: false, cuidador_staff: false },
     gestionar_catalogo:  { medico: false, cuidador_staff: false },
+    ver_staff:           { medico: false, cuidador_staff: false },
 };
 
 function canDo(action) {

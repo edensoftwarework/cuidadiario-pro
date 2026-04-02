@@ -7,13 +7,26 @@ let _staffList = [];
 let _pacientesList = [];
 let _asignaciones = [];
 let _editingStaffId = null;
+let _staffReadOnly = false; // true para medico/cuidador_staff con permiso ver_staff
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
-    if (!requireRole('admin_institucion')) return;
+    const _currentUser = API_B2B.getUser();
+    if (_currentUser?.rol !== 'admin_institucion') {
+        if (!canDo('ver_staff')) {
+            showToast('No tenés permisos para acceder a esta sección', 'error');
+            setTimeout(() => window.location.href = 'dashboard.html', 1500);
+            return;
+        }
+        _staffReadOnly = true;
+    }
     initSidebar();
     populateSidebarUser();
-    initForms();
+    if (!_staffReadOnly) initForms();
+    // En modo lectura: ocultar botones de alta de personal y de nueva asignación
+    if (_staffReadOnly) {
+        document.querySelectorAll('#btnNuevoStaff, #btnNuevaAsignacion').forEach(el => { if (el) el.style.display = 'none'; });
+    }
     await Promise.all([loadStaff(), loadPacientes(), loadAsignaciones()]);
 });
 
@@ -61,10 +74,10 @@ function renderStaff(lista) {
             <td><span class="badge ${s.activo ? 'badge-green' : 'badge-gray'}">${s.activo ? '✅ Activo' : '⛔ Inactivo'}</span></td>
             <td class="text-muted" style="font-size:.78rem">${formatDate(s.created_at)}</td>
             <td>
-                <div class="td-actions">
+                ${_staffReadOnly ? '' : `<div class="td-actions">
                     <button class="btn btn-sm btn-secondary" onclick="openEditStaff(${s.id})">✏️ Editar</button>
                     ${s.activo ? `<button class="btn btn-sm btn-danger" onclick="desactivarStaff(${s.id},'${escapeHtml(s.nombre)}')">🚫 Desactivar</button>` : `<button class="btn btn-sm btn-success" onclick="reactivarStaff(${s.id})">✅ Activar</button>`}
-                </div>
+                </div>`}
             </td>
         </tr>`).join('');
 }
@@ -81,7 +94,7 @@ function renderAsignaciones(lista) {
             <td>${escapeHtml(a.paciente_nombre)} ${escapeHtml(a.paciente_apellido || '')} ${a.habitacion ? `<span class="badge badge-gray">Hab. ${a.habitacion}</span>` : ''}</td>
             <td>${escapeHtml(a.cuidador_nombre)} ${rolBadge(a.cuidador_rol)}</td>
             <td class="text-muted" style="font-size:.78rem">${formatDate(a.created_at)}</td>
-            <td><button class="btn btn-sm btn-danger" onclick="removeAsignacion(${a.id})">🗑 Quitar</button></td>
+            <td>${_staffReadOnly ? '—' : `<button class="btn btn-sm btn-danger" onclick="removeAsignacion(${a.id})">🗑 Quitar</button>`}</td>
         </tr>`).join('');
 }
 
