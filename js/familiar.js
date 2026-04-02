@@ -140,22 +140,16 @@ function renderFamiliares(lista) {
                     ${p.fecha_ingreso ? `<div style="font-size:.8rem;color:var(--text-secondary)">📋 Ingreso: <strong>${formatDate(p.fecha_ingreso)}</strong></div>` : ''}
                     ${p.fecha_nacimiento ? `<div style="font-size:.8rem;color:var(--text-secondary)">🎂 Nacimiento: <strong>${formatDate(p.fecha_nacimiento)}</strong></div>` : ''}
                 </div>
+                ${(canFamiliarSee('medicamentos') || canFamiliarSee('citas')) ? `
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
-                    <a href="paciente.html?id=${p.id}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">
-                        💊 Medicación
-                    </a>
-                    <a href="paciente.html?id=${p.id}&tab=citas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">
-                        📅 Citas
-                    </a>
-                </div>
+                    ${canFamiliarSee('medicamentos') ? `<a href="paciente.html?id=${p.id}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">💊 Medicación</a>` : ''}
+                    ${canFamiliarSee('citas')        ? `<a href="paciente.html?id=${p.id}&tab=citas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📅 Citas</a>` : ''}
+                </div>` : ''}
+                ${(canFamiliarSee('signos') || canFamiliarSee('notas')) ? `
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-                    <a href="paciente.html?id=${p.id}&tab=signos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">
-                        ❤️ Signos vitales
-                    </a>
-                    <a href="paciente.html?id=${p.id}&tab=notas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">
-                        📝 Notas
-                    </a>
-                </div>
+                    ${canFamiliarSee('signos') ? `<a href="paciente.html?id=${p.id}&tab=signos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">❤️ Signos vitales</a>` : ''}
+                    ${canFamiliarSee('notas')  ? `<a href="paciente.html?id=${p.id}&tab=notas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📝 Notas</a>` : ''}
+                </div>` : ''}
                 <a href="paciente.html?id=${p.id}" class="btn btn-primary btn-sm btn-block" style="margin-top:10px">
                     Ver ficha completa →
                 </a>

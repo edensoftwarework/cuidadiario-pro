@@ -192,28 +192,35 @@ function row(label, val) {
 // ============================================
 // LOAD ALL DATA
 // ============================================
+// Returns a resolved promise (no-op) when a familiar is blocked from seeing a section.
+// For all other roles _canLoad always returns true so loaders run normally.
+function _canLoad(section) {
+    if (!_isReadOnly) return true;
+    return canFamiliarSee(section);
+}
+
 async function loadAllData() {
     await Promise.all([
-        loadMedicamentos(),
-        loadCitas(),
-        loadTareas(),
-        loadSintomas(),
-        loadSignos(),
-        loadContactos(),
-        loadNotas(),
-        loadDocumentos(),
+        _canLoad('medicamentos') ? loadMedicamentos() : Promise.resolve(),
+        _canLoad('citas')        ? loadCitas()        : Promise.resolve(),
+        _canLoad('tareas')       ? loadTareas()       : Promise.resolve(),
+        _canLoad('sintomas')     ? loadSintomas()     : Promise.resolve(),
+        _canLoad('signos')       ? loadSignos()       : Promise.resolve(),
+        _canLoad('contactos')    ? loadContactos()    : Promise.resolve(),
+        _canLoad('notas')        ? loadNotas()        : Promise.resolve(),
+        _canLoad('documentos')   ? loadDocumentos()   : Promise.resolve(),
     ]);
 }
 
 // Refresh all data when offline queue syncs successfully (e.g. toma/tarea registrado sin internet)
 window.addEventListener('offlinesynccomplete', () => {
     if (!_pacienteId) return;
-    loadMedicamentos();
-    loadTareas();
-    loadSintomas();
-    loadSignos();
-    loadNotas();
-    loadCitas();
+    if (_canLoad('medicamentos')) loadMedicamentos();
+    if (_canLoad('tareas'))       loadTareas();
+    if (_canLoad('sintomas'))     loadSintomas();
+    if (_canLoad('signos'))       loadSignos();
+    if (_canLoad('notas'))        loadNotas();
+    if (_canLoad('citas'))        loadCitas();
 });
 
 // ============================================
