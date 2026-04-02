@@ -19,12 +19,14 @@ let _catalogoView = 'institucional'; // 'institucional' | 'paciente'
 let _selectedPacienteId = null;
 let _editingCatalogoId = null;
 let _pacientesList = [];             // lista de pacientes para el selector
+let _catalogoIsAdmin = false;        // true when logged-in user is admin_institucion
 
 async function initCatalogo() {
     if (!requireAuth()) return;
 
     const user = API_B2B.getUser();
-    if (user?.rol !== 'admin_institucion') {
+    _catalogoIsAdmin = user?.rol === 'admin_institucion';
+    if (!_catalogoIsAdmin && !canDo('gestionar_catalogo')) {
         window.location.href = 'dashboard.html';
         return;
     }
@@ -241,7 +243,7 @@ function renderCatalogo(lista) {
                         <td style="padding:10px 8px;text-align:right">
                             <div class="d-flex gap-8 justify-end">
                                 <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${c.id})" title="Editar">✏️</button>
-                                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${c.id})" title="Eliminar">🗑</button>
+                                ${_catalogoIsAdmin ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${c.id})" title="Eliminar">🗑</button>` : ''}
                             </div>
                         </td>
                     </tr>`;

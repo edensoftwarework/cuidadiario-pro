@@ -154,6 +154,12 @@ function populateSidebarUser() {
                 el.style.display = '';
             });
         }
+        // Mostrar Catálogo si el permiso gestionar_catalogo está activado para este rol
+        if ((user.rol === 'medico' || user.rol === 'cuidador_staff') && canDo('gestionar_catalogo')) {
+            document.querySelectorAll('.sidebar-nav a[href="catalogo.html"]').forEach(el => {
+                el.style.display = '';
+            });
+        }
     }
     // Inject "Mis residentes" sidebar link for medico/cuidador_staff on ALL pages
     // (prevents the link from disappearing when navigating away from pacientes.html)
@@ -571,11 +577,12 @@ function toggleEgresadosSection(toggleEl) {
 //   cuidador_staff: can create/edit patients but NOT give discharge
 //   admin: always allowed; familiar: never allowed (read-only)
 const _PERM_DEFAULTS = {
-    crear_paciente:    { medico: true,  cuidador_staff: true  },
-    editar_paciente:   { medico: true,  cuidador_staff: true  },
-    ver_todos_pacientes: { medico: true, cuidador_staff: true },
-    dar_alta:          { medico: true,  cuidador_staff: false },
-    eliminar_paciente: { medico: false, cuidador_staff: false },
+    crear_paciente:      { medico: true,  cuidador_staff: true  },
+    editar_paciente:     { medico: true,  cuidador_staff: true  },
+    ver_todos_pacientes: { medico: true,  cuidador_staff: true  },
+    dar_alta:            { medico: true,  cuidador_staff: false },
+    eliminar_paciente:   { medico: false, cuidador_staff: false },
+    gestionar_catalogo:  { medico: false, cuidador_staff: false },
 };
 
 function canDo(action) {
