@@ -318,6 +318,15 @@ const PERM_KEYS = [
     'cuidador_staff_dar_alta',
     'cuidador_staff_gestionar_catalogo',
     'cuidador_staff_ver_staff',
+    // permisos del familiar (secciones visibles en la ficha)
+    'familiar_ver_medicamentos',
+    'familiar_ver_citas',
+    'familiar_ver_tareas',
+    'familiar_ver_sintomas',
+    'familiar_ver_signos',
+    'familiar_ver_contactos',
+    'familiar_ver_notas',
+    'familiar_ver_documentos',
 ];
 
 const PERM_DEFAULTS = {
@@ -333,6 +342,15 @@ const PERM_DEFAULTS = {
     cuidador_staff_dar_alta:          false,
     cuidador_staff_gestionar_catalogo: false,
     cuidador_staff_ver_staff:          false,
+    // familiar defaults
+    familiar_ver_medicamentos:        true,
+    familiar_ver_citas:               true,
+    familiar_ver_tareas:              true,
+    familiar_ver_sintomas:            true,
+    familiar_ver_signos:              true,
+    familiar_ver_contactos:           true,
+    familiar_ver_notas:               false,
+    familiar_ver_documentos:          true,
 };
 
 function _loadPermisosFromObj(perms) {
@@ -365,8 +383,9 @@ async function guardarPermisos() {
         const el = document.getElementById('perm_' + k);
         if (el) out[k] = el.checked;
     });
-    const btn = document.getElementById('btnGuardarPermisos');
-    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+    const btn  = document.getElementById('btnGuardarPermisos');
+    const btn2 = document.getElementById('btnGuardarPermisosFamiliar');
+    [btn, btn2].forEach(b => { if (b) { b.disabled = true; b.textContent = 'Guardando...'; } });
     try {
         // Persistir en la DB para que todos los usuarios de la institución reciban los permisos
         await API_B2B.patch('/api/b2b/institucion', { permisos_equipo: out });
@@ -380,7 +399,8 @@ async function guardarPermisos() {
     } catch (err) {
         showToast(err.message || 'Error al guardar permisos', 'error');
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '\uD83D\uDD10 Guardar permisos'; }
+        if (btn)  { btn.disabled  = false; btn.textContent  = '🔐 Guardar permisos'; }
+        if (btn2) { btn2.disabled = false; btn2.textContent = '👨‍👩‍👧 Guardar permisos del familiar'; }
     }
 }
 async function exportarDatos() {

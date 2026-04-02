@@ -1134,6 +1134,16 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .toggle-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
 .toggle-desc  { font-size: 0.78rem; color: var(--text-secondary); }
 
+/* Permisos table rows (configuracion) */
+.perm-row-label { background: var(--bg-card); }
+.perm-row-switch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    padding: 12px 8px;
+}
+
 /* Switch toggle */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }

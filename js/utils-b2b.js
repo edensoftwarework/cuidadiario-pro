@@ -612,6 +612,29 @@ function canDo(action) {
     return _PERM_DEFAULTS[action]?.[user.rol] ?? false;
 }
 
+// Defaults para secciones visibles por el familiar en la ficha del paciente
+const _FAMILIAR_SECTION_DEFAULTS = {
+    medicamentos: true,
+    citas:        true,
+    tareas:       true,
+    sintomas:     true,
+    signos:       true,
+    contactos:    true,
+    notas:        false,
+    documentos:   true,
+};
+
+// Retorna true si el familiar puede ver la sección dada según los permisos de la institución.
+// section: 'medicamentos' | 'citas' | 'tareas' | 'sintomas' | 'signos' | 'contactos' | 'notas' | 'documentos'
+function canFamiliarSee(section) {
+    const user = API_B2B.getUser();
+    if (!user || user.rol !== 'familiar') return true; // no aplica para otros roles
+    const perms = user.institucion_permisos || {};
+    const key = `familiar_ver_${section}`;
+    if (key in perms) return !!perms[key];
+    return _FAMILIAR_SECTION_DEFAULTS[section] ?? false;
+}
+
 // ============================================
 // CONFIRM DIALOG (custom)
 // ============================================

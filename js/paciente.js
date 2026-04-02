@@ -45,6 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTabs(params.get('tab'));
     initForms();
 
+    // Familiar: ocultar tabs según permisos de la institución
+    if (_isReadOnly) {
+        // tabs que pueden ser restringidos por el admin (canFamiliarSee definido en utils-b2b.js)
+        const restrictableTabs = ['medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos'];
+        restrictableTabs.forEach(tabName => {
+            if (!canFamiliarSee(tabName)) {
+                const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+                if (tabBtn) tabBtn.style.display = 'none';
+            }
+        });
+    }
+
     // Load catalogs (familiar: solo catálogo del paciente; otros: ambos)
     try {
         if (_isReadOnly) {
