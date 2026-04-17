@@ -432,15 +432,15 @@ async function _showTrialExpiredOverlay(user) {
         } catch (e) { /* si falla, continuar con 0 */ }
     }
 
-    const canUseBasico = pacientesCount <= 15 && staffCount <= 8;
-    const canUsePro    = pacientesCount <= 40 && staffCount <= 20;
+    const canUseBasico = pacientesCount <= 30 && staffCount <= 20;
+    // const canUsePro = pacientesCount <= 40 && staffCount <= 20;  // Plan PRO desactivado temporalmente
 
     // Advertencia de conteos solo si excede límites de Básico
     let countWarning = '';
     if (!canUseBasico) {
         const parts = [];
-        if (pacientesCount > 15) parts.push(`${pacientesCount} pacientes activos (máx. 15 en Básico)`);
-        if (staffCount > 8)      parts.push(`${staffCount} miembros de staff (máx. 8 en Básico)`);
+        if (pacientesCount > 30) parts.push(`${pacientesCount} pacientes activos (máx. 30 en Básico)`);
+        if (staffCount > 20)     parts.push(`${staffCount} miembros de staff (máx. 20 en Básico)`);
         countWarning = `
             <div style="margin:14px 0 0;padding:12px 14px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;text-align:left">
                 <p style="font-weight:700;color:#92400E;margin-bottom:6px;font-size:.85rem">⚠️ Para el Plan Básico necesitás reducir:</p>
@@ -453,13 +453,11 @@ async function _showTrialExpiredOverlay(user) {
 
     // Botón Básico
     const btnBasico = canUseBasico
-        ? `<a href="configuracion.html?autoplan=basico" style="display:block;background:#fff;color:#0F172A;padding:10px 18px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.88rem;border:1.5px solid #CBD5E1">Contratar Plan Básico — $29.000/mes</a>`
+        ? `<a href="configuracion.html?autoplan=basico" style="display:block;background:#fff;color:#0F172A;padding:10px 18px;border-radius:10px;font-weight:600;text-decoration:none;font-size:.88rem;border:1.5px solid #CBD5E1">Contratar Plan Básico — $19.000/mes</a>`
         : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:10px 18px;border-radius:10px;font-weight:600;font-size:.88rem;border:1.5px solid #E2E8F0;cursor:not-allowed">Plan Básico — Reducí pacientes/staff primero</button>`;
 
-    // Botón PRO
-    const btnPro = canUsePro
-        ? `<a href="configuracion.html?autoplan=pro" style="display:block;background:#1565C0;color:#fff;padding:11px 18px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.92rem">⭐ Contratar Plan PRO — $59.000/mes</a>`
-        : `<button disabled style="display:block;width:100%;background:#F1F5F9;color:#94A3B8;padding:11px 18px;border-radius:10px;font-weight:600;font-size:.92rem;border:1.5px solid #E2E8F0;cursor:not-allowed">Plan PRO — Reducí pacientes/staff primero</button>`;
+    // Botón PRO — desactivado temporalmente
+    // const btnPro = ...;
 
     const overlay = document.createElement('div');
     overlay.id = 'trialExpiredOverlay';
@@ -475,8 +473,7 @@ async function _showTrialExpiredOverlay(user) {
             </p>
             ${countWarning}
             <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
-                <a href="configuracion.html?autoplan=total" style="display:block;background:#4C1D95;color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">🏆 Contratar Plan Total — $99.000/mes</a>
-                ${btnPro}
+                <a href="configuracion.html?autoplan=total" style="display:block;background:#4C1D95;color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">🏆 Contratar Plan Total — $45.000/mes</a>
                 ${btnBasico}
             </div>
             <p style="margin-top:14px;font-size:.76rem;color:#94A3B8">Podés seguir accediendo a <a href="pacientes.html" style="color:#64748B">Pacientes</a>, <a href="staff.html" style="color:#64748B">Staff</a> y <a href="configuracion.html" style="color:#64748B">Configuración</a>.</p>

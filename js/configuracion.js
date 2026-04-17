@@ -44,7 +44,7 @@ async function initConfiguracion() {
         // disparar la suscripción automáticamente sin que el usuario tenga que
         // buscar el botón correcto.
         const _autoplan = new URLSearchParams(window.location.search).get('autoplan');
-        if (_autoplan && ['basico', 'pro', 'total'].includes(_autoplan)) {
+        if (_autoplan && ['basico', 'total'].includes(_autoplan)) {  // 'pro' desactivado temporalmente
             setTimeout(() => suscribirPlan(_autoplan, false), 300);
         }
     }
@@ -715,17 +715,17 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 
     const configs = {
         total:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#4C1D95;color:#fff;border-radius:20px">🏆 Plan Total activo</span>`,
-                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: true, showBasico: true, showTotal: false },
+                   desc: 'Plan Total activo — pacientes ilimitados, staff ilimitado, todas las funciones.', showPRO: false, showBasico: true, showTotal: false },
         pro:     { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#1565C0;color:#fff;border-radius:20px">⭐ Plan PRO activo</span>`,
                    desc: 'Plan PRO activo — hasta 40 pacientes, hasta 20 staff, reportes PDF.', showPRO: false, showBasico: true, showTotal: true },
         basico:  { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#0D9488;color:#fff;border-radius:20px">✅ Plan Básico activo</span>`,
-                   desc: 'Plan Básico activo — hasta 15 pacientes y 8 miembros de staff.', showPRO: true, showBasico: false, showTotal: true },
+                   desc: 'Plan Básico activo — hasta 30 pacientes y 20 miembros de staff.', showPRO: false, showBasico: false, showTotal: true },
         trial:   { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
-                   desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
+                   desc: trialDesc, showPRO: false, showBasico: true, showTotal: true },
         free:    { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#D97706;color:#fff;border-radius:20px">${trialLabel}</span>`,
-                   desc: trialDesc, showPRO: true, showBasico: true, showTotal: true },
+                   desc: trialDesc, showPRO: false, showBasico: true, showTotal: true },
         expired: { badge: `<span class="badge" style="font-size:.9rem;padding:6px 16px;background:#6B7280;color:#fff;border-radius:20px">🔒 Sin plan activo</span>`,
-                   desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: true, showBasico: true, showTotal: true },
+                   desc: 'Tu período de prueba venció. Elegí un plan para continuar usando CuidaDiario PRO.', showPRO: false, showBasico: true, showTotal: true },
     };
     const cfg = configs[plan] || configs.free;
     wrap.innerHTML = cfg.badge;
@@ -802,37 +802,26 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
     if (btnTotal)  btnTotal.textContent  = '🏆 Contratar Plan Total';
 
     // Deshabilitar planes que superan los límites de conteo
-    const canBasico = pacientesCount <= 15 && staffCount <= 8;
-    const canPro    = pacientesCount <= 40 && staffCount <= 20;
+    const canBasico = pacientesCount <= 30 && staffCount <= 20;
+    // const canPro = ...;  // Plan PRO desactivado temporalmente
 
     // Limpiar warnings anteriores
     ['_planWarnBasico', '_planWarnPRO'].forEach(id => document.getElementById(id)?.remove());
 
     if (btnBasico && cfg.showBasico && !canBasico) {
         btnBasico.disabled = true;
-        btnBasico.title = `Necesitás tener máx. 15 pac. y 8 staff para el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
+        btnBasico.title = `Necesitás tener máx. 30 pac. y 20 staff para el Plan Básico (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
         const warn = document.createElement('p');
         warn.id = '_planWarnBasico';
         warn.style.cssText = 'font-size:.78rem;color:#92400E;background:#FEF3C7;border-radius:6px;padding:7px 10px;margin-top:6px';
-        warn.innerHTML = `⚠️ No podés usar el Plan Básico con ${pacientesCount} pac. y ${staffCount} staff (límite: 15 pac. / 8 staff). Reducí registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
+        warn.innerHTML = `⚠️ No podés usar el Plan Básico con ${pacientesCount} pac. y ${staffCount} staff (límite: 30 pac. / 20 staff). Reducí registros desde <a href="pacientes.html" style="color:#78350F;font-weight:700">Pacientes</a> o <a href="staff.html" style="color:#78350F;font-weight:700">Staff</a>.`;
         btnBasico.insertAdjacentElement('afterend', warn);
     } else if (btnBasico) {
         btnBasico.disabled = false;
         btnBasico.title = '';
     }
 
-    if (btnPRO && cfg.showPRO && !canPro) {
-        btnPRO.disabled = true;
-        btnPRO.title = `Necesitás tener máx. 40 pac. y 20 staff para el Plan PRO (tenés ${pacientesCount} pac. / ${staffCount} staff)`;
-        const warn = document.createElement('p');
-        warn.id = '_planWarnPRO';
-        warn.style.cssText = 'font-size:.78rem;color:#1E40AF;background:#EFF6FF;border-radius:6px;padding:7px 10px;margin-top:6px';
-        warn.innerHTML = `ℹ️ Tu configuración (${pacientesCount} pac. / ${staffCount} staff) supera los límites del Plan PRO. Solo podés contratar el Plan Total.`;
-        btnPRO.insertAdjacentElement('afterend', warn);
-    } else if (btnPRO) {
-        btnPRO.disabled = false;
-        btnPRO.title = '';
-    }
+    // Botón PRO desactivado temporalmente — no se muestra (showPRO=false en todos los configs)
 }
 
 async function suscribirPlan(plan, testMode) {
@@ -842,7 +831,7 @@ async function suscribirPlan(plan, testMode) {
                          || (_currentPlan === 'pro'   && plan === 'basico');
         const planLabel = { basico: 'Plan Básico', pro: 'Plan PRO', total: 'Plan Total' }[plan];
         const msg = isDowngrade
-            ? `¿Confirmás el cambio a ${planLabel}?\n\nSe cancelará tu suscripción actual y comenzará una nueva por $${plan==='basico'?'29.000':plan==='pro'?'59.000':'99.000'}/mes. El cambio es inmediato.`
+            ? `¿Confirmás el cambio a ${planLabel}?\n\nSe cancelará tu suscripción actual y comenzará una nueva por $${plan==='basico'?'19.000':'45.000'}/mes. El cambio es inmediato.`
             : `¿Confirmás el cambio a ${planLabel}?\n\nSe cancelará tu suscripción actual y comenzará una nueva con el precio del ${planLabel}.`;
         if (!confirm(msg)) return;
     }
