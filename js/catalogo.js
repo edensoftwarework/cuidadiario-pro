@@ -6,6 +6,27 @@
 
 'use strict';
 
+/** Categorías de insumos (value en BD = slug; label en UI) */
+const CATALOGO_CATEGORIAS = [
+    { value: 'medicamento',   label: 'Medicamento' },
+    { value: 'alimentos',     label: 'Alimentos' },
+    { value: 'cocina',        label: 'Cocina' },
+    { value: 'limpieza',      label: 'Limpieza' },
+    { value: 'higiene',       label: 'Higiene personal' },
+    { value: 'enfermeria',    label: 'Enfermería' },
+    { value: 'papeleria',     label: 'Papelería / Oficina' },
+    { value: 'mantenimiento', label: 'Mantenimiento' },
+    { value: 'otros',         label: 'Otros' },
+];
+
+const CATALOGO_FILTER_SIN_CATEGORIA = '_sin_categoria';
+
+function labelCategoria(value) {
+    if (!value) return 'Sin categoría';
+    const c = CATALOGO_CATEGORIAS.find(x => x.value === value);
+    return c ? c.label : value;
+}
+
 /** Pluraliza la unidad de medida de un insumo */
 function pluralUnidad(u) {
     if (!u) return '';
@@ -51,19 +72,7 @@ async function initCatalogo() {
         _populatePacienteSelectors();
     } catch (e) { /* continuar */ }
 
-    // Búsqueda en tiempo real
-    const searchInput = document.getElementById('catalogoSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            const q = searchInput.value.toLowerCase().trim();
-            const filtered = q ? _catalogoItems.filter(c =>
-                c.nombre.toLowerCase().includes(q) ||
-                (c.principio_activo || '').toLowerCase().includes(q) ||
-                (c.presentacion || '').toLowerCase().includes(q)
-            ) : _catalogoItems;
-            renderCatalogo(filtered);
-        });
-    }
+    _initCatalogoCategoriaControls();
 
     // Attach form handler
     const form = document.getElementById('formCatalogoItem');
@@ -71,6 +80,62 @@ async function initCatalogo() {
 
     // Iniciar con vista institucional
     await switchView('institucional');
+}
+
+function _initCatalogoCategoriaControls() {
+    const filterSel = document.getElementById('catalogoCategoriaFilter');
+    if (filterSel) {
+        filterSel.innerHTML = '<option value="">Todas</option>';
+        CATALOGO_CATEGORIAS.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.value;
+            opt.textContent = cat.label;
+            filterSel.appendChild(opt);
+        });
+        const sinOpt = document.createElement('option');
+        sinOpt.value = CATALOGO_FILTER_SIN_CATEGORIA;
+        sinOpt.textContent = 'Sin categoría';
+        filterSel.appendChild(sinOpt);
+        filterSel.addEventListener('change', applyCatalogoFilters);
+    }
+
+    const modalSel = document.getElementById('cCategoria');
+    if (modalSel) {
+        modalSel.innerHTML = '<option value="">— Sin categoría (ítems anteriores) —</option>';
+        CATALOGO_CATEGORIAS.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.value;
+            opt.textContent = cat.label;
+            modalSel.appendChild(opt);
+        });
+    }
+
+    const searchInput = document.getElementById('catalogoSearch');
+    if (searchInput) searchInput.addEventListener('input', applyCatalogoFilters);
+}
+
+function applyCatalogoFilters() {
+    const q = (document.getElementById('catalogoSearch')?.value || '').toLowerCase().trim();
+    const catFilter = document.getElementById('catalogoCategoriaFilter')?.value || '';
+
+    let list = _catalogoItems;
+
+    if (catFilter === CATALOGO_FILTER_SIN_CATEGORIA) {
+        list = list.filter(c => !c.categoria);
+    } else if (catFilter) {
+        list = list.filter(c => c.categoria === catFilter);
+    }
+
+    if (q) {
+        list = list.filter(c =>
+            c.nombre.toLowerCase().includes(q) ||
+            (c.principio_activo || '').toLowerCase().includes(q) ||
+            (c.presentacion || '').toLowerCase().includes(q) ||
+            labelCategoria(c.categoria).toLowerCase().includes(q)
+        );
+    }
+
+    renderCatalogo(list);
 }
 
 function _populatePacienteSelectors() {
@@ -156,7 +221,7 @@ async function loadCatalogo() {
     try {
         const params = _selectedPacienteId ? { paciente_id: _selectedPacienteId } : {};
         _catalogoItems = await API_B2B.getCatalogo(params);
-        renderCatalogo(_catalogoItems);
+        applyCatalogoFilters();
         renderStockBajoAlert();
     } catch (e) {
         showToast('Error al cargar catálogo', 'error');
@@ -197,12 +262,33 @@ function renderCatalogo(lista) {
         : 'Agregá los insumos que maneja la institución (medicamentos, materiales, elementos de stock) para llevar un inventario centralizado.';
 
     if (lista.length === 0) {
-        el.innerHTML = `<div class="empty-state">
-            <div class="empty-icon">📦</div>
-            <h3>${isPatientView ? 'Sin insumos del residente' : 'Catálogo vacío'}</h3>
-            <p>${emptyMsg}</p>
-            <button class="btn btn-primary" onclick="openModalCatalogoItem()">+ Agregar primer ítem</button>
-        </div>`;
+        const hasItems = _catalogoItems.length > 0;
+        const filterActive = (document.getElementById('catalogoSearch')?.value || '').trim() ||
+            (document.getElementById('catalogoCategoriaFilter')?.value || '');
+        const title = hasItems && filterActive ? 'Sin resultados' : (isPatientView ? 'Sin insumos del residente' : 'Catálogo vacío');
+        const msg = hasItems && filterActive
+            ? 'No hay ítems que coincidan con la búsqueda o el filtro de categoría.'
+            : emptyMsg;
+        el.replaceChildren();
+        const box = document.createElement('d' + 'iv');
+        box.className = 'empty-state';
+        const icon = document.createElement('d' + 'iv');
+        icon.className = 'empty-icon';
+        icon.textContent = '📦';
+        const h3 = document.createElement('h3');
+        h3.textContent = title;
+        const p = document.createElement('p');
+        p.textContent = msg;
+        box.append(icon, h3, p);
+        if (!hasItems || !filterActive) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-primary';
+            btn.textContent = '+ Agregar primer ítem';
+            btn.addEventListener('click', () => openModalCatalogoItem());
+            box.appendChild(btn);
+        }
+        el.appendChild(box);
         return;
     }
 
@@ -212,6 +298,7 @@ function renderCatalogo(lista) {
             <thead>
                 <tr style="border-bottom:2px solid var(--border-color);text-align:left">
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Ítem</th>
+                    <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Categoría</th>
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Presentación</th>
                     ${!isPatientView ? `<th style="padding:10px 8px;color:var(--text-secondary);font-weight:600">Residente</th>` : ''}
                     <th style="padding:10px 8px;color:var(--text-secondary);font-weight:600;text-align:center">Stock actual</th>
@@ -227,7 +314,10 @@ function renderCatalogo(lista) {
                     return `<tr style="border-bottom:1px solid var(--border-color)">
                         <td style="padding:10px 8px">
                             <div style="font-weight:600">${escapeHtml(c.nombre)}</div>
-                            ${c.principio_activo ? `<div class="text-muted" style="font-size:.82rem">${escapeHtml(c.principio_activo)}</div>` : ''}
+                            ${c.principio_activo ? `<span class="text-muted" style="font-size:.82rem;display:block">${escapeHtml(c.principio_activo)}</span>` : ''}
+                        </td>
+                        <td style="padding:10px 8px">
+                            <span class="badge badge-teal" style="font-size:.75rem">${escapeHtml(labelCategoria(c.categoria))}</span>
                         </td>
                         <td style="padding:10px 8px;color:var(--text-secondary)">${escapeHtml(c.presentacion || '—')}</td>
                         ${!isPatientView ? `<td style="padding:10px 8px">
@@ -280,6 +370,8 @@ function openModalCatalogoItem(id) {
         const item = _catalogoItems.find(c => c.id === id);
         if (item) {
             f.querySelector('[name="cNombre"]').value          = item.nombre || '';
+            const catSel = f.querySelector('[name="cCategoria"]');
+            if (catSel) catSel.value = item.categoria || '';
             f.querySelector('[name="cPrincipioActivo"]').value = item.principio_activo || '';
             f.querySelector('[name="cPresentacion"]').value    = item.presentacion || '';
             f.querySelector('[name="cStockActual"]').value     = item.stock_actual ?? 0;
@@ -309,6 +401,8 @@ function openModalCatalogoItem(id) {
             if (radioInst) radioInst.checked = true;
             onCatTipoChange('institucional');
         }
+        const catSelNew = f.querySelector('[name="cCategoria"]');
+        if (catSelNew) catSelNew.value = 'otros';
     }
 
     openModal('modalCatalogoItem');
@@ -338,6 +432,8 @@ async function handleSaveCatalogoItem(e) {
         return;
     }
 
+    const categoriaVal = f.querySelector('[name="cCategoria"]')?.value?.trim() || null;
+
     const data = {
         nombre:           f.querySelector('[name="cNombre"]').value.trim(),
         principio_activo: f.querySelector('[name="cPrincipioActivo"]').value.trim() || null,
@@ -346,10 +442,16 @@ async function handleSaveCatalogoItem(e) {
         stock_minimo:     parseInt(f.querySelector('[name="cStockMinimo"]').value) || 5,
         unidad:           f.querySelector('[name="cUnidad"]').value,
         paciente_id:      pacienteId,
+        categoria:          categoriaVal,
         // notas_restock se envía solo al editar (el backend lo usa si stock aumentó)
         notas_restock:    _editingCatalogoId ? (f.querySelector('[name="cNotasRestock"]')?.value?.trim() || null) : undefined,
     };
     if (!data.nombre) { showToast('El nombre es obligatorio', 'warning'); btn.disabled = false; btn.textContent = 'Guardar'; return; }
+    if (!_editingCatalogoId && !categoriaVal) {
+        showToast('Seleccioná una categoría', 'warning');
+        btn.disabled = false; btn.textContent = 'Guardar';
+        return;
+    }
 
     try {
         if (_editingCatalogoId) {
