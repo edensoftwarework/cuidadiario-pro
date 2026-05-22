@@ -223,6 +223,10 @@
                                     <span class="badge badge-gray" style="font-size:.9rem;padding:6px 14px">Cargando…</span>
                                 </div>
                                 <p id="planDesc" style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px"></p>
+                                <p style="font-size:.84rem;color:var(--text-secondary);margin-bottom:14px;padding:10px 12px;background:var(--bg-page);border-radius:8px;border:1px solid var(--border-color)">
+                                    📞 La contratación y gestión de planes se realiza por contacto directo con el desarrollador:
+                                    <strong style="color:var(--text-primary)">+54 2932 446373</strong>
+                                </p>
 
                                 <div id="planExpiryInfo" style="display:none;margin-bottom:16px"></div>
 
@@ -251,11 +255,11 @@
                                 </div>
 
                                 <div id="planActions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-                                    <button class="btn btn-primary btn-sm" id="btnSuscribirTotal" onclick="suscribirPlan('total', false)" style="display:none">🏆 Contratar Plan Total</button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="btnSuscribirTotal" onclick="contactarDesarrolladorPlan()" style="display:none">🏆 Contratar Plan Total</button>
                                     <!-- btnSuscribirPRO desactivado temporalmente: plan PRO no disponible -->
-                                    <button class="btn btn-primary btn-sm" id="btnSuscribirPRO" onclick="suscribirPlan('pro', false)" style="display:none !important;visibility:hidden">💳 Contratar Plan PRO</button>
-                                    <button class="btn btn-secondary btn-sm" id="btnSuscribirBasico" onclick="suscribirPlan('basico', false)" style="display:none">Contratar Plan Básico</button>
-                                    <button class="btn btn-danger btn-sm" id="btnCancelarSuscripcion" onclick="cancelarSuscripcion()" style="display:none">🚫 Cancelar suscripción</button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="btnSuscribirPRO" onclick="contactarDesarrolladorPlan()" style="display:none !important;visibility:hidden">💳 Contratar Plan PRO</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnSuscribirBasico" onclick="contactarDesarrolladorPlan()" style="display:none">Contratar Plan Básico</button>
+                                    <button type="button" class="btn btn-danger btn-sm" id="btnCancelarSuscripcion" onclick="contactarDesarrolladorPlan()" style="display:none">🚫 Cancelar suscripción</button>
                                 </div>
 
                                 <!-- Zona de test (oculta por defecto, visible con ?test=1 en la URL) -->
@@ -263,10 +267,10 @@
                                     <div style="font-size:.75rem;font-weight:700;color:#92400E;text-transform:uppercase;margin-bottom:8px">🧪 Modo test (1 día de prueba)</div>
                                     <div style="display:flex;gap:8px;flex-wrap:wrap">
                                         <!-- Test PRO desactivado: plan PRO no disponible -->
-                                        <button class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="suscribirPlan('basico', true)">Test Básico</button>
-                                        <button class="btn btn-sm btn-secondary" onclick="verificarPlan()">Verificar ahora</button>
+                                        <button type="button" class="btn btn-sm" style="background:#F59E0B;color:#fff;border:none" onclick="contactarDesarrolladorPlan()">Test Básico</button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="contactarDesarrolladorPlan()">Verificar ahora</button>
                                     </div>
-                                    <p style="font-size:.75rem;color:#92400E;margin-top:8px">Usa tus credenciales sandbox de MercadoPago. El trial de 1 día te permite verificar el flujo completo sin esperas.</p>
+                                    <p style="font-size:.75rem;color:#92400E;margin-top:8px">Los planes se gestionan por contacto directo al desarrollador (+54 2932 446373).</p>
                                 </div>
 
                                 <div id="planVerifyResult" style="margin-top:14px"></div>
@@ -481,12 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (new URLSearchParams(window.location.search).get('test') === '1') {
         const tz = document.getElementById('planTestZone');
         if (tz) tz.style.display = 'block';
-    }
-    // Si volvemos de MercadoPago con éxito, verificar automáticamente
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mp_success') === '1') {
-        const preapprovalId = params.get('preapproval_id') || null;
-        setTimeout(() => verificarPlan(preapprovalId), 800);
     }
 });
 </script>

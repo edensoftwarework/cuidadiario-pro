@@ -40,12 +40,8 @@ async function initConfiguracion() {
         cargarInstitucion();
         loadPermisos();
         await cargarEstadoPlan();
-        // Si llegamos desde el overlay de trial vencido con ?autoplan=xxx,
-        // disparar la suscripción automáticamente sin que el usuario tenga que
-        // buscar el botón correcto.
-        const _autoplan = new URLSearchParams(window.location.search).get('autoplan');
-        if (_autoplan && ['basico', 'total'].includes(_autoplan)) {  // 'pro' desactivado temporalmente
-            setTimeout(() => suscribirPlan(_autoplan, false), 300);
+        if (new URLSearchParams(window.location.search).get('autoplan')) {
+            setTimeout(() => contactarDesarrolladorPlan(), 400);
         }
     }
     loadNotifPrefs();
@@ -663,6 +659,17 @@ document.addEventListener('DOMContentLoaded', initConfiguracion);
 // ============================================
 // PLAN & SUSCRIPCIÓN
 // ============================================
+const CONTACTO_DESARROLLADOR_PLAN = '+54 2932 446373';
+
+function contactarDesarrolladorPlan() {
+    const msg = `Para contratar, cambiar o cancelar tu plan, contactá al desarrollador al ${CONTACTO_DESARROLLADOR_PLAN} (WhatsApp o llamada).`;
+    const result = document.getElementById('planVerifyResult');
+    if (result) {
+        result.innerHTML = `<div class="alert alert-info" style="font-size:.86rem;margin-top:0"><span class="alert-icon">📞</span>${escapeHtml(msg)}</div>`;
+    }
+    showToast(msg, 'info');
+}
+
 async function cargarEstadoPlan() {
     try {
         const inst = await API_B2B.get('/api/b2b/institucion');
@@ -825,6 +832,9 @@ function renderPlanBadge(plan, trialStartedAt = null, pacientesCount = 0, staffC
 }
 
 async function suscribirPlan(plan, testMode) {
+    contactarDesarrolladorPlan();
+    return;
+
     // Confirmación cuando ya hay un plan activo (upgrade o downgrade)
     if (['basico','pro','total'].includes(_currentPlan)) {
         const isDowngrade = (_currentPlan === 'total' && (plan === 'pro' || plan === 'basico'))
@@ -855,6 +865,9 @@ async function suscribirPlan(plan, testMode) {
 }
 
 async function verificarPlan(preapprovalId = null) {
+    contactarDesarrolladorPlan();
+    return;
+
     const btn    = document.getElementById('btnVerificarPlan');
     const result = document.getElementById('planVerifyResult');
     if (btn) { btn.disabled = true; btn.textContent = '🔄 Verificando…'; }
@@ -894,6 +907,9 @@ async function verificarPlan(preapprovalId = null) {
 }
 
 async function cancelarSuscripcion() {
+    contactarDesarrolladorPlan();
+    return;
+
     const planLabels = { basico: 'Plan Básico', pro: 'Plan PRO', total: 'Plan Total' };
     const planLabel  = planLabels[_currentPlan] || 'tu plan actual';
     if (!confirm(`¿Cancelar ${planLabel}?\n\nAl confirmar, se cancela la suscripción automática — no habrá más cobros. Tu acceso sigue activo hasta el vencimiento del período ya pagado.`)) return;
