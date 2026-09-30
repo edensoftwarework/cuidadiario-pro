@@ -97,7 +97,8 @@ function initTabs(defaultTab) {
             document.getElementById('tab-' + target)?.classList.add('active');
         });
     });
-    const tab = defaultTab || 'datos';
+    const allowedTabs = ['datos','medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos'];
+    const tab = allowedTabs.includes(defaultTab) ? defaultTab : 'datos';
     document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.click();
 }
 
@@ -183,7 +184,7 @@ function renderDatosTab(p) {
                 <div class="card-header"><span class="card-title">👨‍👩‍👧 Contacto Familiar</span></div>
                 <div class="card-body">
                     ${row('Nombre', p.contacto_familiar_nombre)}
-                    ${row('Teléfono', p.contacto_familiar_tel ? `<a href="tel:${p.contacto_familiar_tel}" style="color:var(--pro-primary)">${p.contacto_familiar_tel}</a>` : '—')}
+                    ${row('Teléfono', p.contacto_familiar_tel || '—', safeContactHref('tel', p.contacto_familiar_tel))}
                 </div>
             </div>
         </div>
@@ -193,10 +194,13 @@ function renderDatosTab(p) {
     `;
 }
 
-function row(label, val) {
+function row(label, val, href = null) {
+    const renderedValue = href
+        ? `<a href="${escapeHtml(href)}" style="color:var(--pro-primary)">${escapeHtml(val)}</a>`
+        : escapeHtml(val || '—');
     return `<div class="d-flex justify-between" style="padding:8px 0;border-bottom:1px solid var(--border-color)">
-        <span class="text-muted" style="font-size:.82rem">${label}</span>
-        <span class="fw-bold" style="font-size:.88rem;text-align:right">${val || '—'}</span>
+        <span class="text-muted" style="font-size:.82rem">${escapeHtml(label)}</span>
+        <span class="fw-bold" style="font-size:.88rem;text-align:right">${renderedValue}</span>
     </div>`;
 }
 
@@ -222,17 +226,6 @@ async function loadAllData() {
         _canLoad('documentos')   ? loadDocumentos()   : Promise.resolve(),
     ]);
 }
-
-// Refresh all data when offline queue syncs successfully (e.g. toma/tarea registrado sin internet)
-window.addEventListener('offlinesynccomplete', () => {
-    if (!_pacienteId) return;
-    if (_canLoad('medicamentos')) loadMedicamentos();
-    if (_canLoad('tareas'))       loadTareas();
-    if (_canLoad('sintomas'))     loadSintomas();
-    if (_canLoad('signos'))       loadSignos();
-    if (_canLoad('notas'))        loadNotas();
-    if (_canLoad('citas'))        loadCitas();
-});
 
 // ============================================
 // DOCUMENTOS ADJUNTOS
@@ -274,20 +267,27 @@ function renderDocumentos(lista) {
         const size = _formatBytes(d.tamanio_bytes);
         const canDel = _isAdmin || d.subido_nombre === API_B2B.getUser()?.nombre;
         return `
-        <div class="item-row" id="doc-row-${d.id}">
+        <div class="item-row" id="doc-row-${safeRecordId(d.id)}">
             <div class="item-icon badge-blue" style="font-size:1.2rem;min-width:40px;height:40px;display:flex;align-items:center;justify-content:center">${icon}</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(d.nombre_archivo)}</div>
                 <div class="item-subtitle">${size} · Subido por ${escapeHtml(d.subido_nombre || '—')} · ${formatDate(d.created_at)}</div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0">
-                <button class="btn btn-sm btn-secondary" onclick="API_B2B.downloadDocumento(${d.id}, '${escapeHtml(d.nombre_archivo).replace(/'/g, "\\'")}')">&#x2B07;&#xFE0F; Descargar</button>
-                ${canDel ? `<button class="btn btn-sm btn-danger" onclick="eliminarDocumento(${d.id})">&#x1F5D1;</button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="descargarDocumento(${safeRecordId(d.id)})">&#x2B07;&#xFE0F; Descargar</button>
+                ${canDel ? `<button class="btn btn-sm btn-danger" onclick="eliminarDocumento(${safeRecordId(d.id)})">&#x1F5D1;</button>` : ''}
             </div>
         </div>`;
     }).join('');
 
     el.innerHTML = toolbar + `<div class="item-list">${rows}</div>`;
+}
+
+function descargarDocumento(id) {
+    const safeId = safeRecordId(id);
+    const documento = _documentos.find(d => safeRecordId(d.id) === safeId);
+    if (!safeId || !documento) return;
+    API_B2B.downloadDocumento(safeId, documento.nombre_archivo || 'documento');
 }
 
 function _docIcon(mime, nombre) {
@@ -413,7 +413,7 @@ function renderHistorialTomas(lista) {
         <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-color)">
             <span style="flex-shrink:0;margin-top:1px;font-size:.95rem">✅</span>
             <div style="flex:1;min-width:0">
-                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${(t.cantidad && t.cantidad > 1) ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${t.cantidad}</span>` : ''}</div>
+                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${safeFiniteNumber(t.cantidad) > 1 ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${safeFiniteNumber(t.cantidad)}</span>` : ''}</div>
                 <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
                     ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
                 </div>
@@ -458,15 +458,15 @@ function renderMedicamentos(lista) {
                 <div class="item-meta">
                     ${ !_isReadOnly ? (
                         m.catalogo_id
-                            ? `<span class="badge ${(m.catalogo_stock??0) <= 0 ? 'badge-red' : (m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${m.catalogo_stock??0}${m.catalogo_unidad ? ' '+_pluralUnidad(m.catalogo_unidad) : ''}${(m.catalogo_stock??0) <= (m.catalogo_stock_minimo??5) ? ' ⚠️' : ''}</span>`
-                            : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${m.stock}</span>` : '<span class="badge badge-gray" style="opacity:.65">Sin stock</span>')
+                            ? `<span class="badge ${safeFiniteNumber(m.catalogo_stock) <= 0 ? 'badge-red' : safeFiniteNumber(m.catalogo_stock) <= safeFiniteNumber(m.catalogo_stock_minimo, 5) ? 'badge-orange' : 'badge-teal'}">📦 Stock: ${safeFiniteNumber(m.catalogo_stock)}${m.catalogo_unidad ? ' '+escapeHtml(_pluralUnidad(m.catalogo_unidad)) : ''}${safeFiniteNumber(m.catalogo_stock) <= safeFiniteNumber(m.catalogo_stock_minimo, 5) ? ' ⚠️' : ''}</span>`
+                            : (m.stock !== null ? `<span class="badge badge-teal">Stock: ${safeFiniteNumber(m.stock)}</span>` : '<span class="badge badge-gray" style="opacity:.65">Sin stock</span>')
                     ) : '' }
                 </div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${m.id},'${escapeHtml(m.nombre)}')">✅ Toma</button>` : ''}
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${m.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteMed(${m.id})">🗑</button>` : ''}
+                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${safeRecordId(m.id)})">✅ Toma</button>` : ''}
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${safeRecordId(m.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteMed(${safeRecordId(m.id)})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -672,7 +672,7 @@ async function handleCrearInsumoRapido(e) {
             const sel = document.getElementById('mCatalogoPacSelect');
             if (sel) {
                 sel.innerHTML = '<option value="">— Sin vincular al del residente —</option>' +
-                    _catalogoPaciente.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${c.stock_actual ?? 0} ${escapeHtml(c.unidad || '')})</option>`).join('');
+                    _catalogoPaciente.map(c => `<option value="${safeRecordId(c.id)}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${safeFiniteNumber(c.stock_actual)} ${escapeHtml(c.unidad || '')})</option>`).join('');
                 sel.value = String(newItem.id);
                 onCatalogoSelectChange('pac', sel);
             }
@@ -681,7 +681,7 @@ async function handleCrearInsumoRapido(e) {
             const sel = document.getElementById('mCatalogoInstSelect');
             if (sel) {
                 sel.innerHTML = '<option value="">— Sin vincular al institucional —</option>' +
-                    _catalogo.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${c.stock_actual ?? 0} ${escapeHtml(c.unidad || '')})</option>`).join('');
+                    _catalogo.map(c => `<option value="${safeRecordId(c.id)}">${escapeHtml(c.nombre)}${c.presentacion ? ' — ' + escapeHtml(c.presentacion) : ''} (${safeFiniteNumber(c.stock_actual)} ${escapeHtml(c.unidad || '')})</option>`).join('');
                 sel.value = String(newItem.id);
                 onCatalogoSelectChange('inst', sel);
             }
@@ -697,9 +697,10 @@ async function handleCrearInsumoRapido(e) {
     }
 }
 
-function registrarToma(id, nombre) {
+function registrarToma(id) {
     // Block toma if stock is depleted
-    const med = _meds.find(m => m.id === id);
+    const med = _meds.find(m => safeRecordId(m.id) === safeRecordId(id));
+    const nombre = med?.nombre || 'medicamento';
     if (med) {
         if (med.catalogo_id) {
             // Stock managed by catalog (institutional or patient-specific)
@@ -836,7 +837,7 @@ function renderCitasHistorial(lista) {
             </div>
             ${!_isReadOnly ? `
             <div class="item-actions">
-                <button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${h.id})" title="Reutilizar cita">🔁 Reutilizar</button>
+                <button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${safeRecordId(h.id)})" title="Reutilizar cita">🔁 Reutilizar</button>
             </div>` : ''}
         </div>`).join('')}</div>`;
 }
@@ -857,12 +858,12 @@ function renderCitas(lista) {
                 <div class="item-subtitle">📆 ${formatDateTime(c.fecha)} ${c.especialidad ? '· ' + escapeHtml(c.especialidad) : ''}</div>
                 ${c.medico ? `<div class="item-subtitle">🩺 Dr. ${escapeHtml(c.medico)}</div>` : ''}
                 ${c.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(c.lugar)}</div>` : ''}
-                <div class="item-meta"><span class="badge ${estadoColor[c.estado] || 'badge-gray'}">${c.estado || 'pendiente'}</span></div>
+                <div class="item-meta"><span class="badge ${estadoColor[c.estado] || 'badge-gray'}">${escapeHtml(c.estado || 'pendiente')}</span></div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${c.id})" title="Reutilizar">🔁</button>
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCita(${c.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCita(${c.id})">&#x1F5D1;</button>` : ''}
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary" onclick="openModalReutilizarCita(${safeRecordId(c.id)})" title="Reutilizar">🔁</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCita(${safeRecordId(c.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCita(${safeRecordId(c.id)})">&#x1F5D1;</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -953,15 +954,15 @@ function renderTareas(lista) {
                 <div class="item-title">${escapeHtml(t.titulo)}</div>
                 ${t.descripcion ? `<div class="item-subtitle">${escapeHtml(t.descripcion)}</div>` : ''}
                 <div class="item-meta">
-                    ${t.hora ? `<span class="badge badge-gray">🕐 ${t.hora}</span>` : ''}
+                    ${t.hora ? `<span class="badge badge-gray">🕐 ${escapeHtml(t.hora)}</span>` : ''}
                     ${t.frecuencia ? `<span class="badge badge-gray">🔄 ${escapeHtml(t.frecuencia)}</span>` : ''}
-                    ${t.categoria ? `<span class="badge ${catColors[t.categoria] || 'badge-gray'}">${t.categoria}</span>` : ''}
+                    ${t.categoria ? `<span class="badge ${catColors[t.categoria] || 'badge-gray'}">${escapeHtml(t.categoria)}</span>` : ''}
                 </div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="completarTarea(${t.id},'${escapeHtml(t.titulo)}')">✅ Completar</button>` : ''}
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${t.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${t.id})">🗑</button>` : ''}
+                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="completarTarea(${safeRecordId(t.id)})">✅ Completar</button>` : ''}
+                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalTarea(${safeRecordId(t.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTarea(${safeRecordId(t.id)})">🗑</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -1023,7 +1024,8 @@ async function handleSaveTarea(e) {
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalTarea', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
-function completarTarea(id, titulo) {
+function completarTarea(id) {
+    const titulo = _tareas.find(t => safeRecordId(t.id) === safeRecordId(id))?.titulo || 'tarea';
     document.getElementById('tareaInfo').textContent = `Completar: ${titulo}`;
     document.getElementById('tareaTareaId').value = id;
     document.getElementById('formCompletarTarea').reset();
@@ -1070,14 +1072,14 @@ function renderSintomas(lista) {
             <div class="item-body">
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
-                    ${s.intensidad !== null ? `<span class="badge ${s.intensidad >= 7 ? 'badge-red' : s.intensidad >= 4 ? 'badge-orange' : 'badge-teal'}">Intensidad: ${s.intensidad}/10</span>` : ''}
+                    ${s.intensidad !== null ? `<span class="badge ${safeFiniteNumber(s.intensidad) >= 7 ? 'badge-red' : safeFiniteNumber(s.intensidad) >= 4 ? 'badge-orange' : 'badge-teal'}">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
                     <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
                     <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || '—')}</span>
                 </div>
             </div>
             ${!_isReadOnly ? `<div class="item-actions">
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalSintoma(${s.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteSintoma(${s.id})">🗑</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalSintoma(${safeRecordId(s.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteSintoma(${safeRecordId(s.id)})">🗑</button>
             </div>` : ''}
         </div>`).join('')}</div>`;
 }
@@ -1157,11 +1159,11 @@ function renderSignos(lista) {
     const historial = lista.slice(0, 20).map(s => {
         const tipo = SIGNOS_TIPOS.find(t => t.id === s.tipo);
         return `<tr>
-            <td>${tipo?.icon || ''} ${tipo?.label || s.tipo}</td>
+            <td>${tipo?.icon || ''} ${escapeHtml(tipo?.label || s.tipo)}</td>
             <td class="fw-bold">${escapeHtml(s.valor)} <span class="text-muted">${tipo?.unidad || ''}</span></td>
             <td class="text-muted">${formatDateTime(s.fecha)}</td>
             <td class="text-muted">${escapeHtml(s.registrador_nombre || '—')}</td>
-            ${!_isReadOnly ? `<td><button class="btn btn-danger btn-icon btn-sm" onclick="deleteSigno(${s.id})">🗑</button></td>` : '<td></td>'}
+            ${!_isReadOnly ? `<td><button class="btn btn-danger btn-icon btn-sm" onclick="deleteSigno(${safeRecordId(s.id)})">🗑</button></td>` : '<td></td>'}
         </tr>`;
     }).join('');
 
@@ -1217,22 +1219,26 @@ function renderContactos(lista) {
     if (!el) return;
     const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} contacto${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalContacto()">+ Agregar</button></div>`;
     if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📞</div><h3>Sin contactos de emergencia</h3></div>`; return; }
-    el.innerHTML = toolbar + `<div class="item-list">${lista.map(c => `
+    el.innerHTML = toolbar + `<div class="item-list">${lista.map(c => {
+        const telHref = safeContactHref('tel', c.telefono);
+        const emailHref = safeContactHref('mailto', c.email);
+        return `
         <div class="item-row" ${c.es_principal ? 'style="border-left:3px solid var(--pro-success-light)"' : ''}>
             <div class="item-icon badge-teal">👤</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(c.nombre)} ${c.es_principal ? '<span class="badge badge-green">Principal</span>' : ''}</div>
                 ${c.relacion ? `<div class="item-subtitle">${escapeHtml(c.relacion)}</div>` : ''}
                 <div class="item-meta">
-                    ${c.telefono ? `<a href="tel:${c.telefono}" class="badge badge-blue">📞 ${escapeHtml(c.telefono)}</a>` : ''}
-                    ${c.email ? `<a href="mailto:${c.email}" class="badge badge-gray">✉️ ${escapeHtml(c.email)}</a>` : ''}
+                    ${c.telefono ? telHref ? `<a href="${escapeHtml(telHref)}" class="badge badge-blue">📞 ${escapeHtml(c.telefono)}</a>` : `<span class="badge badge-blue">📞 ${escapeHtml(c.telefono)}</span>` : ''}
+                    ${c.email ? emailHref ? `<a href="${escapeHtml(emailHref)}" class="badge badge-gray">✉️ ${escapeHtml(c.email)}</a>` : `<span class="badge badge-gray">✉️ ${escapeHtml(c.email)}</span>` : ''}
                 </div>
             </div>
             ${!_isReadOnly ? `<div class="item-actions">
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalContacto(${c.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteContacto(${c.id})">🗑</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalContacto(${safeRecordId(c.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteContacto(${safeRecordId(c.id)})">🗑</button>
             </div>` : ''}
-        </div>`).join('')}</div>`;
+        </div>`;
+    }).join('')}</div>`;
 }
 
 let _editingContactoId = null;
@@ -1292,8 +1298,8 @@ function renderNotas(lista) {
                 </div>
             </div>
             ${!_isReadOnly ? `<div class="item-actions">
-                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalNota(${n.id})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteNota(${n.id})">🗑</button>
+                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalNota(${safeRecordId(n.id)})">✏️</button>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteNota(${safeRecordId(n.id)})">🗑</button>
             </div>` : ''}
         </div>`).join('')}</div>`;
 }

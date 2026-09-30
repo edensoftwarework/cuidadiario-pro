@@ -111,8 +111,16 @@
 
     function showAlert(msg, type = 'danger') {
         const icons = { danger: '❌', success: '✅', warning: '⚠️', info: 'ℹ️' };
-        document.getElementById('alertMsg').innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icons[type] || '❌'}</span>${msg}</div>`;
-        document.getElementById('alertMsg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const safeType = Object.prototype.hasOwnProperty.call(icons, type) ? type : 'danger';
+        const host = document.getElementById('alertMsg');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${safeType}`;
+        const icon = document.createElement('span');
+        icon.className = 'alert-icon';
+        icon.textContent = icons[safeType];
+        alert.append(icon, document.createTextNode(msg == null ? '' : String(msg)));
+        host.replaceChildren(alert);
+        host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // Cuentas de prueba que no necesitan validación estricta ni verificación de email
@@ -172,7 +180,7 @@
                     <h2 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:8px">¡Cuenta creada!</h2>
                     <p style="font-size:.92rem;color:var(--text-secondary);margin-bottom:8px;line-height:1.6">
                         Te enviamos un email de confirmación a:<br>
-                        <strong style="color:var(--text-primary)">${email}</strong>
+                        <strong id="registeredEmail" style="color:var(--text-primary)"></strong>
                     </p>
                     <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:24px;line-height:1.6">
                         Revisá tu bandeja de entrada (y la carpeta de spam) y hacé clic en el enlace para activar tu cuenta.<br>
@@ -198,6 +206,8 @@
                     </button>
                 </div>
             `;
+            const registeredEmail = card.querySelector('#registeredEmail');
+            if (registeredEmail) registeredEmail.textContent = email;
             card.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
             showAlert(err.message);

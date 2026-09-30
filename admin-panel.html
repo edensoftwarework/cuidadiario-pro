@@ -256,7 +256,7 @@
             if (pac > limPac) parts.push(`${pac} pacientes activos (máx. ${limPac})`);
             if (stf > limStf) parts.push(`${stf} staff activo (máx. ${limStf})`);
             const planLabel = plan === 'basico' ? 'Básico' : 'PRO';
-            warn.innerHTML  = `⚠️ La institución <strong>ID ${_lastQueryData.id}</strong> tiene ${parts.join(' y ')} — no puede usar Plan ${planLabel}. Asigná Plan Total.`;
+            warn.textContent = `⚠️ La institución ID ${Number(_lastQueryData.id) || 0} tiene ${parts.join(' y ')} — no puede usar Plan ${planLabel}. Asigná Plan Total.`;
             warn.style.display = 'block';
         } else {
             warn.style.display = 'none';
@@ -278,7 +278,7 @@
                 showResult(res, 'error', '❌ Error', data.error || `HTTP ${r.status}`);
                 addLog(`❌ query inst ${id} — ${data.error}`, 'err');
             } else {
-                showResult(res, 'ok', `🏥 ${escHtml(data.nombre)}`, buildInstInfo(data));
+                showResult(res, 'ok', `🏥 ${data.nombre || ''}`, buildInstInfo(data), true);
                 addLog(`🔍 inst ${data.id} (${data.nombre}) → plan: ${data.plan}`, 'ok');
                 _lastQueryData = data;
                 document.getElementById('instId').value = data.id; // auto-completar en sección Asignar Plan
@@ -290,8 +290,9 @@
     }
 
     function buildInstInfo(d) {
-        const planLabel = planText(d.plan);
-        const planBadge = `<span class="plan-badge plan-${d.plan}">${planLabel}</span>`;
+        const safePlan = ['free','basico','pro','total'].includes(d.plan) ? d.plan : 'free';
+        const planLabel = planText(safePlan);
+        const planBadge = `<span class="plan-badge plan-${safePlan}">${planLabel}</span>`;
 
         let expiryLine = '';
         if (d.plan !== 'free' && d.plan_manual_expires_at) {
@@ -319,12 +320,12 @@
 
         return `
         <div class="info-grid">
-            <div class="info-row"><span class="info-label">ID</span><span class="info-val">${d.id}</span></div>
+            <div class="info-row"><span class="info-label">ID</span><span class="info-val">${Number(d.id) || 0}</span></div>
             <div class="info-row"><span class="info-label">Tipo</span><span class="info-val">${escHtml(d.tipo || '—')}</span></div>
             <div class="info-row"><span class="info-label">Plan activo</span><span class="info-val">${planBadge}</span></div>
             <div class="info-row"><span class="info-label">Estado</span><span class="info-val">${d.activa ? '🟢 Activa' : '🔴 Inactiva'}</span></div>
-            <div class="info-row"><span class="info-label">Pacientes activos</span><span class="info-val">${d.pacientes_count ?? '—'}</span></div>
-            <div class="info-row"><span class="info-label">Staff activo</span><span class="info-val">${d.staff_count ?? '—'}</span></div>
+            <div class="info-row"><span class="info-label">Pacientes activos</span><span class="info-val">${Number.isFinite(Number(d.pacientes_count)) ? Number(d.pacientes_count) : '—'}</span></div>
+            <div class="info-row"><span class="info-label">Staff activo</span><span class="info-val">${Number.isFinite(Number(d.staff_count)) ? Number(d.staff_count) : '—'}</span></div>
             <div class="info-row"><span class="info-label">Email</span><span class="info-val">${escHtml(d.email || '—')}</span></div>
             <div class="info-row"><span class="info-label">Teléfono</span><span class="info-val">${escHtml(d.telefono || '—')}</span></div>
             ${expiryLine}
@@ -357,11 +358,11 @@
                 addLog(`❌ set-plan inst ${id} → ${plan} — ${data.error}`, 'err');
             } else if (data.test_mode) {
                 showResult(res, 'ok', '🧪 Plan de test activado',
-                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${Number(data.institucion_id) || 0})<br>
                      Plan: <span class="plan-badge" style="background:#EDE9FE;color:#5B21B6">Free vencido (test)</span><br>
                      <span style="font-size:.82rem;color:#5B21B6">La institución verá la pantalla de trial expirado. Para revertir, asigná un plan real.</span>
                      ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
-                );
+                , true);
                 addLog(`🧪 TEST inst ${data.institucion_id} (${data.nombre}) → free_expired`, 'ok');
                 document.getElementById('instId').value = '';
                 document.getElementById('planNote').value = '';
@@ -369,11 +370,11 @@
                 const trialEnd = new Date(data.trial_started_at);
                 trialEnd.setDate(trialEnd.getDate() + 60);
                 showResult(res, 'ok', '🔄 Trial reiniciado',
-                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${Number(data.institucion_id) || 0})<br>
                      Plan: <span class="plan-badge plan-free">Free (trial activo)</span><br>
                      <span style="font-size:.82rem;color:#065F46">Nuevo vencimiento del trial: <strong>${trialEnd.toLocaleDateString('es-AR')}</strong></span>
                      ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
-                );
+                , true);
                 addLog(`🔄 TRIAL RESET inst ${data.institucion_id} (${data.nombre}) → vence ${trialEnd.toLocaleDateString('es-AR')}`, 'ok');
                 document.getElementById('instId').value = '';
                 document.getElementById('planNote').value = '';
@@ -381,11 +382,12 @@
                 const expStr = data.plan_manual_expires_at
                     ? ` · Vence el ${new Date(data.plan_manual_expires_at).toLocaleDateString('es-AR')}`
                     : (plan !== 'free' ? ' · Sin vencimiento' : '');
+                const responsePlan = ['free','basico','pro','total'].includes(data.plan) ? data.plan : 'free';
                 showResult(res, 'ok', '✅ Plan activado',
-                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id})<br>
-                     Plan: <span class="plan-badge plan-${data.plan}">${planText(data.plan)}</span>${expStr}
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${Number(data.institucion_id) || 0})<br>
+                     Plan: <span class="plan-badge plan-${responsePlan}">${planText(responsePlan)}</span>${expStr}
                      ${note ? `<br><span style="color:#6B7280;font-size:.8rem">📝 ${escHtml(note)}</span>` : ''}`
-                );
+                , true);
                 const expiryLog = data.plan_manual_expires_at ? ` | vence ${new Date(data.plan_manual_expires_at).toLocaleDateString('es-AR')}` : '';
                 addLog(`✅ inst ${data.institucion_id} (${data.nombre}) → ${plan}${expiryLog}${note ? ' | ' + note : ''}`, 'ok');
                 document.getElementById('instId').value = '';
@@ -417,9 +419,9 @@
                 addLog(`❌ remove-plan inst ${id} — ${data.error}`, 'err');
             } else {
                 showResult(res, 'ok', '🚫 Plan removido correctamente',
-                    `<strong>${escHtml(data.nombre)}</strong> (ID ${data.institucion_id}) ahora está en modo <span class="plan-badge plan-free">Free</span>.<br>
+                    `<strong>${escHtml(data.nombre)}</strong> (ID ${Number(data.institucion_id) || 0}) ahora está en modo <span class="plan-badge plan-free">Free</span>.<br>
                      <span style="font-size:.82rem;color:#6B7280">La institución puede seguir accediendo en modo lectura. Para reactivarla, asignale un plan nuevo.</span>`
-                );
+                , true);
                 addLog(`🚫 inst ${data.institucion_id} (${data.nombre}) → plan removido (free)`, 'ok');
                 document.getElementById('removeId').value = '';
             }
@@ -431,12 +433,18 @@
 
     // ── Helpers ──
     function planText(plan) {
-        return { free: '🔓 Free', basico: '✅ Básico', pro: '⭐ PRO', total: '🏆 Total' }[plan] || plan;
+        return { free: '🔓 Free', basico: '✅ Básico', pro: '⭐ PRO', total: '🏆 Total' }[plan] || 'Desconocido';
     }
 
-    function showResult(el, type, title, body) {
-        el.className = `result ${type}`;
-        el.innerHTML = `<div class="res-title">${title}</div>${body}`;
+    function showResult(el, type, title, body, trustedStructure = false) {
+        el.className = `result ${type === 'ok' ? 'ok' : 'error'}`;
+        const titleEl = document.createElement('div');
+        titleEl.className = 'res-title';
+        titleEl.textContent = title == null ? '' : String(title);
+        const bodyEl = document.createElement('div');
+        if (trustedStructure) bodyEl.innerHTML = body;
+        else bodyEl.textContent = body == null ? '' : String(body);
+        el.replaceChildren(titleEl, bodyEl);
         el.style.display = 'block';
     }
 
@@ -453,8 +461,8 @@
     }
 
     function escHtml(s) {
-        if (!s) return '';
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     // Enter en login

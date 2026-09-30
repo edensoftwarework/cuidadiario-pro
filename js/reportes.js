@@ -9,7 +9,7 @@ let _pacientes = [];
 let _reporteData = null;
 
 async function initReportes() {
-    requireAuth();
+    if (!requireAuth()) return;
     requireRole('admin_institucion', 'medico', 'cuidador_staff');
     initSidebar();
     populateSidebarUser();
@@ -182,7 +182,7 @@ function renderReporte(data, checks) {
         document.getElementById('reporteSignosBody').innerHTML = `<table class="table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Valor</th><th>Unidad</th><th>Registrado por</th></tr></thead><tbody>
             ${signos.map(g => { const ts = tipoSignoBadge(g.tipo); return `<tr>
                 <td>${formatDateTime(g.fecha)}</td>
-                <td><span class="badge ${ts.cls}">${ts.icon} ${g.tipo ? g.tipo.replace(/_/g,' ') : '—'}</span></td>
+                <td><span class="badge ${ts.cls}">${ts.icon} ${escapeHtml(g.tipo ? g.tipo.replace(/_/g,' ') : '—')}</span></td>
                 <td><strong>${escapeHtml(String(g.valor))}</strong></td>
                 <td>${escapeHtml(g.unidad || '—')}</td>
                 <td>${escapeHtml(g.registrador_nombre || '—')}</td>
@@ -235,13 +235,13 @@ function renderReporte(data, checks) {
 // Helpers visuales
 function citaEstadoBadge(estado) {
     const map = { pendiente: 'badge-warning', realizada: 'badge-success', cancelada: 'badge-danger' };
-    return `<span class="badge ${map[estado] || 'badge-secondary'}">${estado || '—'}</span>`;
+    return `<span class="badge ${map[estado] || 'badge-secondary'}">${escapeHtml(estado || '—')}</span>`;
 }
 
 function intensidadBadge(v) {
     if (!v) return '—';
     const cls = v <= 3 ? 'badge-success' : v <= 6 ? 'badge-warning' : 'badge-danger';
-    return `<span class="badge ${cls}">${v}/10</span>`;
+    return `<span class="badge ${cls}">${safeFiniteNumber(v)}/10</span>`;
 }
 
 document.addEventListener('DOMContentLoaded', initReportes);

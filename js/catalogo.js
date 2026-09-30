@@ -190,7 +190,7 @@ async function switchView(view) {
         }
         if (_selectedPacienteId) {
             const pac = _pacientesList.find(p => p.id === _selectedPacienteId);
-            if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? escapeHtml((pac.apellido + ' ' + pac.nombre).trim()) : 'residente'}`;
+            if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente'}`;
             await loadCatalogo();
         } else {
             document.getElementById('catalogoList').innerHTML =
@@ -207,7 +207,7 @@ async function onPacienteSelectorChange() {
     const cardTitle = document.getElementById('catalogoCardTitle');
     if (_selectedPacienteId) {
         const pac = _pacientesList.find(p => p.id === _selectedPacienteId);
-        if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? escapeHtml((pac.apellido + ' ' + pac.nombre).trim()) : 'residente'}`;
+        if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente'}`;
         await loadCatalogo();
     } else {
         if (cardTitle) cardTitle.textContent = '👤 Insumos del residente';
@@ -242,8 +242,8 @@ function renderStockBajoAlert() {
                 </span>
                 <span style="font-weight:600">${escapeHtml(c.nombre)}</span>
                 ${c.paciente_nombre ? `<span class="badge badge-purple" style="font-size:.7rem">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</span>` : ''}
-                <span class="text-muted">${c.stock_actual} / ${c.stock_minimo ?? 5} ${pluralUnidad(c.unidad)}</span>
-                <button class="btn btn-sm btn-secondary" onclick="openModalCatalogoItem(${c.id})" style="margin-left:auto">
+                <span class="text-muted">${safeFiniteNumber(c.stock_actual)} / ${safeFiniteNumber(c.stock_minimo, 5)} ${escapeHtml(pluralUnidad(c.unidad))}</span>
+                <button class="btn btn-sm btn-secondary" onclick="openModalCatalogoItem(${safeRecordId(c.id)})" style="margin-left:auto">
                     + Reponer stock
                 </button>
             </div>`).join('');
@@ -323,8 +323,8 @@ function renderCatalogo(lista) {
                         ${!isPatientView ? `<td style="padding:10px 8px">
                             ${c.paciente_nombre ? `<span class="badge badge-purple" style="font-size:.75rem">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</span>` : '<span class="text-muted" style="font-size:.8rem">General</span>'}
                         </td>` : ''}
-                        <td style="padding:10px 8px;text-align:center;font-weight:700;font-size:1.1rem;color:${empty ? 'var(--pro-danger)' : low ? '#E65100' : 'var(--pro-success)'}">${c.stock_actual}</td>
-                        <td style="padding:10px 8px;text-align:center;color:var(--text-secondary)">${c.stock_minimo ?? 5}</td>
+                        <td style="padding:10px 8px;text-align:center;font-weight:700;font-size:1.1rem;color:${empty ? 'var(--pro-danger)' : low ? '#E65100' : 'var(--pro-success)'}">${safeFiniteNumber(c.stock_actual)}</td>
+                        <td style="padding:10px 8px;text-align:center;color:var(--text-secondary)">${safeFiniteNumber(c.stock_minimo, 5)}</td>
                         <td style="padding:10px 8px;text-align:center">
                             <span class="badge ${empty ? 'badge-red' : low ? 'badge-orange' : 'badge-green'}">
                                 ${empty ? '❌ Sin stock' : low ? '⚠️ Bajo' : '✅ OK'}
@@ -332,8 +332,8 @@ function renderCatalogo(lista) {
                         </td>
                         <td style="padding:10px 8px;text-align:right">
                             <div class="d-flex gap-8 justify-end">
-                                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${c.id})" title="Editar">✏️</button>
-                                ${_catalogoIsAdmin ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${c.id})" title="Eliminar">🗑</button>` : ''}
+                                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${safeRecordId(c.id)})" title="Editar">✏️</button>
+                                ${_catalogoIsAdmin ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${safeRecordId(c.id)})" title="Eliminar">🗑</button>` : ''}
                             </div>
                         </td>
                     </tr>`;
@@ -522,10 +522,10 @@ async function loadRestockHistorial(catalogoId) {
         list.innerHTML = historial.map(h => `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:.79rem;gap:8px">
                 <div style="min-width:0">
-                    <strong style="color:var(--success)">+${h.cantidad_repuesta}</strong>
+                    <strong style="color:var(--success)">+${safeFiniteNumber(h.cantidad_repuesta)}</strong>
                     <span style="color:var(--text-primary)"> ${escapeHtml(h.nombre_item)}</span>
                     ${h.notas ? `<br><em style="color:var(--text-secondary)">${escapeHtml(h.notas)}</em>` : ''}
-                    <br><span style="color:var(--text-secondary)">${h.stock_anterior} → ${h.stock_nuevo} · ${escapeHtml(h.registrador || 'Sistema')}</span>
+                    <br><span style="color:var(--text-secondary)">${safeFiniteNumber(h.stock_anterior)} → ${safeFiniteNumber(h.stock_nuevo)} · ${escapeHtml(h.registrador || 'Sistema')}</span>
                 </div>
                 <span style="color:var(--text-secondary);white-space:nowrap;flex-shrink:0">${formatDate(h.created_at)}</span>
             </div>

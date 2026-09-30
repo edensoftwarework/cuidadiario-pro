@@ -72,7 +72,7 @@ function renderMisPacientes(lista) {
         return `
         <div class="card" style="overflow:visible${isEgresado ? ';opacity:.72' : ''}">
             <div style="${headerBg};padding:16px;display:flex;align-items:center;gap:12px;border-radius:10px 10px 0 0">
-                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff">${isEgresado ? '🚪' : (p.nombre||'P').charAt(0).toUpperCase()}</div>
+                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff">${isEgresado ? '🚪' : escapeHtml((p.nombre||'P').charAt(0).toUpperCase())}</div>
                 <div style="flex:1;min-width:0">
                     <div style="color:#fff;font-weight:700;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                     <div style="color:rgba(255,255,255,0.75);font-size:0.78rem">
@@ -86,14 +86,14 @@ function renderMisPacientes(lista) {
                 ${p.diagnostico ? `<div class="mb-8"><span class="badge badge-${isEgresado ? 'gray' : 'blue'}">${escapeHtml(p.diagnostico)}</span></div>` : ''}
                 ${!isEgresado ? `
                 <div class="d-flex gap-8 flex-wrap mt-8">
-                    <a href="paciente.html?id=${p.id}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1">💊 Medicamentos</a>
-                    <a href="paciente.html?id=${p.id}&tab=tareas"      class="btn btn-sm btn-secondary" style="flex:1">&#x2705; Tareas</a>
+                    <a href="paciente.html?id=${safeRecordId(p.id)}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1">💊 Medicamentos</a>
+                    <a href="paciente.html?id=${safeRecordId(p.id)}&tab=tareas"      class="btn btn-sm btn-secondary" style="flex:1">&#x2705; Tareas</a>
                 </div>
                 <div class="d-flex gap-8 flex-wrap mt-8">
-                    <a href="paciente.html?id=${p.id}&tab=sintomas"    class="btn btn-sm btn-secondary" style="flex:1">🩺 Síntomas</a>
-                    <a href="paciente.html?id=${p.id}&tab=signos"      class="btn btn-sm btn-secondary" style="flex:1">❤️ Signos</a>
+                    <a href="paciente.html?id=${safeRecordId(p.id)}&tab=sintomas"    class="btn btn-sm btn-secondary" style="flex:1">🩺 Síntomas</a>
+                    <a href="paciente.html?id=${safeRecordId(p.id)}&tab=signos"      class="btn btn-sm btn-secondary" style="flex:1">❤️ Signos</a>
                 </div>` : ''}
-                <a href="paciente.html?id=${p.id}" class="btn btn-${isEgresado ? 'secondary' : 'primary'} btn-sm btn-block mt-12">${isEgresado ? '📋 Ver historial' : 'Ver ficha completa →'}</a>
+                <a href="paciente.html?id=${safeRecordId(p.id)}" class="btn btn-${isEgresado ? 'secondary' : 'primary'} btn-sm btn-block mt-12">${isEgresado ? '📋 Ver historial' : 'Ver ficha completa →'}</a>
             </div>
         </div>`;
     };

@@ -7,6 +7,8 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
+// Paquete P0-2/P0-3/P0-8: este cambio de script dispara un install que recarga STATIC_ASSETS
+// dentro del mismo cache, sin eliminar entradas estáticas ajenas/no-B2B.
 const CACHE_NAME = 'cuidadiario-pro-v6';
 const CACHE_NAME_API = 'cuidadiario-pro-api-v6';
 
@@ -14,9 +16,11 @@ const STATIC_ASSETS = [
     './',
     './index.html',
     './landing.html',
+    './login.html',
     './register.html',
     './verify-email.html',
     './reset-password.html',
+    './admin-panel.html',
     './pages/dashboard.html',
     './pages/pacientes.html',
     './pages/paciente.html',
@@ -41,7 +45,6 @@ const STATIC_ASSETS = [
     './js/catalogo.js',
     './js/configuracion.js',
     './manifest.json',
-    './login.html',
     './icons/icon-192.png',
     './icons/icon-512.png'
 ];
@@ -209,7 +212,7 @@ async function staleWhileRevalidate(request) {
     const response = await fetchPromise;
     if (response) return response;
     return new Response(
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sin conexión</title></head><body style="font-family:system-ui;text-align:center;padding:60px 20px;color:#374151"><div style="font-size:3rem">📡</div><h2>Sin conexión</h2><p>Verificá tu internet e intentá nuevamente.<br>Si ya usaste la app antes, <a href="javascript:location.reload()">recargá la página</a>.</p></body></html>',
+        '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sin conexión</title></head><body style="font-family:system-ui;text-align:center;padding:60px 20px;color:#374151"><div style="font-size:3rem">📡</div><h2>Sin conexión</h2><p>Verificá tu internet e intentá nuevamente.<br>Si ya usaste la app antes, <a href="">recargá la página</a>.</p></body></html>',
         { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
 }

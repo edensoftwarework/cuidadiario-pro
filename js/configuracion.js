@@ -6,7 +6,7 @@
 'use strict';
 
 async function initConfiguracion() {
-    requireAuth();
+    if (!requireAuth()) return;
     initSidebar();
     populateSidebarUser();
 
@@ -853,7 +853,9 @@ async function suscribirPlan(plan, testMode) {
     try {
         const res = await API_B2B.createSubscription(plan, testMode);
         if (res.init_point) {
-            window.location.href = res.init_point;
+            const paymentUrl = safeExternalHttpsHref(res.init_point, ['mercadopago.com', 'mercadopago.com.ar']);
+            if (!paymentUrl) throw new Error('El proveedor devolvió un enlace de pago no permitido.');
+            window.location.href = paymentUrl;
         } else {
             showToast('No se pudo obtener el link de pago', 'error');
             if (btn) { btn.disabled = false; btn.textContent = originalText; }
@@ -880,7 +882,7 @@ async function verificarPlan(preapprovalId = null) {
         if (res.status === 'current') {
             renderPlanBadge(plan);
             const planLabels = { pro: 'Plan PRO', basico: 'Plan Básico', total: 'Plan Total', free: 'Período de prueba', expired: 'Sin plan activo' };
-            if (result) result.innerHTML = `<div class="alert alert-info" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">ℹ️</span>Tu plan actual es: <strong>${planLabels[plan] || plan}</strong>. Si ya realizaste un pago, aguardá la confirmación de MercadoPago o usá el enlace de verificación que llegó a tu email.</div>`;
+            if (result) result.innerHTML = `<div class="alert alert-info" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">ℹ️</span>Tu plan actual es: <strong>${escapeHtml(planLabels[plan] || plan)}</strong>. Si ya realizaste un pago, aguardá la confirmación de MercadoPago o usá el enlace de verificación que llegó a tu email.</div>`;
             showToast('Plan consultado', 'info');
             return;
         }
@@ -896,7 +898,7 @@ async function verificarPlan(preapprovalId = null) {
             pending:    '⏳ El pago está siendo procesado. Puede demorar unos minutos.',
         };
         const statusMsg = msgs[res.status] || res.message || (isOk ? 'Plan activado correctamente.' : 'Sin suscripción activa.');
-        if (result) result.innerHTML = `<div class="alert alert-${isOk ? 'success' : 'warning'}" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">${isOk ? '✅' : '⚠️'}</span>${statusMsg}</div>`;
+        if (result) result.innerHTML = `<div class="alert alert-${isOk ? 'success' : 'warning'}" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">${isOk ? '✅' : '⚠️'}</span>${escapeHtml(statusMsg)}</div>`;
         showToast(isOk ? 'Plan activado ✅' : 'Sin suscripción activa aún', isOk ? 'success' : 'warning');
     } catch (err) {
         if (result) result.innerHTML = `<div class="alert alert-danger" style="font-size:.84rem;margin-top:8px"><span class="alert-icon">❌</span>Error: ${escapeHtml(err.message)}</div>`;
@@ -941,6 +943,6 @@ async function cancelarSuscripcion() {
 }
 
 function escapeHtml(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }

@@ -110,7 +110,7 @@ function renderCitasProximas(citas) {
                 <div class="item-subtitle">${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatDateTime(c.fecha)}</div>
                 ${c.medico ? `<div class="item-meta"><span class="badge badge-gray">🩺 ${escapeHtml(c.medico)}</span></div>` : ''}
             </div>
-            <a href="paciente.html?id=${c.paciente_id}" class="btn btn-sm btn-secondary">Ver</a>
+            <a href="paciente.html?id=${safeRecordId(c.paciente_id)}" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(citas);
     container.innerHTML = buildItems(citas.slice(0, MAX))
@@ -135,12 +135,12 @@ function renderSintomasRecientes(sintomas) {
                 <div style="font-size:.8rem;font-weight:700;color:var(--pro-primary);margin-bottom:2px">👤 ${escapeHtml(s.paciente_nombre)} ${escapeHtml(s.paciente_apellido || '')}</div>
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
-                    ${s.intensidad ? `<span class="badge badge-orange">Intensidad: ${s.intensidad}/10</span>` : ''}
+                    ${s.intensidad ? `<span class="badge badge-orange">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
                     <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
                     <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || '—')}</span>
                 </div>
             </div>
-            <a href="paciente.html?id=${s.paciente_id}&tab=sintomas" class="btn btn-sm btn-secondary">Ver</a>
+            <a href="paciente.html?id=${safeRecordId(s.paciente_id)}&tab=sintomas" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(sintomas);
     container.innerHTML = buildItems(sintomas.slice(0, MAX))
@@ -170,7 +170,7 @@ function renderNotasUrgentes(notas) {
                     <span class="badge badge-gray">${formatDateTime(n.created_at)}</span>
                 </div>
             </div>
-            <a href="paciente.html?id=${n.paciente_id}&tab=notas" class="btn btn-sm btn-danger">Ver</a>
+            <a href="paciente.html?id=${safeRecordId(n.paciente_id)}&tab=notas" class="btn btn-sm btn-danger">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(notas);
     container.innerHTML = buildItems(notas.slice(0, MAX))
@@ -192,9 +192,9 @@ function renderCumpleanosHoy(lista) {
             <div class="item-icon badge-purple">🎂</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(p.nombre)} ${escapeHtml(p.apellido || '')}</div>
-                <div class="item-subtitle">${p.edad ? `Cumple ${p.edad} años hoy 🎉` : 'Hoy es su cumpleaños 🎉'}</div>
+                <div class="item-subtitle">${p.edad ? `Cumple ${safeFiniteNumber(p.edad)} años hoy 🎉` : 'Hoy es su cumpleaños 🎉'}</div>
             </div>
-            <a href="paciente.html?id=${p.id}" class="btn btn-sm btn-secondary">Ver ficha</a>
+            <a href="paciente.html?id=${safeRecordId(p.id)}" class="btn btn-sm btn-secondary">Ver ficha</a>
         </div>`).join('');
     const allHtml = buildItems(lista);
     container.innerHTML = buildItems(lista.slice(0, MAX))
@@ -227,7 +227,7 @@ function renderStockBajo(lista) {
                 <div class="item-title">${escapeHtml(m.nombre)}${catBadge}${pacienteBadge}</div>
                 <div class="item-subtitle">${escapeHtml(m.dosis_horario || '')}</div>
             </div>
-            <span class="badge badge-danger">Stock: ${m.stock}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
+            <span class="badge badge-danger">Stock: ${safeFiniteNumber(m.stock)}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
         </div>`;
     }).join('');
     const allHtml = buildItems(lista);

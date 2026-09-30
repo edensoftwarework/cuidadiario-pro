@@ -79,11 +79,12 @@ function renderPacientes(lista) {
     grid.innerHTML = paginated.map(p => {
         const edad = calcEdad(p.fecha_nacimiento);
         const isEgresado = !!p.fecha_egreso;
+        const id = safeRecordId(p.id);
         const editBtn = !isEgresado && canDo('editar_paciente')
-            ? `<button class="btn btn-sm btn-secondary btn-icon" title="Editar paciente" onclick="openEditPaciente(${p.id}, event)">✏️</button>`
+            ? `<button class="btn btn-sm btn-secondary btn-icon" title="Editar paciente" onclick="openEditPaciente(${id}, event)">✏️</button>`
             : '';
         return `
-        <div class="paciente-card${isEgresado ? ' egresado' : ''}" onclick="window.location.href='paciente.html?id=${p.id}'">
+        <div class="paciente-card${isEgresado ? ' egresado' : ''}" onclick="window.location.href='paciente.html?id=${id}'">
             <div class="paciente-card-avatar">${isEgresado ? '🚪' : '👤'}</div>
             <div class="paciente-card-body">
                 <div class="paciente-card-name">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>

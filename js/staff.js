@@ -69,7 +69,7 @@ function renderStaff(lista) {
         <tr>
             <td>
                 <div class="d-flex align-center gap-8" style="min-width:0">
-                    <div class="sidebar-avatar" style="width:34px;height:34px;font-size:.85rem;flex-shrink:0">${(s.nombre || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="sidebar-avatar" style="width:34px;height:34px;font-size:.85rem;flex-shrink:0">${escapeHtml((s.nombre || 'U').charAt(0).toUpperCase())}</div>
                     <div style="min-width:0">
                         <div class="fw-bold" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${escapeHtml(s.nombre)}</div>
                         <div class="text-muted" style="font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${escapeHtml(s.email)}</div>
@@ -81,8 +81,8 @@ function renderStaff(lista) {
             <td class="text-muted" style="font-size:.78rem">${formatDate(s.created_at)}</td>
             <td>
                 ${_staffReadOnly ? '' : `<div class="td-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="openEditStaff(${s.id})">✏️ Editar</button>
-                    ${s.activo ? `<button class="btn btn-sm btn-danger" onclick="desactivarStaff(${s.id},'${escapeHtml(s.nombre)}')">🚫 Desactivar</button>` : `<button class="btn btn-sm btn-success" onclick="reactivarStaff(${s.id})">✅ Activar</button>`}
+                    <button class="btn btn-sm btn-secondary" onclick="openEditStaff(${safeRecordId(s.id)})">✏️ Editar</button>
+                    ${s.activo ? `<button class="btn btn-sm btn-danger" onclick="desactivarStaff(${safeRecordId(s.id)})">🚫 Desactivar</button>` : `<button class="btn btn-sm btn-success" onclick="reactivarStaff(${safeRecordId(s.id)})">✅ Activar</button>`}
                 </div>`}
             </td>
         </tr>`).join('');
@@ -97,10 +97,10 @@ function renderAsignaciones(lista) {
     }
     tbody.innerHTML = lista.map(a => `
         <tr>
-            <td>${escapeHtml(a.paciente_nombre)} ${escapeHtml(a.paciente_apellido || '')} ${a.habitacion ? `<span class="badge badge-gray">Hab. ${a.habitacion}</span>` : ''}</td>
+            <td>${escapeHtml(a.paciente_nombre)} ${escapeHtml(a.paciente_apellido || '')} ${a.habitacion ? `<span class="badge badge-gray">Hab. ${escapeHtml(a.habitacion)}</span>` : ''}</td>
             <td>${escapeHtml(a.cuidador_nombre)} ${rolBadge(a.cuidador_rol)}</td>
             <td class="text-muted" style="font-size:.78rem">${formatDate(a.created_at)}</td>
-            <td>${(!_staffReadOnly || _canAsignarPaciente) ? `<button class="btn btn-sm btn-danger" onclick="removeAsignacion(${a.id})">🗑 Quitar</button>` : '—'}</td>
+            <td>${(!_staffReadOnly || _canAsignarPaciente) ? `<button class="btn btn-sm btn-danger" onclick="removeAsignacion(${safeRecordId(a.id)})">🗑 Quitar</button>` : '—'}</td>
         </tr>`).join('');
 }
 
@@ -175,7 +175,8 @@ async function handleSaveStaff(e) {
     }
 }
 
-async function desactivarStaff(id, nombre) {
+async function desactivarStaff(id) {
+    const nombre = _staffList.find(s => safeRecordId(s.id) === safeRecordId(id))?.nombre || 'este miembro del staff';
     confirmDialog(`¿Desactivar a ${nombre}? No podrá iniciar sesión.`, async () => {
         try {
             await API_B2B.deleteStaff(id);
@@ -197,8 +198,8 @@ async function reactivarStaff(id) {
 function openNuevaAsignacion() {
     const pacSelect = document.getElementById('asigPaciente');
     const cuidSelect = document.getElementById('asigCuidador');
-    if (pacSelect) pacSelect.innerHTML = '<option value="">— Seleccionar paciente —</option>' + _pacientesList.filter(p => !p.fecha_egreso).map(p => `<option value="${p.id}">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}${p.habitacion ? ' · Hab. ' + p.habitacion : ''}</option>`).join('');
-    if (cuidSelect) cuidSelect.innerHTML = '<option value="">— Seleccionar cuidador —</option>' + _staffList.filter(s => s.activo).map(s => `<option value="${s.id}">${escapeHtml(s.nombre)} (${s.rol})</option>`).join('');
+    if (pacSelect) pacSelect.innerHTML = '<option value="">— Seleccionar paciente —</option>' + _pacientesList.filter(p => !p.fecha_egreso).map(p => `<option value="${safeRecordId(p.id)}">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}${p.habitacion ? ' · Hab. ' + escapeHtml(p.habitacion) : ''}</option>`).join('');
+    if (cuidSelect) cuidSelect.innerHTML = '<option value="">— Seleccionar cuidador —</option>' + _staffList.filter(s => s.activo).map(s => `<option value="${safeRecordId(s.id)}">${escapeHtml(s.nombre)} (${escapeHtml(s.rol)})</option>`).join('');
     document.getElementById('formAsignacion').reset();
     openModal('modalAsignacion');
 }

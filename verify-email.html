@@ -67,10 +67,11 @@
                     </svg>
                 </div>
                 <h2>Enlace inválido o vencido</h2>
-                <p>${msg || 'El link de confirmación expiró o ya fue usado. Podés solicitar uno nuevo desde la pantalla de configuración.'}</p>
+                <p id="verifyErrorMessage"></p>
                 <a href="pages/onboarding.html" class="btn btn-secondary" style="display:inline-block;width:100%">
                     Volver a la configuración
                 </a>`;
+            document.getElementById('verifyErrorMessage').textContent = msg || 'El link de confirmación expiró o ya fue usado. Podés solicitar uno nuevo desde la pantalla de configuración.';
         }
 
         if (!token) {
@@ -92,7 +93,6 @@
                         localStorage.setItem('cd_pro_token', data.token);
                         const userStr = JSON.stringify(data.user);
                         localStorage.setItem('cd_pro_user',      userStr);
-                        localStorage.setItem('cd_pro_last_user', userStr);
                     } else {
                         // Fallback para versiones antiguas del backend sin token fresco
                         const raw = localStorage.getItem('cd_pro_user');

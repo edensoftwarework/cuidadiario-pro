@@ -16,8 +16,15 @@ function showToast(msg, type = 'info', duration = 3500) {
     }
     const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${msg}</span>`;
+    const safeType = Object.prototype.hasOwnProperty.call(icons, type) ? type : 'info';
+    toast.className = `toast ${safeType}`;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.textContent = icons[safeType];
+    const message = document.createElement('span');
+    message.className = 'toast-msg';
+    message.textContent = msg == null ? '' : String(msg);
+    toast.append(icon, message);
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(30px)'; toast.style.transition = 'all 0.3s ease'; setTimeout(() => toast.remove(), 300); }, duration);
 }
@@ -49,22 +56,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllMo
 // ============================================
 function requireAuth(redirectTo = '../login.html') {
     if (API_B2B.isAuth()) return true;
-
-    // No valid token — allow access if the user hasn't explicitly logged out.
-    // getLastUser() returns null only after logout(); after token expiry it still has the user.
-    // Without a token, all server API calls will either:
-    //   · Offline → return cached data (get()) or queue writes (post/patch/del)
-    //   · Online  → return 401, which handle() will redirect to login automatically
-    // So this is safe: navigator.onLine is NOT checked because it's unreliable on mobile.
-    const lastUser = API_B2B.getLastUser();
-    if (lastUser) {
-        // Restore user object so pages can render role-specific UI
-        if (!API_B2B.getUser()) {
-            localStorage.setItem(API_B2B.USER_KEY, localStorage.getItem(API_B2B.LAST_USER_KEY));
-        }
-        return true;
-    }
-
+    API_B2B.removeToken();
     window.location.href = redirectTo;
     return false;
 }
@@ -336,18 +328,36 @@ async function _renderNotifPanel() {
         // Detect current path depth for relative links
         const inPages = window.location.pathname.includes('/pages/');
         const base    = inPages ? '' : 'pages/';
-        body.innerHTML = items.map(n => {
-            const href  = n.href ? base + n.href : '#';
+        body.replaceChildren();
+        items.forEach(n => {
+            const link = document.createElement('a');
+            link.className = `notif-item${n.es_nuevo ? ' unread' : ''}`;
+            link.href = _safeSameOriginHref(n.href || '#', base);
+
+            const icon = document.createElement('span');
+            icon.className = 'notif-icon';
+            icon.textContent = n.icono == null ? '' : String(n.icono);
+
+            const content = document.createElement('span');
+            content.className = 'notif-body';
+            const title = document.createElement('span');
+            title.className = 'notif-title';
+            title.textContent = n.titulo == null ? '' : String(n.titulo);
+            const desc = document.createElement('span');
+            desc.className = 'notif-desc';
+            desc.textContent = n.descripcion == null ? '' : String(n.descripcion);
+            content.append(title, desc);
+
             const tsStr = _formatTsShort(n.ts);
-            return `<a class="notif-item${n.es_nuevo ? ' unread' : ''}" href="${escapeHtml(href)}">
-                <span class="notif-icon">${n.icono}</span>
-                <span class="notif-body">
-                    <span class="notif-title">${escapeHtml(n.titulo)}</span>
-                    <span class="notif-desc">${escapeHtml(n.descripcion || '')}</span>
-                    ${tsStr ? `<span class="notif-ts">🕐 ${tsStr}</span>` : ''}
-                </span>
-            </a>`;
-        }).join('');
+            if (tsStr) {
+                const ts = document.createElement('span');
+                ts.className = 'notif-ts';
+                ts.textContent = `🕐 ${tsStr}`;
+                content.appendChild(ts);
+            }
+            link.append(icon, content);
+            body.appendChild(link);
+        });
     } catch (err) {
         body.innerHTML = `<div class="notif-empty" style="color:var(--danger)">Error al cargar notificaciones.</div>`;
     }
@@ -431,6 +441,8 @@ async function _showTrialExpiredOverlay(user) {
             staffCount = inst.staff_count || 0;
         } catch (e) { /* si falla, continuar con 0 */ }
     }
+    pacientesCount = safeFiniteNumber(pacientesCount);
+    staffCount = safeFiniteNumber(staffCount);
 
     const canUseBasico = pacientesCount <= 30 && staffCount <= 20;
     // const canUsePro = pacientesCount <= 40 && staffCount <= 20;  // Plan PRO desactivado temporalmente
@@ -493,9 +505,9 @@ function formatDate(isoString, options) {
         // timezone shift, regardless of whether the backend returns a date-only
         // string or a full ISO timestamp with Z or +00:00 suffix.
         const datePart = String(isoString).slice(0, 10);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return String(isoString);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return '—';
         return new Date(datePart + 'T12:00:00').toLocaleDateString('es-AR', options || { day:'2-digit', month:'2-digit', year:'numeric' });
-    } catch { return isoString; }
+    } catch { return '—'; }
 }
 function formatDateTime(isoString) {
     if (!isoString) return '—';
@@ -506,13 +518,16 @@ function formatDateTime(isoString) {
         // JS los parsea como hora local del navegador → muestra la hora correcta.
         // También se eliminan offsets ±HH:MM por si viene algún TIMESTAMPTZ.
         const s = String(isoString).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
-        return new Date(s).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
-    } catch { return isoString; }
+        const date = new Date(s);
+        if (Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
+    } catch { return '—'; }
 }
 function calcEdad(fechaNacimiento) {
     if (!fechaNacimiento) return null;
     const hoy = new Date();
     const nac = new Date(fechaNacimiento);
+    if (Number.isNaN(nac.getTime())) return null;
     let edad = hoy.getFullYear() - nac.getFullYear();
     const m = hoy.getMonth() - nac.getMonth();
     if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
@@ -532,8 +547,56 @@ function todayDatetimeLocal() {
 // MISC
 // ============================================
 function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function safeRecordId(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : 0;
+}
+
+function safeFiniteNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+}
+
+function _safeSameOriginHref(value, relativePrefix = '') {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw || raw === '#') return '#';
+    try {
+        const isAbsoluteOrRooted = /^[a-z][a-z\d+.-]*:/i.test(raw) || raw.startsWith('//') || raw.startsWith('/') || raw.startsWith('#');
+        const url = new URL(isAbsoluteOrRooted ? raw : relativePrefix + raw, window.location.href);
+        if (url.origin !== window.location.origin || !['http:', 'https:'].includes(url.protocol)) return '#';
+        return url.pathname + url.search + url.hash;
+    } catch {
+        return '#';
+    }
+}
+
+function safeExternalHttpsHref(value, allowedHostnameSuffixes = []) {
+    try {
+        const url = new URL(String(value));
+        if (url.protocol !== 'https:') return null;
+        const host = url.hostname.toLowerCase();
+        if (allowedHostnameSuffixes.length && !allowedHostnameSuffixes.some(suffix => host === suffix || host.endsWith('.' + suffix))) return null;
+        return url.href;
+    } catch {
+        return null;
+    }
+}
+
+function safeContactHref(kind, value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return null;
+    if (kind === 'tel') {
+        return /^\+?[\d\s().-]{3,40}$/.test(raw) ? `tel:${raw}` : null;
+    }
+    if (kind === 'mailto') {
+        if (/[\u0000-\u0020\u007f<>"/?#&]/.test(raw)) return null;
+        return /^[^@]+@[^@]+\.[^@]+$/.test(raw) ? `mailto:${raw}` : null;
+    }
+    return null;
 }
 
 function rolBadge(rol) {
@@ -544,7 +607,7 @@ function rolBadge(rol) {
         medico:            ['🩺 Médico / Profesional', 'badge-green'],
     };
     const [label, cls] = map[rol] || [rol, 'badge-gray'];
-    return `<span class="badge ${cls}">${label}</span>`;
+    return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
 }
 
 function tipoSignoBadge(tipo) {
@@ -859,7 +922,7 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
             b = document.createElement('div');
             b.id = '_offlineBanner';
             b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#374151;color:#fff;padding:10px 16px;text-align:center;font-size:.84rem;z-index:9999;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 -2px 8px rgba(0,0,0,.3)';
-            b.innerHTML = '\uD83D\uDCF5 Sin conexi\u00f3n \u2014 Mostrando datos guardados. Algunos cambios no estar\u00e1n disponibles.';
+            b.textContent = '\uD83D\uDCF5 Sin conexi\u00f3n \u2014 Las consultas y los cambios B2B requieren conexi\u00f3n. Ninguna operaci\u00f3n se guardar\u00e1 para enviarla despu\u00e9s.';
             document.body.appendChild(b);
         }
         b.style.display = 'flex';
@@ -872,35 +935,15 @@ function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
     window.addEventListener('online', () => {
         hideOfflineBanner();
         showToast && showToast('Conexión restablecida ✅', 'success');
-        // Sincronizar escrituras pendientes en cola
-        if (typeof API_B2B !== 'undefined' && typeof API_B2B._syncOfflineQueue === 'function') {
-            // 5 s delay — Railway DNS typically needs ~4 s after a mobile reconnect
-            setTimeout(() => API_B2B._syncOfflineQueue(), 5000);
-        }
     });
     if (!navigator.onLine) showOfflineBanner();
-
-    // On every page load: sync pending queue items if we came back online between sessions.
-    // The 'online' event doesn't fire when the app is opened fresh while already connected.
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof API_B2B === 'undefined') return;
-        if (API_B2B._offlineQueue.count() > 0 && navigator.onLine) {
-            setTimeout(() => API_B2B._syncOfflineQueue(), 3000);
-        }
-    });
 })();
 
 /**
- * Maneja errores de escritura offline (cola local).
- * Devuelve true si el error fue manejado (era queued), false si es un error real.
- * opts: { modal: 'modalId', form: HTMLFormElement }
+ * Compatibilidad temporal para consumidores existentes.
+ * P0-3 convirtió las escrituras B2B en network-only: ningún error se presenta
+ * como éxito, no se cierra el modal y no se reinicia el formulario.
  */
-function handleOfflineWrite(err, opts = {}) {
-    if (err && err.queued) {
-        if (typeof showToast === 'function') showToast(err.message, 'warning');
-        if (opts.modal && typeof closeModal === 'function') closeModal(opts.modal);
-        if (opts.form) opts.form.reset();
-        return true;
-    }
+function handleOfflineWrite() {
     return false;
 }

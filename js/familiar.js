@@ -91,7 +91,7 @@ function renderFamiliares(lista) {
             <!-- Header del paciente -->
             <div style="${headerBg};padding:20px 20px 16px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:14px">
                 <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#fff;flex-shrink:0">
-                    ${isEgresado ? '🚪' : (p.nombre || 'P').charAt(0).toUpperCase()}
+                    ${isEgresado ? '🚪' : escapeHtml((p.nombre || 'P').charAt(0).toUpperCase())}
                 </div>
                 <div style="flex:1;min-width:0">
                     <div style="color:#fff;font-weight:700;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
@@ -142,19 +142,19 @@ function renderFamiliares(lista) {
                 </div>
                 ${(canFamiliarSee('medicamentos') || canFamiliarSee('citas')) ? `
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
-                    ${canFamiliarSee('medicamentos') ? `<a href="paciente.html?id=${p.id}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">💊 Medicación</a>` : ''}
-                    ${canFamiliarSee('citas')        ? `<a href="paciente.html?id=${p.id}&tab=citas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📅 Citas</a>` : ''}
+                    ${canFamiliarSee('medicamentos') ? `<a href="paciente.html?id=${safeRecordId(p.id)}&tab=medicamentos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">💊 Medicación</a>` : ''}
+                    ${canFamiliarSee('citas')        ? `<a href="paciente.html?id=${safeRecordId(p.id)}&tab=citas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📅 Citas</a>` : ''}
                 </div>` : ''}
                 ${(canFamiliarSee('signos') || canFamiliarSee('notas')) ? `
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-                    ${canFamiliarSee('signos') ? `<a href="paciente.html?id=${p.id}&tab=signos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">❤️ Signos vitales</a>` : ''}
-                    ${canFamiliarSee('notas')  ? `<a href="paciente.html?id=${p.id}&tab=notas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📝 Notas</a>` : ''}
+                    ${canFamiliarSee('signos') ? `<a href="paciente.html?id=${safeRecordId(p.id)}&tab=signos" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">❤️ Signos vitales</a>` : ''}
+                    ${canFamiliarSee('notas')  ? `<a href="paciente.html?id=${safeRecordId(p.id)}&tab=notas" class="btn btn-sm btn-secondary" style="flex:1;min-width:130px;text-align:center">📝 Notas</a>` : ''}
                 </div>` : ''}
-                <a href="paciente.html?id=${p.id}" class="btn btn-primary btn-sm btn-block" style="margin-top:10px">
+                <a href="paciente.html?id=${safeRecordId(p.id)}" class="btn btn-primary btn-sm btn-block" style="margin-top:10px">
                     Ver ficha completa →
                 </a>
-                <div id="stockAlertFam_${p.id}" style="margin-top:10px"></div>` : `
-                <a href="paciente.html?id=${p.id}" class="btn btn-secondary btn-sm btn-block" style="margin-top:10px">
+                <div id="stockAlertFam_${safeRecordId(p.id)}" style="margin-top:10px"></div>` : `
+                <a href="paciente.html?id=${safeRecordId(p.id)}" class="btn btn-secondary btn-sm btn-block" style="margin-top:10px">
                     📋 Ver historial del paciente
                 </a>`}
             </div>
@@ -202,7 +202,7 @@ async function _cargarStockAlertFamiliar(pacienteId) {
                 const isBajo = c.stock_minimo != null && c.stock_actual <= c.stock_minimo;
                 const rowBg  = isBajo ? '#FEF9C3' : 'transparent';
                 const nameHtml = escapeHtml(c.nombre) + (c.presentacion ? ` <span style="color:#6B7280;font-weight:400">— ${escapeHtml(c.presentacion)}</span>` : '');
-                const stockHtml = c.stock_actual + (c.unidad ? ' ' + escapeHtml(c.unidad) : '');
+                const stockHtml = safeFiniteNumber(c.stock_actual) + (c.unidad ? ' ' + escapeHtml(c.unidad) : '');
                 return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:4px 6px;border-radius:4px;margin-bottom:2px;background:${rowBg}">` +
                        `<span style="color:${isBajo ? '#92400E' : '#374151'}">${isBajo ? '⚠️' : '💊'} ${nameHtml}</span>` +
                        `<span style="font-weight:700;color:${isBajo ? '#B45309' : '#1F2937'};white-space:nowrap;margin-left:8px">${stockHtml}</span></div>`;
@@ -221,7 +221,7 @@ async function _cargarStockAlertFamiliar(pacienteId) {
             <div style="font-weight:700;font-size:.8rem;color:#166534;margin-bottom:6px">📦 Últimas reposiciones de insumos</div>
             ${restock.map(h => `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:.79rem;padding:3px 0;border-bottom:1px solid rgba(134,239,172,.4);color:#14532D;gap:8px">
-                <span><strong>+${h.cantidad_repuesta}</strong> ${escapeHtml(h.nombre_item)}${h.notas ? ` · <em style="color:#166534">${escapeHtml(h.notas)}</em>` : ''}</span>
+                <span><strong>+${safeFiniteNumber(h.cantidad_repuesta)}</strong> ${escapeHtml(h.nombre_item)}${h.notas ? ` · <em style="color:#166534">${escapeHtml(h.notas)}</em>` : ''}</span>
                 <span style="white-space:nowrap;flex-shrink:0;color:#166534">${formatDate(h.created_at)}</span>
             </div>`).join('')}
         </div>`;

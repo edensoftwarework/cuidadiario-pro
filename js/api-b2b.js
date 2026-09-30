@@ -9,25 +9,39 @@ const API_B2B = {
     BASE_URL: 'https://cuidadiario-backend-production.up.railway.app',
     TOKEN_KEY:     'cd_pro_token',
     USER_KEY:      'cd_pro_user',
-    LAST_USER_KEY: 'cd_pro_last_user',   // survives token expiry — used for offline login recovery
+    LAST_USER_KEY: 'cd_pro_last_user',   // legacy P0-2 cleanup target; no longer written or restored
+    ACTIVE_WORKER_KEY: 'cd_active_worker',
 
     // ---------- Auth storage ----------
     getToken()  { return localStorage.getItem(this.TOKEN_KEY); },
     setToken(t) { localStorage.setItem(this.TOKEN_KEY, t); },
-    // removeToken: clears active session but keeps LAST_USER_KEY so offline login can recover
-    removeToken(){ localStorage.removeItem(this.TOKEN_KEY); localStorage.removeItem(this.USER_KEY); },
+    removeToken() {
+        localStorage.removeItem(this.TOKEN_KEY);
+        localStorage.removeItem(this.USER_KEY);
+        localStorage.removeItem(this.LAST_USER_KEY);
+        try { sessionStorage.removeItem(this.ACTIVE_WORKER_KEY); } catch {}
+        this.purgeLegacyGetCache();
+    },
     getUser()      { const u = localStorage.getItem(this.USER_KEY);      return u ? JSON.parse(u) : null; },
-    // Falls back to USER_KEY for backward compat (sessions created before LAST_USER_KEY existed)
-    getLastUser()  {
-        const u = localStorage.getItem(this.LAST_USER_KEY) || localStorage.getItem(this.USER_KEY);
-        return u ? JSON.parse(u) : null;
+    setUser(u)  { localStorage.setItem(this.USER_KEY, JSON.stringify(u)); },
+    isAuth() {
+        const token = this.getToken();
+        if (!token) return false;
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3 || parts.some(part => !part)) return false;
+            const encoded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=');
+            const payload = JSON.parse(atob(padded));
+            const now = Math.floor(Date.now() / 1000);
+            return payload.b2b === true
+                && Number.isFinite(payload.exp)
+                && payload.exp > now
+                && (!Number.isFinite(payload.nbf) || payload.nbf <= now);
+        } catch {
+            return false;
+        }
     },
-    setUser(u)  {
-        const s = JSON.stringify(u);
-        localStorage.setItem(this.USER_KEY, s);
-        localStorage.setItem(this.LAST_USER_KEY, s); // always keep a persistent copy
-    },
-    isAuth()    { return !!this.getToken(); },
 
     // ---------- Headers ----------
     headers(auth = true) {
@@ -39,9 +53,6 @@ const API_B2B = {
     // ---------- Error handler ----------
     async handle(res) {
         if (res.status === 401) {
-            // Always preserve the user for offline recovery before clearing the session.
-            const currUser = localStorage.getItem(this.USER_KEY);
-            if (currUser) localStorage.setItem(this.LAST_USER_KEY, currUser);
             this.removeToken();
 
             // If NOT on login page → session expired while using the app → redirect to login.
@@ -106,118 +117,17 @@ const API_B2B = {
     async get(path) {
         return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
     },
-    // ---------- Offline Write Queue ----------
-    _offlineQueue: {
-        _key: 'cd_offline_queue',
-        get()       { try { return JSON.parse(localStorage.getItem(this._key) || '[]'); } catch { return []; } },
-        add(op)     { const q = this.get(); q.push({ ...op, _qid: Date.now() + '_' + Math.random().toString(36).slice(2), _queued_at: new Date().toISOString() }); try { localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
-        remove(qid) { try { const q = this.get().filter(o => o._qid !== qid); localStorage.setItem(this._key, JSON.stringify(q)); } catch {} },
-        count()     { return this.get().length; },
-    },
-
-    async _syncOfflineQueue() {
-        const queue = this._offlineQueue.get();
-        if (!queue.length) return;
-        let synced = 0, failed = 0;
-        for (const op of queue) {
-            try {
-                // Call _fetch directly — avoids re-triggering the navigator.onLine check inside
-                // post/patch/del which would re-queue the item and cause duplication.
-                const url  = `${this.BASE_URL}${op.path}`;
-                const opts = { method: op.method, headers: this.headers() };
-                if (op.body && op.method !== 'DELETE') {
-                    // Inject the original registration timestamp so the backend
-                    // can store when the action was actually performed offline,
-                    // not when the sync request arrives at the server.
-                    const bodyWithTs = op._queued_at
-                        ? { ...op.body, _offline_ts: op._queued_at }
-                        : op.body;
-                    opts.body = JSON.stringify(bodyWithTs);
-                }
-                const res = await this._fetch(url, opts);
-                // 401 mid-sync → token expired — stop without redirecting; items stay in queue.
-                // The user will see a toast and can re-login to trigger sync again.
-                if (res.status === 401) {
-                    if (typeof showToast === 'function') showToast('⚠️ Sesión expirada. Iniciá sesión para sincronizar los cambios pendientes.', 'warning');
-                    return;
-                }
-                // 404 on DELETE → item already gone from server, treat as success
-                if (op.method === 'DELETE' && res.status === 404) {
-                    this._offlineQueue.remove(op._qid); synced++; continue;
-                }
-                await this.handle(res);
-                this._offlineQueue.remove(op._qid);
-                synced++;
-            } catch (e) {
-                // Network still down → stop immediately and schedule retry
-                if (e.message && e.message.includes('Sin conexi')) {
-                    setTimeout(() => { if (navigator.onLine) this._syncOfflineQueue(); }, 30_000);
-                    return;
-                }
-                failed++; // server-side error (4xx/5xx) — log and continue with next item
-            }
-        }
-        if (synced > 0 && typeof showToast === 'function') showToast(`✅ ${synced} ${synced > 1 ? 'acciones sincronizadas' : 'acción sincronizada'} correctamente`, 'success');
-        // Notify pages (e.g. paciente.html) that new data arrived so they can refresh
-        // their in-memory lists without requiring a manual page reload.
-        if (synced > 0) window.dispatchEvent(new CustomEvent('offlinesynccomplete', { detail: { synced } }));
-        if (failed > 0) {
-            if (typeof showToast === 'function') showToast(`⚠️ ${failed} ${failed > 1 ? 'acciones no pudieron' : 'acción no pudo'} sincronizarse. Reintentando en 30s…`, 'warning');
-            setTimeout(() => { if (navigator.onLine) this._syncOfflineQueue(); }, 30_000);
-        }
-    },
-
+    // ---------- B2B writes (network-only) ----------
+    // P0-3: any pre-existing cd_offline_queue value is intentionally quarantined.
+    // This client never reads, writes, parses, migrates, deletes or transmits it.
     async post(path, body) {
-        if (!navigator.onLine) {
-            this._offlineQueue.add({ method: 'POST', path, body });
-            const e = new Error('Sin conexión — guardado localmente, se enviará al reconectarse.');
-            e.queued = true; throw e;
-        }
-        try {
-            return await this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) }));
-        } catch (err) {
-            // navigator.onLine can report true while DNS is not yet resolved — queue anyway
-            if (err.message && err.message.includes('Sin conexi')) {
-                this._offlineQueue.add({ method: 'POST', path, body });
-                const e = new Error('Sin conexión — guardado localmente, se enviará al reconectarse.');
-                e.queued = true; throw e;
-            }
-            throw err;
-        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) }));
     },
     async patch(path, body) {
-        if (!navigator.onLine) {
-            this._offlineQueue.add({ method: 'PATCH', path, body });
-            const e = new Error('Sin conexión — cambio guardado localmente, se enviará al reconectarse.');
-            e.queued = true; throw e;
-        }
-        try {
-            return await this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'PATCH', headers: this.headers(), body: JSON.stringify(body) }));
-        } catch (err) {
-            if (err.message && err.message.includes('Sin conexi')) {
-                this._offlineQueue.add({ method: 'PATCH', path, body });
-                const e = new Error('Sin conexión — cambio guardado localmente, se enviará al reconectarse.');
-                e.queued = true; throw e;
-            }
-            throw err;
-        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'PATCH', headers: this.headers(), body: JSON.stringify(body) }));
     },
     async del(path) {
-        if (!navigator.onLine) {
-            this._offlineQueue.add({ method: 'DELETE', path, body: null });
-            const e = new Error('Sin conexión — acción guardada localmente, se enviará al reconectarse.');
-            e.queued = true; throw e;
-        }
-        try {
-            return await this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'DELETE', headers: this.headers() }));
-        } catch (err) {
-            if (err.message && err.message.includes('Sin conexi')) {
-                this._offlineQueue.add({ method: 'DELETE', path, body: null });
-                const e = new Error('Sin conexión — acción guardada localmente, se enviará al reconectarse.');
-                e.queued = true; throw e;
-            }
-            throw err;
-        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'DELETE', headers: this.headers() }));
     },
     async postNoAuth(path, body) { return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method:'POST', headers: this.headers(false), body: JSON.stringify(body) })); },
 
@@ -429,22 +339,16 @@ const API_B2B = {
     },
 };
 
-// ============================================
-// ONE-TIME MIGRATION: populate LAST_USER_KEY from USER_KEY
-// Runs on every page load — if the user logged in with an older version of the code that
-// didn't set LAST_USER_KEY, we copy the current session user so offline login can work.
-// ============================================
-(function _migrateLastUser() {
+// P0-2: retire the legacy offline identity. A locally usable B2B token is required
+// to keep the active identity; authenticity remains enforced by the backend.
+(function _enforceAuthenticatedSession() {
     try {
-        if (!localStorage.getItem(API_B2B.LAST_USER_KEY)) {
-            const curr = localStorage.getItem(API_B2B.USER_KEY);
-            if (curr) localStorage.setItem(API_B2B.LAST_USER_KEY, curr);
-        }
+        if (!API_B2B.isAuth()) API_B2B.removeToken();
+        else localStorage.removeItem(API_B2B.LAST_USER_KEY);
     } catch {}
 })();
 
-// Remove only legacy /api/b2b GET responses. Do not touch identity, preferences or
-// the offline write queue: those controls belong to later, separate P0 blocks.
+// P0-1 remains active: remove only legacy /api/b2b GET responses.
 API_B2B.purgeLegacyGetCache();
 
 // ============================================
