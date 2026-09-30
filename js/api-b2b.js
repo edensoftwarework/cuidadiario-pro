@@ -86,29 +86,25 @@ const API_B2B = {
         catch { throw new Error('Sin conexión. Verificá tu internet e intentá nuevamente.'); }
     },
 
-    // ---------- Offline cache (localStorage) ----------
-    _offlineCache: {
-        _key(path) { return 'cd_api_' + path.replace(/[^a-z0-9_/-]/gi, '_'); },
-        get(path)        { try { const v = localStorage.getItem(this._key(path)); return v ? JSON.parse(v) : null; } catch { return null; } },
-        set(path, data)  { try { localStorage.setItem(this._key(path), JSON.stringify(data)); } catch {} }
+    // ---------- Legacy GET cache cleanup ----------
+    // GET responses are network-only now. Remove only legacy keys whose encoded
+    // path belongs to /api/b2b and preserve every other localStorage entry
+    // (session/offline queue/preferences are separate P0s).
+    purgeLegacyGetCache() {
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key === 'cd_api_/api/b2b' || key.startsWith('cd_api_/api/b2b/'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+        } catch {}
     },
 
     async get(path) {
-        try {
-            const data = await this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
-            this._offlineCache.set(path, data); // guardar para uso offline
-            return data;
-        } catch (err) {
-            const isOffline = !navigator.onLine || (err.message && err.message.includes('Sin conexi'));
-            if (isOffline) {
-                const cached = this._offlineCache.get(path);
-                if (cached !== null) {
-                    console.info('[API offline] Sirviendo desde caché local:', path);
-                    return cached;
-                }
-            }
-            throw err;
-        }
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
     },
     // ---------- Offline Write Queue ----------
     _offlineQueue: {
@@ -446,6 +442,10 @@ const API_B2B = {
         }
     } catch {}
 })();
+
+// Remove only legacy /api/b2b GET responses. Do not touch identity, preferences or
+// the offline write queue: those controls belong to later, separate P0 blocks.
+API_B2B.purgeLegacyGetCache();
 
 // ============================================
 // SERVICE WORKER REGISTRATION

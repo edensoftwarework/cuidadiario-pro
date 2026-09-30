@@ -2,7 +2,8 @@
    sw.js — Service Worker para CuidaDiario PRO
    Estrategia:
    - Cache-first para assets estáticos (CSS, JS, fuentes)
-   - Network-first para llamadas API (fallback a cache si hay)
+   - Network-only para GET /api/b2b/ (nunca Cache Storage)
+   - Network-first para las demás llamadas API (fallback a cache si hay)
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
@@ -61,16 +62,37 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Activación — limpiar caches viejas
+function isB2BApiUrl(url) {
+    return url.pathname === '/api/b2b' || url.pathname.startsWith('/api/b2b/');
+}
+
+async function purgeB2BApiResponsesFromCaches() {
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map(async cacheName => {
+        const cache = await caches.open(cacheName);
+        const requests = await cache.keys();
+        await Promise.all(
+            requests
+                .filter(request => isB2BApiUrl(new URL(request.url)))
+                .map(request => cache.delete(request))
+        );
+    }));
+}
+
+// Activación — limpiar caches estáticas propias viejas y purgar únicamente
+// respuestas B2B de cualquier Cache Storage. Caches API/no-B2B y caches ajenas
+// se conservan para no alterar consumidores compartidos.
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(k => k !== CACHE_NAME && k !== CACHE_NAME_API)
+                    .filter(k => /^cuidadiario-pro-v\d+$/.test(k) && k !== CACHE_NAME)
                     .map(k => caches.delete(k))
             )
-        ).then(() => self.clients.claim())
+        )
+        .then(() => purgeB2BApiResponsesFromCaches())
+        .then(() => self.clients.claim())
     );
 });
 
@@ -85,7 +107,13 @@ self.addEventListener('fetch', (event) => {
     // Ignorar requests de extensiones de browser
     if (!url.protocol.startsWith('http')) return;
 
-    // API calls → Network-first con fallback a cache
+    // B2B API → sólo red: nunca escribir ni recuperar desde Cache Storage.
+    if (isB2BApiUrl(url)) {
+        event.respondWith(networkOnly(request));
+        return;
+    }
+
+    // Demás API calls → Network-first con fallback a cache (sin cambios)
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(networkFirstWithCache(request, CACHE_NAME_API));
         return;
@@ -108,6 +136,17 @@ self.addEventListener('fetch', (event) => {
 });
 
 // === Estrategias de caché ===
+
+async function networkOnly(request) {
+    try {
+        return await fetch(request);
+    } catch {
+        return new Response(JSON.stringify({ error: 'Sin conexión' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
 
 async function cacheFirst(request) {
     const cached = await caches.match(request);
