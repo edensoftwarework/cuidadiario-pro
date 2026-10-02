@@ -35,12 +35,17 @@
         <p>Por favor esperá un momento.</p>
     </div>
 
+    <script src="js/api-b2b.js"></script>
+    <script src="js/maintenance-b2b-v2.js"></script>
     <script>
     (async function () {
         const params  = new URLSearchParams(window.location.search);
         const token   = params.get('token');
         const isB2B   = params.get('b2b') === '1';
         const card    = document.getElementById('verifyCard');
+
+        const availability = await globalThis.B2B_MAINTENANCE_READY;
+        if (availability?.mode !== 'normal') return;
 
         function showSuccess() {
             card.innerHTML = `
