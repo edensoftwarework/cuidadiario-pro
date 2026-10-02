@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mantenimiento — CuidaDiario PRO</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: #f3f6fb;
+            color: #14213d;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+        .card {
+            width: min(100%, 560px);
+            padding: 40px 32px;
+            border: 1px solid #dbe4f0;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 18px 50px rgba(20, 33, 61, .12);
+            text-align: center;
+        }
+        .icon { margin-bottom: 20px; font-size: 46px; line-height: 1; }
+        h1 { margin: 0 0 14px; font-size: clamp(1.45rem, 4vw, 2rem); }
+        p { margin: 8px 0; color: #53627a; line-height: 1.6; }
+        .note { color: #33445f; font-weight: 650; }
+        button { margin-top: 20px; padding: 10px 18px; border: 0; border-radius: 9px; background: #173b7a; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+        button:hover, button:focus-visible { background: #102d60; }
+    </style>
+</head>
+<body>
+    <main class="card" role="status" aria-live="polite">
+        <div class="icon" aria-hidden="true">🛠️</div>
+        <h1>CuidaDiario PRO se encuentra temporalmente en mantenimiento.</h1>
+        <p>El servicio estará disponible nuevamente en unos minutos.</p>
+        <p class="note">Por favor, no cierre ni repita operaciones pendientes.</p>
+        <button type="button" id="retryMaintenance">Reintentar</button>
+    </main>
+    <script>
+    // Permite que una reapertura manual reciba una versión nueva del worker sin
+    // borrar caches ni estado local. Mientras el interruptor siga activo, el
+    // intento vuelve a esta misma pantalla.
+    if ('serviceWorker' in navigator) {
+        const retryButton = document.getElementById('retryMaintenance');
+        retryButton.addEventListener('click', async () => {
+            retryButton.disabled = true;
+            try {
+                const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+                await registration.update();
+                window.location.replace(new URL('login.html', registration.scope).href);
+            } catch {
+                retryButton.disabled = false;
+            }
+        });
+    }
+    </script>
+</body>
+</html>

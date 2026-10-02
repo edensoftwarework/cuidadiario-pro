@@ -12,6 +12,33 @@
 const CACHE_NAME = 'cuidadiario-pro-v6';
 const CACHE_NAME_API = 'cuidadiario-pro-api-v6';
 
+// Interruptor operativo temporal para ventanas coordinadas. Debe publicarse en
+// `true` sólo durante la ventana y volver a `false` mediante un nuevo deploy.
+// La barrera técnica de escrituras continúa siendo B2B_P1_BRIDGE_MODE=1.
+const B2B_MAINTENANCE_MODE = true;
+
+// Allowlist exacta: no usar prefijos amplios porque este service worker comparte
+// origen/caches con superficies que no pertenecen a la aplicación PRO B2B.
+const B2B_APP_PATHS = new Set([
+    '/',
+    '/index.html',
+    '/login.html',
+    '/register.html',
+    '/verify-email.html',
+    '/reset-password.html',
+    '/admin-panel.html',
+    '/pages/dashboard.html',
+    '/pages/pacientes.html',
+    '/pages/paciente.html',
+    '/pages/staff.html',
+    '/pages/cuidador.html',
+    '/pages/familiar.html',
+    '/pages/onboarding.html',
+    '/pages/reportes.html',
+    '/pages/catalogo.html',
+    '/pages/configuracion.html'
+]);
+
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -21,6 +48,7 @@ const STATIC_ASSETS = [
     './verify-email.html',
     './reset-password.html',
     './admin-panel.html',
+    './maintenance-b2b.html',
     './pages/dashboard.html',
     './pages/pacientes.html',
     './pages/paciente.html',
@@ -69,6 +97,58 @@ function isB2BApiUrl(url) {
     return url.pathname === '/api/b2b' || url.pathname.startsWith('/api/b2b/');
 }
 
+function getScopeRelativePath(url) {
+    if (url.origin !== self.location.origin) return null;
+    const scopePath = new URL(self.registration.scope).pathname;
+    if (scopePath === '/') return url.pathname;
+    if (!url.pathname.startsWith(scopePath)) return null;
+    return `/${url.pathname.slice(scopePath.length)}`;
+}
+
+function isB2BAppNavigation(request, url) {
+    if (request.mode !== 'navigate') return false;
+    const relativePath = getScopeRelativePath(url);
+    return relativePath !== null && B2B_APP_PATHS.has(relativePath);
+}
+
+function maintenanceResponse() {
+    return new Response(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mantenimiento — CuidaDiario PRO</title><style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f3f6fb;color:#14213d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.card{width:min(100%,560px);padding:40px 32px;border:1px solid #dbe4f0;border-radius:18px;background:#fff;box-shadow:0 18px 50px rgba(20,33,61,.12);text-align:center}.icon{font-size:46px;line-height:1;margin-bottom:20px}h1{margin:0 0 14px;font-size:clamp(1.45rem,4vw,2rem)}p{margin:8px 0;color:#53627a;line-height:1.6}.note{font-weight:650;color:#33445f}
+</style></head><body><main class="card" role="status" aria-live="polite"><div class="icon" aria-hidden="true">🛠️</div><h1>CuidaDiario PRO se encuentra temporalmente en mantenimiento.</h1><p>El servicio estará disponible nuevamente en unos minutos.</p><p class="note">Por favor, no cierre ni repita operaciones pendientes.</p></main><script>(function(){if(!('serviceWorker' in navigator))return;let reopened=false;const reopen=function(){if(reopened)return;reopened=true;navigator.serviceWorker.getRegistration().then(function(registration){window.location.replace(new URL('login.html',registration?registration.scope:location.origin+'/').href);});};navigator.serviceWorker.addEventListener('controllerchange',reopen);const update=function(){navigator.serviceWorker.getRegistration().then(function(registration){return registration&&registration.update();}).catch(function(){});};update();setInterval(update,30000);})();</script></body></html>`, {
+        status: 503,
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store, max-age=0',
+            'Retry-After': '300'
+        }
+    });
+}
+
+async function maintenancePageResponse() {
+    const cache = await caches.open(CACHE_NAME);
+    const maintenanceUrl = new URL('maintenance-b2b.html', self.registration.scope).href;
+    const cached = await cache.match(maintenanceUrl);
+    return cached || maintenanceResponse();
+}
+
+async function showMaintenanceToOpenB2BClients() {
+    if (!B2B_MAINTENANCE_MODE) return;
+    const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const maintenanceUrl = new URL('maintenance-b2b.html', self.registration.scope).href;
+    windowClients
+        .filter(client => {
+            const url = new URL(client.url);
+            return B2B_APP_PATHS.has(getScopeRelativePath(url));
+        })
+        .forEach(client => {
+            // No esperar la navegación dentro de `activate`: iniciarla y dejar
+            // que el nuevo worker termine de activarse evita un ciclo de espera.
+            client.navigate(maintenanceUrl).catch(() => {});
+        });
+}
+
 async function purgeB2BApiResponsesFromCaches() {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map(async cacheName => {
@@ -96,6 +176,7 @@ self.addEventListener('activate', (event) => {
         )
         .then(() => purgeB2BApiResponsesFromCaches())
         .then(() => self.clients.claim())
+        .then(() => showMaintenanceToOpenB2BClients())
     );
 });
 
@@ -109,6 +190,13 @@ self.addEventListener('fetch', (event) => {
 
     // Ignorar requests de extensiones de browser
     if (!url.protocol.startsWith('http')) return;
+
+    // Ventana humana B2B → reemplazar sólo navegaciones PRO allowlisteadas.
+    // No se escribe en caches ni se toca almacenamiento del navegador.
+    if (B2B_MAINTENANCE_MODE && isB2BAppNavigation(request, url)) {
+        event.respondWith(maintenancePageResponse());
+        return;
+    }
 
     // B2B API → sólo red: nunca escribir ni recuperar desde Cache Storage.
     if (isB2BApiUrl(url)) {
