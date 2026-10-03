@@ -1,7 +1,7 @@
 # Modelo de datos de CuidaDiario PRO B2B
 
-**Fuente:** DDL, `ALTER TABLE` y consultas de `backend/index.js`, inspección externa parcial de Railway del 15/09/2026 y prueba independiente de recuperación lógica del 28/09/2026.  
-**Alcance:** esquema pretendido por el código. La recuperación confirmó la presencia de tablas y conteos agregados seleccionados, pero no verificó definición, restricciones, contenido ni consistencia completos del esquema efectivo: **[NO VERIFICADO]**.
+**Fuente:** DDL, migraciones y consultas de `backend/index.js`/`backend/b2b-p1.js`, inspección externa parcial de Railway, recuperación lógica y gate estructural productivo P1.  
+**Alcance:** modelo B2B reconstruido. El gate productivo verificó la estructura P1-A/P1-B; la definición histórica restante, el contenido y la consistencia semántica integral continúan **[NO VERIFICADO]** salvo evidencia expresa.
 
 **[VERIFICADO] Este documento modela exclusivamente B2B. NO MODIFICAR TABLAS B2C.** Existen tablas de otro producto en la misma base/runner, pero quedan fuera de este modelo. `_migrations` sólo se menciona por ser una dependencia compartida.
 
@@ -91,7 +91,7 @@ Aunque la tabla usa el término “pacientes”, la documentación funcional emp
 | Ciclo de residencia | `fecha_ingreso`, `fecha_egreso`, `motivo_egreso`, `activo` |
 | Auditoría mínima | `created_at` |
 
-Sensibilidad: identificación directa y datos relativos a salud/cuidado. `DELETE /pacientes/:id` desactiva; la operación de egreso completa fecha/motivo pero no necesariamente cambia `activo`. El frontend presenta el egresado como sólo lectura, pero el backend no impone esa condición de manera general.
+Sensibilidad: identificación directa y datos relativos a salud/cuidado. `DELETE /pacientes/:id` desactiva; la operación de egreso completa fecha/motivo pero no necesariamente cambia `activo`. Desde P1-A el backend conserva la lectura histórica y bloquea nuevas mutaciones sobre residentes egresados; sólo admite los cierres administrativos acotados y, donde el código lo contempla, una corrección excepcional por `admin_institucion` con motivo. No se afirma una prohibición absoluta fuera de esas rutas/condiciones.
 
 ### 4.2 `asignaciones_b2b`
 
@@ -152,7 +152,7 @@ Institución usa `CASCADE`; catálogo, residente y usuario usan `SET NULL`. Se c
 
 Campos: `id` PK; `institucion_id`, `paciente_id` y `created_by` son FK (la última anulable); `titulo`, `descripcion`, `fecha`, `medico`, `especialidad`, `lugar`, `estado`, `created_at`, `updated_at`.
 
-Institución/residente usan `CASCADE`; creador usa `SET NULL`. El API permite edición y borrado físico. “Historial de citas” consulta las filas de esta misma tabla con `estado='realizada'`.
+Institución/residente usan `CASCADE`; creador usa `SET NULL`. El API productivo permite edición versionada y soft-delete prospectivo. “Historial de citas” consulta las filas no archivadas de esta misma tabla con `estado='realizada'`.
 
 ### 6.2 `historial_citas_b2b`
 
@@ -176,12 +176,12 @@ Institución/residente usan `CASCADE`; tarea/usuario usan `SET NULL`. Es append-
 
 | Tabla | Campos de contenido | Referencias | Eliminación API | Historial de edición/borrado |
 |---|---|---|---|---|
-| `sintomas_b2b` | `id` PK; `descripcion`, `intensidad`, `fecha`, nombre del registrador | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Física | No |
-| `signos_vitales_b2b` | `id` PK; `tipo`, `valor`, `unidad`, `notas`, `fecha`, nombre del registrador | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Física | No; tampoco hay PATCH API |
-| `contactos_b2b` | `id` PK; `nombre`, `relacion`, `telefono`, `email`, `es_principal`, `created_at` | FK institución/residente `CASCADE` | Física | No |
-| `notas_b2b` | `id` PK; `titulo`, `contenido`, `urgente`, autor nominal, `created_at` | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Física | No |
+| `sintomas_b2b` | `id` PK; `descripcion`, `intensidad`, `fecha`, nombre del registrador | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Soft-delete P1 productivo | Ledger prospectivo |
+| `signos_vitales_b2b` | `id` PK; `tipo`, `valor`, `unidad`, `notas`, `fecha`, nombre del registrador | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Soft-delete P1 productivo | Ledger; no hay PATCH API |
+| `contactos_b2b` | `id` PK; `nombre`, `relacion`, `telefono`, `email`, `es_principal`, `created_at` | FK institución/residente `CASCADE` | Soft-delete P1 productivo | Ledger prospectivo |
+| `notas_b2b` | `id` PK; `titulo`, `contenido`, `urgente`, autor nominal, `created_at` | FK institución/residente `CASCADE`; FK usuario `SET NULL` | Soft-delete P1 productivo | Ledger prospectivo |
 
-Son datos personales y/o de salud/cuidado. El backend conserva compatibilidad con `_offline_ts` para síntomas/signos y `_quien` para notas, pero el paquete frontend local P0-3 ya no crea ni reproduce mutaciones desde una cola offline. Las ediciones de síntomas, contactos y notas reemplazan contenido sin versión anterior.
+Son datos personales y/o de salud/cuidado. El backend conserva compatibilidad con `_offline_ts` para síntomas/signos y `_quien` como texto no autoritativo, pero P0-3 ya no crea ni reproduce mutaciones desde una cola offline. P1 productivo versiona ediciones y atribuye el actor desde la sesión backend revalidada.
 
 ## 8. Documentos
 
@@ -193,7 +193,9 @@ Son datos personales y/o de salud/cuidado. El backend conserva compatibilidad co
 | Archivo | `nombre_archivo`, `tipo_mime`, `tamanio_bytes`, `datos` TEXT base64 |
 | Atribución | `subido_nombre`, `created_at` |
 
-Institución/residente usan `CASCADE`; usuario usa `SET NULL`. El contenido se almacena dentro de PostgreSQL, no en un repositorio de objetos observado. El API borra físicamente. No hay categorías documentales, fecha propia del documento, descripción, versionado ni papelera.
+Institución/residente usan `CASCADE`; usuario usa `SET NULL`. El contenido se almacena dentro de PostgreSQL, no en un repositorio de objetos observado. En P1 productivo el API conserva fila, metadatos y bytes, marca `deleted_at/deleted_by/deletion_reason`, excluye listado/descarga normal y continúa computando los datos archivados en la cuota. No hay purga definitiva ni UI de restauración.
+
+**P0-C no modificó este modelo ni creó migraciones.** P1-A/P1-B agregaron el ciclo lógico anterior y están **[VERIFICADOS EN PRODUCCIÓN / CLOSED]**. La autorización P0 y las cabeceras no-store se conservan.
 
 ## 9. Tabla compartida de control
 
@@ -203,20 +205,20 @@ Institución/residente usan `CASCADE`; usuario usa `SET NULL`. El contenido se a
 
 | Recurso | Alta | Edición | Eliminación expuesta | Evidencia histórica conservada |
 |---|---|---|---|---|
-| Institución | Registro B2B | Sobrescritura | No hay endpoint | Sólo `created_at`; cambios de plan no tienen auditoría general. |
-| Usuarios | Sí | Sobrescritura | Desactivación | No hay historial de roles/permisos/estado. |
-| Residentes | Sí | Sobrescritura / egreso | Desactivación | Fecha/motivo de egreso, pero no versiones generales. |
-| Asignaciones | Sí/reactivación | Estado | Desactivación | No hay log separado. |
-| Medicamentos | Sí | Sobrescritura | Desactivación | Historial de administraciones, no de indicaciones. |
+| Institución | Registro B2B | Versionada | No hay endpoint | Ledger prospectivo, incluido canal superadmin. |
+| Usuarios | Sí | Versionada | Desactivación | Ledger prospectivo de cambios/seguridad. |
+| Residentes | Sí | Versionada / egreso | Desactivación | Fecha/motivo, guard de egreso y ledger prospectivo. |
+| Asignaciones | Sí/reactivación | Estado versionado | Desactivación | Ledger prospectivo local. |
+| Medicamentos | Sí | Versionada | Desactivación | Historial de administraciones y ledger prospectivo de indicación/stock. |
 | Administraciones | Sí | No expuesta | No expuesta | La fila es el evento. |
-| Catálogo | Sí | Sobrescritura | Desactivación | Sólo aumentos de stock generan reposición. |
-| Citas | Sí | Sobrescritura | **Borrado físico** | Estado realizada en fila actual; tabla histórica no alimentada. |
-| Tareas | Sí | Sobrescritura | Desactivación | Cumplimientos en historial. |
-| Síntomas | Sí | Sobrescritura | **Borrado físico** | No. |
-| Signos vitales | Sí | Sin PATCH | **Borrado físico** | No. |
-| Contactos | Sí | Sobrescritura | **Borrado físico** | No. |
-| Notas | Sí | Sobrescritura | **Borrado físico** | No. |
-| Documentos | Sí | Sin PATCH | **Borrado físico** | No. |
+| Catálogo | Sí | Versionada localmente | Desactivación | Reposición y cambio quedan en una transacción con ledger. |
+| Citas | Sí | Versionada | **Soft-delete** | Estado realizada en fila actual; archivadas se excluyen. |
+| Tareas | Sí | Versionada | Desactivación | Cumplimientos idempotentes y auditados. |
+| Síntomas | Sí | Versionada | **Soft-delete** | Ledger prospectivo. |
+| Signos vitales | Sí | Sin PATCH | **Soft-delete** | Ledger prospectivo. |
+| Contactos | Sí | Versionada | **Soft-delete** | Ledger prospectivo. |
+| Notas | Sí | Versionada | **Soft-delete** | Ledger prospectivo. |
+| Documentos | Sí | Sin PATCH | **Soft-delete** | Fila/bytes conservados, ocultos y aún incluidos en cuota. |
 
 ## 11. Cascadas y riesgo de borrado retrospectivo
 
@@ -258,7 +260,24 @@ Esas capacidades son **PROPUESTAS**. No deben inferirse de las tablas actuales n
 
 El método, middleware y consumidor de cada ruta se detalla en `MAPA_API_B2B.md`.
 
+### 13.1 Relaciones usadas por la autorización P0-C
+
+Sin alterar claves ni filas existentes, P0-C usa `usuarios_b2b -> instituciones_b2b` para estado e identidad vigentes; `asignaciones_b2b` activas para el alcance restringido; `pacientes_b2b.institucion_id` como raíz del recurso; y `paciente_id` de cada tabla clínica/operativa para autorizar antes de leer o mutar. Catálogo y reposiciones admiten el caso institucional (`paciente_id IS NULL`) sólo según rol/permiso; cuando tienen residente deben corresponder al mismo tenant y alcance. Los recursos sin residente padre resoluble fallan cerrados. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 30/09/2026].** El despliegue no ejecutó SQL, migraciones, cambios de esquema ni modificación retrospectiva de filas.
+
 ## 14. Fotografía externa de producción
+
+### 13.2 Extensiones P1-A/P1-B productivas
+
+Tres migraciones registradas en `schema_migrations_b2b(version, checksum, applied_at)` agregan, sin DROP/TRUNCATE ni reescritura de filas:
+
+- `auditoria_eventos_b2b`: ledger prospectivo, actor/tenant/recurso/versión, before/after sanitizado, modo de captura y metadata; trigger DB contra `UPDATE/DELETE`;
+- `operaciones_idempotentes_b2b`: clave por institución, actor y operación, hash canónico, estado/resultado seguro y vencimiento conceptual de 90 días;
+- `version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0)` en institución, usuario, residente, asignación, medicamento, catálogo, cita, tarea, síntoma, signo, contacto, nota y documento;
+- `deleted_at`, `deleted_by`, `deletion_reason` sólo en citas, síntomas, signos vitales, contactos, notas y documentos.
+
+Las filas heredadas quedan preservadas y parten de versión prospectiva 1. No se fabrica auditoría previa. La primera modificación futura de una fila heredada captura baseline sanitizado; las siguientes registran diff. Eventos naturales —administraciones, tareas completadas y reposiciones— usan referencia mínima. **[VERIFICADO EN PRODUCCIÓN / CLOSED].**
+
+**[VERIFICADO SOBRE RESTAURACIÓN AISLADA DEL DUMP FRESCO — 01/10/2026; NO PRODUCCIÓN]:** el esquema real pre-P1 restaurado no contenía ninguno de los objetos/columnas P1. Tras el runner se verificaron los tipos, defaults, NOT NULL, CHECK, PK/unique, cuatro índices y trigger esperados: 13 tablas con `version`, seis con las tres columnas de archivado, journal con tres checksums, ledger e idempotencia vacíos. Los conteos/fingerprints heredados —961 filas B2B y 1.502 no-B2B en 32 tablas— permanecieron iguales y no se fabricó historia. Un ensayo con `version TEXT` preexistente confirmó que `IF NOT EXISTS` no compara definiciones; el preflight productivo debe abortar ante cualquier colisión o drift, aunque el dump examinado tuvo cero.
 
 **[VERIFICADO — EVIDENCIA EXTERNA 15/09/2026]** La instancia PostgreSQL del proyecto Railway `resilient-nature`, entorno `production`, contiene tablas `*_b2b` junto con tablas B2C/no B2B: **[COMPARTIDO - NO TOCAR B2C]**. El servicio estaba Online, con volumen `postgres-volume`, una réplica en `US East (Virginia, USA)`, Private Networking y un TCP Proxy público configurado.
 
@@ -287,6 +306,8 @@ Son valores puntuales de la interfaz, no un inventario histórico, una validaci�
 La diferencia entre las 2 filas de `documentos_b2b` observadas el 15/09 y las 12 restauradas desde el dump del 28/09 corresponde a fotografías de fechas y mecanismos distintos; no se inspeccionó contenido ni se determinó su causa. **[NO VERIFICADO]** Estos conteos no demuestran por sí solos integridad referencial, completitud semántica, ausencia de huérfanos ni correspondencia con un punto posterior de producción.
 
 ## 15. Comprobaciones aún necesarias
+
+La estructura P1 quedó verificada en producción mediante `PASS|3|13|13|18|35|4|1|1|0|`: tres migraciones/checksums, 13 columnas `version`, 13 checks, 18 columnas soft-delete, 35 columnas core, constraints, cuatro índices, función y trigger append-only. Lo siguiente continúa pendiente fuera de ese gate:
 
 Antes de futuras migraciones se debe verificar, mediante un procedimiento de sólo lectura aprobado:
 

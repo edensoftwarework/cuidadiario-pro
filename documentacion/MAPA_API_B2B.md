@@ -1,6 +1,6 @@
 # Mapa de API de CuidaDiario PRO B2B
 
-**Fuente:** declaraciones de rutas y consultas de `backend/index.js` al 15 de septiembre de 2026.  
+**Fuente:** declaraciones de rutas y consultas de `backend/index.js` y `backend/b2b-p1.js`, actualizadas con P0-C y P1-A/P1-B desplegados y verificados en producción al 3 de octubre de 2026.  
 **Base pública confirmada en Railway y configurada en el frontend:** `https://cuidadiario-backend-production.up.railway.app`, dirigida al puerto 8080, seguida de la ruta indicada.  
 **Nota:** todos los controladores están actualmente en el mismo archivo; “control” describe lo que el backend ejecuta, no lo que oculta la UI.
 
@@ -10,25 +10,44 @@
 
 | Código | Control actual |
 |---|---|
-| `A` | `authB2BMiddleware`: JWT válido con marca B2B. |
+| `A` | `authB2BMiddleware`: JWT válido con `b2b: true` y revalidación actual de usuario, institución, pertenencia, rol, estado y e-mail verificado. |
 | `R(...)` | `requireB2BRole`: rol incluido en la lista. |
 | `C(acción)` | `checkB2BCanDo`: permiso configurable de institución/rol. |
 | `P` | `checkB2BPacienteAccess`: acceso al residente por institución, rol/permisos y/o asignación. |
 | `F(sección)` | `checkB2BFamiliarCanSee`: sección familiar habilitada. |
 | `L` | `requireActivePlan` o chequeo de límite/estado de plan equivalente. |
 | `K` | encabezado `X-Admin-Key` comparado con `SUPERADMIN_KEY`; no usa JWT B2B. |
+| `V` | versión prospectiva; `expected_version`/`If-Match` opcional y conflicto 409. |
+| `I` | `Idempotency-Key` opcional con resultado persistido y conflicto de payload. |
+| `G` | guard central de residente egresado. |
+| `S` | soft-delete; lecturas normales filtran `deleted_at IS NULL`. |
 | Público | Sin JWT; puede tener rate limit, token de un solo uso o firma de proveedor. |
 
 Abreviaturas de rol: `AI` administrador institucional, `MD` médico, `CS` cuidador/personal, `FA` familiar.
 
 ## 2. Reglas transversales
 
-- Las consultas B2B usan normalmente `institucion_id` del JWT como frontera de tenant.
-- `A` valida claims del token, pero no recarga usuario/institución/rol/estado en cada petición.
-- `P` no se aplica de modo uniforme: varias listas lo ejecutan sólo cuando el cliente envía `paciente_id`; varias mutaciones por ID sólo restringen por institución y rol.
-- Los controles `F` afectan lectura familiar de módulos, pero no todas las respuestas agregadas los aplican sección por sección.
+- Las consultas B2B usan `institucion_id` revalidado contra el usuario actual como frontera de tenant.
+- `A` recarga usuario, institución, rol, estado, verificación y permisos actuales en cada petición protegida. Un token con tenant divergente o identidad ya no vigente falla cerrado.
+- Las listas clínicas/operativas exigen `paciente_id` a familiar y personal sin permiso global; administrador/personal con alcance institucional conservan la lista global dentro del tenant.
+- Las mutaciones por ID resuelven primero el recurso, su `paciente_id`, tenant y acceso actual. Los recursos no encontrados, cross-tenant, no asignados o con padre no resoluble no se mutan.
+- Los controles `F` se aplican también a dashboard, reportes, catálogo/reposiciones familiares y documentos.
 - `L` aparece principalmente en altas y acciones; no equivale a una política uniforme para todos los `PATCH` y `DELETE`.
-- En el paquete frontend local P0-3, `POST`, `PATCH` y `DELETE` son exclusivamente de red: no se encolan ni reintentan automáticamente. Una `cd_offline_queue` heredada permanece byte a byte, sin lectura, migración, transmisión o borrado automático. El backend sigue sin contrato de idempotencia extremo a extremo para futuros reintentos explícitos. **[VERIFICADO EN ENTORNO CONTROLADO — 30/09/2026; NO EN PRODUCCIÓN].**
+- Desde P0-3, `POST`, `PATCH` y `DELETE` son exclusivamente de red: no se encolan ni reintentan automáticamente. Una `cd_offline_queue` heredada permanece byte a byte, sin lectura, migración, transmisión o borrado automático. P1-B agrega idempotencia opcional a toma, tarea completada y carga documental; clientes heredados sin header continúan funcionando. **[P1-B VERIFICADO EN PRODUCCIÓN / CERRADO — 03/10/2026].**
+
+**Estado P1-A/P1-B productivo:** las mutaciones de dominio cubiertas registran ledger sanitizado dentro de la misma transacción; filas editables tienen versión prospectiva; los egresados conservan lectura histórica y bloquean nuevas mutaciones, con cierres administrativos acotados y, donde el código lo contempla, corrección excepcional por AI con motivo; las seis familias `S` preservan la fila y quedan fuera de GET/list/download. Mercado Pago B2B no fue ampliado ni reactivado.
+
+**Gate con dump fresco y cierre productivo:** sobre una restauración aislada se confirmaron rutas P1 de idempotencia, versión, soft-delete, egreso, documentos/cuota y bridge. El gate estructural productivo final dio `PASS|3|13|13|18|35|4|1|1|0|`. El bridge permite login/GET y bloquea mutadores HTTP B2B, `verify-subscription`, `auth/verify-email` y `POST /api/admin/set-plan`; no intercepta B2C ni protege migraciones, jobs/timers, SQL administrativo o la sincronización periódica directa de Mercado Pago. Al cierre productivo quedó en `0`.
+
+**Estado P0-C:** P0-4/P0-5/P0-6/P0-7 están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 30/09/2026]**. La matriz final ejecutó previamente 232 aserciones sobre Express y PostgreSQL 18 efímero locales, con fixtures/JWT sintéticos y cero intentos externos. No se repitió en producción: el commit exacto `db4d2bd756c339e010333bd96e173673388710f4`, deployment Railway `af85a53b-67e5-4ed5-8a50-773cc8525b32`, aprobó un smoke GET mínimo sin credenciales/datos reales ni mutaciones. No hubo migraciones, cambios de esquema ni cambios B2C.
+
+### 2.1 Estado de mantenimiento B2B
+
+| Método y ruta | Finalidad | Control | Persistencia/efecto |
+|---|---|---|---|
+| `GET /api/b2b/maintenance-status` | Informar exclusivamente si la capa visual B2B debe mostrar mantenimiento. | Público, sólo lectura; `B2B_MAINTENANCE_MODE === '1'`. | No consulta DB, no usa sesión, no expone datos personales/secretos y responde `Cache-Control: no-store`. **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]** |
+
+El guard frontend `maintenance-b2b-v2.js` consume esta ruta mediante el binding léxico `API_B2B.BASE_URL`, con `credentials: omit`, `cache: no-store` y polling de 5 s. La ruta y el overlay no bloquean técnicamente mutaciones: `B2B_P1_BRIDGE_MODE` es una barrera backend separada. `sw.js` no participa en la alternancia. El mecanismo OFF→ON→OFF y el bridge se verificaron en producción; el cierre dejó ambos modos en `0`, preservó B2C/no-B2B y no usó datos clínicos.
 
 ## 3. Suscripciones y plan
 
@@ -58,7 +77,7 @@ Estas cuatro rutas están implementadas y existen variables relacionadas por nom
 
 Registro, recuperación, verificación y bienvenida están programados para usar Resend. La variable relacionada existe por nombre, pero el estado operativo externo no fue comprobado. La URL con token puede quedar en historial/cache/logs. El JWT y los helpers de correo son **[COMPARTIDO - NO TOCAR B2C]**.
 
-**[VERIFICADO EN ENTORNO CONTROLADO — P0-2, 30/09/2026]:** el cliente local exige un JWT estructuralmente B2B y temporalmente vigente para atravesar la guardia; no restaura el último usuario offline. Logout y cualquier 401 eliminan token, usuario actual/legado y selección activa de estación, preservando la cola offline y preferencias. Esta comprobación cliente no valida firma ni reemplaza `A`; la autenticidad y autorización siguen dependiendo del backend. **[NO VERIFICADO EN PRODUCCIÓN].**
+**[CERRADO — P0-2, 30/09/2026]:** el cliente exige un JWT estructuralmente B2B y temporalmente vigente para atravesar la guardia; no restaura el último usuario offline. Logout y cualquier 401 eliminan token, usuario actual/legado y selección activa de estación, preservando la cola offline y preferencias. La lógica fue verificada exhaustivamente en entorno controlado; el commit `9ec220c` fue desplegado y aprobó un gate productivo proporcional. Esta comprobación cliente no valida firma ni reemplaza `A`; la autenticidad y autorización siguen dependiendo del backend.
 
 ## 5. Institución, equipo y asignaciones
 
@@ -81,52 +100,52 @@ Registro, recuperación, verificación y bienvenida están programados para usar
 | `GET /api/b2b/pacientes` | Lista residentes activos. | `A`; AI todos; FA sólo asignados; MD/CS todos o asignados según permiso/query | pacientes, cuidador, familiar, formularios | `mis_asignados=1` fuerza asignaciones para MD/CS. |
 | `GET /api/b2b/pacientes/:id` | Ficha activa. | `A P` | `paciente.js` y vistas por residente | Devuelve 404 cuando no hay acceso. |
 | `POST /api/b2b/pacientes` | Alta de residente. | `A C(crear_paciente) L` | `pacientes.js` | Inserta datos identificatorios y de salud/cuidado. |
-| `PATCH /api/b2b/pacientes/:id` | Editar o registrar egreso. | `A C(editar_paciente/dar_alta)` | `pacientes.js`, `paciente.js` | No ejecuta `P`; restringe por institución. Sobrescribe sin versión. |
-| `DELETE /api/b2b/pacientes/:id` | Desactivar residente. | `A C(eliminar_paciente)` | `pacientes.js` | No ejecuta `P`; no borra físicamente. |
+| `PATCH /api/b2b/pacientes/:id` | Editar o registrar egreso. | `A C(editar_paciente/dar_alta) P V G` | `pacientes.js`, `paciente.js` | Egreso se audita como transición; no admite `fecha_egreso=null` como reactivación. |
+| `DELETE /api/b2b/pacientes/:id` | Desactivar residente. | `A C(eliminar_paciente) P` | `pacientes.js` | Autoriza antes de desactivar; no borra físicamente. |
 
 ## 7. Medicamentos e inventario
 
 | Método y ruta | Finalidad / tablas | Control | Consumidor | Observación actual |
 |---|---|---|---|---|
-| `GET /api/b2b/medicamentos/historial` | Administraciones por institución/residente. | `A F(medicamentos)` para FA; `P` sólo si hay `paciente_id` | `paciente.js`, `familiar.js` | Sin filtro de residente, una llamada directa lista historial institucional. |
-| `GET /api/b2b/medicamentos` | Medicación activa. | `A F(medicamentos)` para FA; `P` sólo si hay `paciente_id` | `paciente.js`, `familiar.js` | Mismo comportamiento con parámetro omitido. |
+| `GET /api/b2b/medicamentos/historial` | Administraciones por institución/residente. | `A F(medicamentos) P/listado institucional explícito` | `paciente.js`, `familiar.js` | FA y personal restringido requieren `paciente_id`; alcance institucional legítimo conserva lista global. |
+| `GET /api/b2b/medicamentos` | Medicación activa. | `A F(medicamentos) P/listado institucional explícito` | `paciente.js`, `familiar.js` | Misma regla fail-closed. |
 | `POST /api/b2b/medicamentos` | Crear indicación. | `A R(AI,CS,MD) L P` | `paciente.js` | Puede asociar catálogo. |
-| `POST /api/b2b/medicamentos/:id/toma` | Registrar administración y descontar stock. | `A R(AI,CS,MD) L` | `paciente.js` | Busca recurso por institución, no ejecuta `P`; crea historial y acepta `_quien`/`_offline_ts`. |
-| `PATCH /api/b2b/medicamentos/:id` | Editar indicación/stock. | `A R(AI,CS,MD)` | `paciente.js` | Institución + rol; no `P` ni versión. |
-| `DELETE /api/b2b/medicamentos/:id` | Desactivar. | `A R(AI,CS,MD)` | `paciente.js` | Institución + rol; no `P`. |
-| `GET /api/b2b/catalogo/stock-bajo` | Listar todo stock bajo institucional/específico. | `A R(AI,MD,CS)` | método disponible en cliente; uso directo no confirmado | No filtra por asignación. |
-| `GET /api/b2b/catalogo` | Lista inventario institucional o de residente. | `A`; para FA exige residente asignado y no muestra institucional | catálogo, paciente, familiar | Para MD/CS no ejecuta `P` al pedir residente. |
-| `POST /api/b2b/catalogo` | Crear ítem. | `A R(AI,MD,CS) C(gestionar_catalogo) L` | `catalogo.js` | Si hay residente sólo valida pertenencia a institución, no asignación. |
-| `PATCH /api/b2b/catalogo/:id` | Editar; si aumenta stock inserta reposición. | `A R(AI,MD,CS) C(gestionar_catalogo)` | `catalogo.js` | Sin `P`; resto de cambios no queda versionado. |
-| `GET /api/b2b/catalogo/restock-historial` | Últimas 50 reposiciones, filtros opcionales. | `A` | `catalogo.js` | Sin filtros devuelve historial institucional; no `P`/`F`. |
+| `POST /api/b2b/medicamentos/:id/toma` | Registrar administración y descontar stock. | `A R(AI,CS,MD) L P(recurso) G I` | `paciente.js` | Stock, historial, ledger e idempotencia son atómicos; actor backend es autoridad y `_quien` no lo reemplaza. |
+| `PATCH /api/b2b/medicamentos/:id` | Editar indicación/stock. | `A R(AI,CS,MD) P(recurso) G V` | `paciente.js` | Valida vínculo de catálogo y versión opcional. |
+| `DELETE /api/b2b/medicamentos/:id` | Desactivar. | `A R(AI,CS,MD) P(recurso)` | `paciente.js` | Falla antes de escribir si no hay acceso. |
+| `GET /api/b2b/catalogo/stock-bajo` | Listar stock bajo institucional/específico. | `A R(AI,MD,CS) P cuando hay residente` | método disponible en cliente; uso directo no confirmado | Sin filtro, personal restringido recibe sólo institucional + residentes asignados. |
+| `GET /api/b2b/catalogo` | Lista inventario institucional o de residente. | `A F(medicamentos) para FA; P cuando hay residente` | catálogo, paciente, familiar | Un filtro de residente siempre se autoriza; sin filtro conserva sólo catálogo institucional. |
+| `POST /api/b2b/catalogo` | Crear ítem. | `A R(AI,MD,CS) C(gestionar_catalogo) L P si hay residente` | `catalogo.js` | Vínculo institucional o al mismo residente autorizado. |
+| `PATCH /api/b2b/catalogo/:id` | Editar; si aumenta stock inserta reposición. | `A R(AI,MD,CS) C(gestionar_catalogo) P/G si tiene residente V` | `catalogo.js` | Cambio, historial de reposición y ledger son atómicos. |
+| `GET /api/b2b/catalogo/restock-historial` | Últimas 50 reposiciones. | `A F(medicamentos) para FA; P/listado acotado` | `catalogo.js` | FA requiere residente; personal restringido sin filtro recibe sólo institucional + asignados. |
 | `DELETE /api/b2b/catalogo/:id` | Desactivar ítem. | `A R(AI)` | `catalogo.js` | No borra físicamente. |
 
 ## 8. Citas y tareas
 
 | Método y ruta | Finalidad | Control | Consumidor | Ciclo/hallazgo |
 |---|---|---|---|---|
-| `GET /api/b2b/citas` | Listar citas. | `A F(citas)` para FA; `P` sólo con `paciente_id` | `paciente.js`, `familiar.js` | Omisión del filtro permite lista institucional. |
+| `GET /api/b2b/citas` | Listar citas. | `A F(citas) P/listado institucional explícito` | `paciente.js`, `familiar.js` | FA/personal restringido requieren residente; alcance institucional conserva lista global. |
 | `POST /api/b2b/citas` | Crear cita. | `A R(AI,CS,MD) L P` | `paciente.js` | — |
-| `PATCH /api/b2b/citas/:id` | Editar/estado. | `A R(AI,CS,MD)` | `paciente.js` | Sin `P`; sobreescribe. |
-| `GET /api/b2b/citas/historial` | Citas actuales con estado `realizada`. | `A F(citas)` para FA; `P` sólo con `paciente_id` | `paciente.js` | No usa `historial_citas_b2b`. |
-| `DELETE /api/b2b/citas/:id` | Eliminar cita. | `A R(AI,CS,MD)` | `paciente.js` | Borrado físico; sin `P`. |
-| `GET /api/b2b/tareas/historial` | Listar cumplimientos. | `A F(tareas)` para FA; `P` sólo con `paciente_id` | `paciente.js`, `familiar.js` | Omisión permite lista institucional. |
-| `GET /api/b2b/tareas` | Listar tareas activas. | `A F(tareas)` para FA; `P` sólo con `paciente_id` | `paciente.js`, `familiar.js` | Omisión permite lista institucional. |
+| `PATCH /api/b2b/citas/:id` | Editar/estado. | `A R(AI,CS,MD) P(recurso)` | `paciente.js` | Autoriza antes de sobrescribir. |
+| `GET /api/b2b/citas/historial` | Citas actuales con estado `realizada`. | `A F(citas) P/listado institucional explícito` | `paciente.js` | No usa `historial_citas_b2b`. |
+| `DELETE /api/b2b/citas/:id` | Archivar cita. | `A R(AI,CS,MD) P(recurso) G V S` | `paciente.js` | Soft-delete repetible; la fila queda preservada. |
+| `GET /api/b2b/tareas/historial` | Listar cumplimientos. | `A F(tareas) P/listado institucional explícito` | `paciente.js`, `familiar.js` | Omisión falla cerrada para roles restringidos. |
+| `GET /api/b2b/tareas` | Listar tareas activas. | `A F(tareas) P/listado institucional explícito` | `paciente.js`, `familiar.js` | Misma regla. |
 | `POST /api/b2b/tareas` | Crear tarea. | `A R(AI,CS,MD) L P` | `paciente.js` | — |
-| `POST /api/b2b/tareas/:id/completar` | Registrar cumplimiento. | `A R(AI,CS,MD) L P` | `paciente.js` | Conserva historial; acepta atribución offline/compartida. |
-| `PATCH /api/b2b/tareas/:id` | Editar. | `A R(AI,CS,MD)` | `paciente.js` | Sin `P`; sin versión. |
-| `DELETE /api/b2b/tareas/:id` | Desactivar. | `A R(AI,CS,MD)` | `paciente.js` | Sin `P`; no borra físicamente. |
+| `POST /api/b2b/tareas/:id/completar` | Registrar cumplimiento. | `A R(AI,CS,MD) L P G I` | `paciente.js` | Historial, ledger e idempotencia son atómicos; actor backend es autoridad. |
+| `PATCH /api/b2b/tareas/:id` | Editar. | `A R(AI,CS,MD) P(recurso) G V` | `paciente.js` | Conflicto opcional por versión. |
+| `DELETE /api/b2b/tareas/:id` | Desactivar. | `A R(AI,CS,MD) P(recurso)` | `paciente.js` | Autoriza antes de desactivar; no borra físicamente. |
 
 ## 9. Síntomas, signos, contactos y notas
 
 | Familia | GET | POST | PATCH | DELETE | Control y persistencia |
 |---|---|---|---|---|---|
-| Síntomas (`sintomas_b2b`, `pacientes_b2b`) | `/api/b2b/sintomas` | `/api/b2b/sintomas` | `/api/b2b/sintomas/:id` | `/api/b2b/sintomas/:id` | GET: `A F(sintomas)` para FA y `P` sólo con filtro. POST: `A R(AI,CS,MD) L P`. PATCH/DELETE: `A R(...)`, institución, sin `P`; DELETE físico. |
-| Signos vitales (`signos_vitales_b2b`, `pacientes_b2b`) | `/api/b2b/signos-vitales` | `/api/b2b/signos-vitales` | — | `/api/b2b/signos-vitales/:id` | GET: `A F(signos)` para FA y `P` sólo con filtro. POST: `A R(...) L P`. DELETE: `A R(...)`, institución, sin `P`, físico. |
-| Contactos (`contactos_b2b`) | `/api/b2b/contactos` | `/api/b2b/contactos` | `/api/b2b/contactos/:id` | `/api/b2b/contactos/:id` | GET: `A F(contactos)` para FA y `P` sólo con filtro. POST: `A R(...) P` (sin `L`). PATCH/DELETE: `A R(...)`, institución, sin `P`; DELETE físico. |
-| Notas (`notas_b2b`, `pacientes_b2b`) | `/api/b2b/notas` | `/api/b2b/notas` | `/api/b2b/notas/:id` | `/api/b2b/notas/:id` | GET: `A F(notas)` para FA y `P` sólo con filtro. POST: `A R(...) L P`. PATCH/DELETE: `A R(...)`, institución, sin `P`; DELETE físico. |
+| Síntomas (`sintomas_b2b`, `pacientes_b2b`) | `/api/b2b/sintomas` | `/api/b2b/sintomas` | `/api/b2b/sintomas/:id` | `/api/b2b/sintomas/:id` | `A/F/P/G/V`; DELETE es `S`, no físico. |
+| Signos vitales (`signos_vitales_b2b`, `pacientes_b2b`) | `/api/b2b/signos-vitales` | `/api/b2b/signos-vitales` | — | `/api/b2b/signos-vitales/:id` | `A/F/P/G`; DELETE es `S`, no físico. |
+| Contactos (`contactos_b2b`) | `/api/b2b/contactos` | `/api/b2b/contactos` | `/api/b2b/contactos/:id` | `/api/b2b/contactos/:id` | `A/F/P/G/V`; DELETE es `S`, no físico. |
+| Notas (`notas_b2b`, `pacientes_b2b`) | `/api/b2b/notas` | `/api/b2b/notas` | `/api/b2b/notas/:id` | `/api/b2b/notas/:id` | `A/F/P/G/V`; DELETE es `S`, no físico. |
 
-Consumidor principal: `paciente.js`; las vistas de cuidador/familiar consumen subconjuntos. Síntomas y signos admiten fecha offline; síntomas/notas admiten nombre visible `_quien`. Ninguna de estas familias conserva versiones generales.
+Consumidor principal: `paciente.js`; las vistas de cuidador/familiar consumen subconjuntos. La fecha offline puede conservarse como momento declarado, pero identidad/actor provienen del backend. Las familias editables conservan versión prospectiva.
 
 ## 10. Notificaciones, panel y reportes
 
@@ -134,18 +153,18 @@ Consumidor principal: `paciente.js`; las vistas de cuidador/familiar consumen su
 |---|---|---|---|---|
 | `GET /api/b2b/notificaciones` | Citas próximas, notas urgentes, síntomas recientes, stock, cumpleaños, ingresos y egresos. | `A`; filtra asignaciones para FA y aplica secciones familiares al armar ítems | `utils-b2b.js` | No es web push; es consulta periódica/visual. |
 | `POST /api/b2b/notificaciones/vistas` | Actualizar última apertura de campana. | `A` | `utils-b2b.js` | Muta sólo usuario actual. |
-| `GET /api/b2b/dashboard` | Conteos, staff agregado, citas, síntomas, notas urgentes, cumpleaños y stock. | `A`; filtra asignados para FA y MD/CS restringidos | `dashboard.js` | Para FA filtra residente, pero no aplica cada bandera `F`; puede incluir notas urgentes aunque la sección notas esté deshabilitada. |
-| `GET /api/b2b/reportes` | Ficha y series de un residente en un período. | `A P`; exige `paciente_id` | `reportes.js` | Devuelve también contactos y notas sin aplicar banderas `F` por sección. |
+| `GET /api/b2b/dashboard` | Conteos, staff agregado, citas, síntomas, notas urgentes, cumpleaños y stock. | `A`; asignaciones/alcance institucional + `F` por bloque para FA | `dashboard.js` | Medicación, tareas, citas, síntomas y notas se omiten/ponen en cero cuando la sección familiar está deshabilitada. |
+| `GET /api/b2b/reportes` | Ficha y series de un residente en un período. | `A P`; exige `paciente_id`; `F` por bloque para FA | `reportes.js` | Medicación/historial, citas, tareas, síntomas, signos, contactos y notas respetan la sección vigente. |
 | `GET /api/b2b/reporte/export` | Exportación JSON institucional. | `A`, comprobación AI interna | `configuracion.js` | No incluye asignaciones, catálogo/reposiciones, tareas activas, documentos ni historial de citas; no es backup completo restaurable. |
 
 ## 11. Documentos
 
 | Método y ruta | Finalidad | Control | Consumidor | Observación actual |
 |---|---|---|---|---|
-| `POST /api/b2b/documentos` | Guardar base64, hasta ~5 MB por archivo y cuota textual institucional de 200 MB. | `A R(AI,CS,MD) L P` | `paciente.js` | Persiste contenido dentro de PostgreSQL. |
+| `POST /api/b2b/documentos` | Guardar base64, hasta ~5 MB por archivo y cuota textual institucional de 200 MB. | `A R(AI,CS,MD) L P G I` | `paciente.js` | Lock institucional serializa cuota; inserción/ledger/idempotencia son atómicos. |
 | `GET /api/b2b/documentos?paciente_id=` | Listar metadatos sin binario. | `A F(documentos)` para FA + `P` | `paciente.js`, `familiar.js` | Exige residente. |
-| `GET /api/b2b/documentos/:id/download` | Recuperar binario. | `A` + institución | `paciente.js` | No ejecuta `P` ni `F`; P0-1 impide su caché por el SW **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]**. |
-| `DELETE /api/b2b/documentos/:id` | Eliminar documento. | `A`; subidor o AI + institución | `paciente.js` | No ejecuta `P`/`F`; borrado físico. |
+| `GET /api/b2b/documentos/:id/download` | Recuperar binario. | `A P(recurso) F(documentos)` para FA | `paciente.js` | Resuelve tenant/residente antes de devolver bytes; respuestas de la familia usan `no-store`; P0-1 además impide Cache Storage. |
+| `DELETE /api/b2b/documentos/:id` | Archivar documento. | `A P(recurso) F(documentos)` para FA + subidor o AI + `G V S` | `paciente.js` | Conserva bytes y cuota; listado/descarga normal lo excluyen; 404 evita enumeración. |
 
 ## 12. Control administrativo B2B separado
 
@@ -160,14 +179,14 @@ Estas rutas actúan sobre B2B, pero están fuera del espacio `/api/b2b/` y depen
 
 | Riesgo que intenta cubrir | Mecanismo actual | Cobertura conocida |
 |---|---|---|
-| Sesión no autenticada | `A` | Casi todas las rutas B2B; webhook usa firma y auth usa tokens específicos. |
+| Sesión no autenticada/no vigente | `A` | Casi todas las rutas B2B; revalida estado actual. Webhook usa firma y auth usa tokens específicos. |
 | Cruce entre instituciones | `institucion_id` del JWT/consulta | Ampliamente aplicado; requiere pruebas automáticas exhaustivas. |
 | Rol no autorizado | `R` o checks internos | Aplicación desigual entre familias. |
-| Usuario sin asignación | `P` | Fuerte en ficha/altas; ausente o condicional en varias listas/mutaciones. |
-| Sección familiar deshabilitada | `F` | Rutas de módulo y notificaciones; incompleto en dashboard/reportes/download. |
+| Usuario sin asignación | `P` + helpers de lista/recurso | Aplicado a ficha, listas restringidas, documentos, agregados y mutaciones inventariadas. |
+| Sección familiar deshabilitada | `F` | Rutas de módulo, notificaciones, dashboard, reportes, catálogo/reposiciones y documentos. |
 | Plan vencido/límite | `L` / `checkInstPlanForAction` | Principalmente creación/acciones, no todas las mutaciones. |
-| Repetición offline | Ninguno extremo a extremo | `_qid` queda sólo en navegador. |
-| Registro de quién/cuándo | IDs/nombres en algunos eventos | Parcial; `_quien` no es autenticación y no hay auditoría general. |
+| Repetición/retry explícito | `I` en toma/tarea/documento | Opcional y persistido; no reactiva cola offline. |
+| Registro de quién/cuándo | Ledger allowlisted | Actor autenticado vigente; `_quien` no es identidad verificada. |
 
 ## 14. Resumen de tablas leídas/modificadas por familia
 
@@ -187,17 +206,13 @@ Estas rutas actúan sobre B2B, pero están fuera del espacio `/api/b2b/` y depen
 | Documentos | documentos, residentes/asignaciones | `documentos_b2b` |
 | Superadmin | institución y conteos | plan/estado comercial de institución |
 
-## 15. Cambios mínimos recomendados para el mapa futuro
+## 15. Cambios mínimos posteriores
 
 Sin cambiar rutas B2C ni datos existentes:
 
-1. incorporar un guard único B2B que recargue usuario/institución y centralice rol, sección y `P`;
-2. aplicar `P` después de resolver el `paciente_id` real del recurso en toda lectura, edición, acción y eliminación;
-3. exigir filtros explícitos o autorización institucional privilegiada en endpoints de lista;
-4. respetar `F` en respuestas agregadas y descargas;
-5. agregar idempotency key persistida a mutaciones reenviables;
-6. registrar auditoría aditiva de mutación/eliminación, sin reescribir eventos pasados;
-7. reemplazar borrados físicos futuros por estados/revocación compatibles donde corresponda;
-8. acompañar cada ruta con pruebas negativas entre institución, rol, asignación y estado de sesión.
+1. mantener la matriz negativa P0-C de institución, rol, asignación, sección y estado de sesión como regresión obligatoria;
+2. conservar como regresión obligatoria las garantías ya desplegadas de idempotencia, ledger, versiones y estados lógicos;
+3. diseñar outbox/saga antes de intentar atomicidad con Resend o Mercado Pago;
+4. agregar UI/export del ledger únicamente en P1-D, fuera de esta pasada.
 
-Estos puntos son plan futuro, no están implementados. Su prioridad y clasificación están en `ESTADO_Y_PLAN_B2B.md`.
+P0-C está desplegado y cerrado desde el 30/09/2026. P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**. P1-C es el próximo bloque y P1-D no se inició; no existe P1-E en la taxonomía canónica. Su prioridad y clasificación están en `ESTADO_Y_PLAN_B2B.md`.
