@@ -17,6 +17,7 @@
     const pollIntervalMs = 5000;
     const requestTimeoutMs = 4000;
     let overlay = null;
+    let overlayCard = null;
     let guardActive = false;
     let retryButton = null;
 
@@ -38,16 +39,13 @@
         if (overlay) return overlay;
         overlay = document.createElement('section');
         overlay.id = 'b2bMaintenanceOverlay';
-        overlay.setAttribute('role', 'alertdialog');
-        overlay.setAttribute('aria-modal', 'true');
-        overlay.setAttribute('aria-live', 'assertive');
         overlay.style.cssText = [
             'position:fixed', 'inset:0', 'z-index:2147483647', 'display:grid',
             'place-items:center', 'padding:24px', 'background:#f3f6fb',
             'color:#14213d', 'font-family:system-ui,-apple-system,"Segoe UI",sans-serif'
         ].join(';');
-        const card = document.createElement('div');
-        card.style.cssText = [
+        overlayCard = document.createElement('div');
+        overlayCard.style.cssText = [
             'width:min(100%,560px)', 'padding:40px 32px', 'border:1px solid #dbe4f0',
             'border-radius:18px', 'background:#fff', 'box-shadow:0 18px 50px rgba(20,33,61,.12)',
             'text-align:center'
@@ -68,15 +66,34 @@
         retryButton.textContent = 'Reintentar';
         retryButton.style.cssText = 'margin-top:20px;padding:10px 18px;border:0;border-radius:9px;background:#173b7a;color:#fff;font:inherit;font-weight:650;cursor:pointer';
         retryButton.addEventListener('click', () => { void refreshStatus(true); });
-        card.append(icon, title, detail, retryButton);
-        overlay.append(card);
+        overlayCard.append(icon, title, detail, retryButton);
+        overlay.append(overlayCard);
         document.body.append(overlay);
         return overlay;
+    }
+
+    function showInitialPending() {
+        guardActive = true;
+        const element = ensureOverlay();
+        element.dataset.state = 'pending';
+        element.setAttribute('role', 'presentation');
+        element.setAttribute('aria-hidden', 'true');
+        element.removeAttribute('aria-modal');
+        element.removeAttribute('aria-live');
+        overlayCard.hidden = true;
+        document.body.setAttribute('aria-busy', 'true');
     }
 
     function showBlocking(kind) {
         guardActive = true;
         const element = ensureOverlay();
+        element.dataset.state = kind;
+        element.setAttribute('role', 'alertdialog');
+        element.setAttribute('aria-modal', 'true');
+        element.setAttribute('aria-live', 'assertive');
+        element.removeAttribute('aria-hidden');
+        overlayCard.hidden = false;
+        document.body.setAttribute('aria-busy', 'true');
         const title = element.querySelector('#b2bMaintenanceTitle');
         const detail = element.querySelector('#b2bMaintenanceDetail');
         if (kind === 'maintenance') {
@@ -99,7 +116,9 @@
         guardActive = false;
         overlay?.remove();
         overlay = null;
+        overlayCard = null;
         retryButton = null;
+        document.body.removeAttribute('aria-busy');
     }
 
     async function requestStatus() {
@@ -137,6 +156,7 @@
         }
     }
 
-    globalThis.B2B_MAINTENANCE_READY = refreshStatus(true);
+    showInitialPending();
+    globalThis.B2B_MAINTENANCE_READY = refreshStatus(false);
     window.setInterval(() => { void refreshStatus(false); }, pollIntervalMs);
 })();
