@@ -120,8 +120,22 @@ const API_B2B = {
     // ---------- B2B writes (network-only) ----------
     // P0-3: any pre-existing cd_offline_queue value is intentionally quarantined.
     // This client never reads, writes, parses, migrates, deletes or transmits it.
-    async post(path, body) {
-        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) }));
+    async post(path, body, options = {}) {
+        const headers = { ...this.headers(), ...(options.headers || {}) };
+        return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers, body: JSON.stringify(body) }));
+    },
+    createIdempotencyKey() {
+        if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+            return globalThis.crypto.randomUUID();
+        }
+        // Fallback only for older browsers; it remains a per-attempt opaque UUID.
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.floor(Math.random() * 16);
+            return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+        });
+    },
+    idempotencyOptions(key) {
+        return { headers: { 'Idempotency-Key': key || this.createIdempotencyKey() } };
     },
     async patch(path, body) {
         return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { method: 'PATCH', headers: this.headers(), body: JSON.stringify(body) }));
@@ -193,7 +207,11 @@ const API_B2B = {
     async createMedicamento(data)         { return this.post('/api/b2b/medicamentos', data); },
     async updateMedicamento(id, data)     { return this.patch(`/api/b2b/medicamentos/${id}`, data); },
     async deleteMedicamento(id)           { return this.del(`/api/b2b/medicamentos/${id}`); },
-    async registrarToma(id, notas, quien, cantidad) { return this.post(`/api/b2b/medicamentos/${id}/toma`, { notas, _quien: quien || '', cantidad: cantidad || 1 }); },
+    async registrarToma(id, notas, quien, cantidad, idempotencyKey) {
+        return this.post(`/api/b2b/medicamentos/${id}/toma`,
+            { notas, _quien: quien || '', cantidad: cantidad || 1 },
+            this.idempotencyOptions(idempotencyKey));
+    },
     async getHistorialMeds(paciente_id)   { return this.get(`/api/b2b/medicamentos/historial?paciente_id=${paciente_id}`); },
 
     // ============================================
@@ -243,7 +261,11 @@ const API_B2B = {
     async createTarea(data)       { return this.post('/api/b2b/tareas', data); },
     async updateTarea(id, data)   { return this.patch(`/api/b2b/tareas/${id}`, data); },
     async deleteTarea(id)         { return this.del(`/api/b2b/tareas/${id}`); },
-    async completarTarea(id, notas, quien) { return this.post(`/api/b2b/tareas/${id}/completar`, { notas, _quien: quien || '' }); },
+    async completarTarea(id, notas, quien, idempotencyKey) {
+        return this.post(`/api/b2b/tareas/${id}/completar`,
+            { notas, _quien: quien || '' },
+            this.idempotencyOptions(idempotencyKey));
+    },
     async getHistorialTareas(pid) { return this.get(`/api/b2b/tareas/historial?paciente_id=${pid}`); },
 
     // ============================================
@@ -318,7 +340,9 @@ const API_B2B = {
     // DOCUMENTOS ADJUNTOS
     // ============================================
     async getDocumentos(paciente_id)  { return this.get(`/api/b2b/documentos?paciente_id=${paciente_id}`); },
-    async uploadDocumento(data)       { return this.post('/api/b2b/documentos', data); },
+    async uploadDocumento(data, idempotencyKey) {
+        return this.post('/api/b2b/documentos', data, this.idempotencyOptions(idempotencyKey));
+    },
     async deleteDocumento(id)         { return this.del(`/api/b2b/documentos/${id}`); },
     // Descarga con auth header → blob → dispara descarga en el navegador
     async downloadDocumento(id, nombre_archivo) {
