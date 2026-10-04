@@ -7,7 +7,7 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-// Paquete P0-2/P0-3/P0-8/P1-B: este cambio de script dispara un install que recarga STATIC_ASSETS
+// Paquete P0-2/P0-3/P0-8/P1-B/P1-C: este cambio de script dispara un install que recarga STATIC_ASSETS
 // dentro del mismo cache, sin eliminar entradas estáticas ajenas/no-B2B.
 const CACHE_NAME = 'cuidadiario-pro-v6';
 const CACHE_NAME_API = 'cuidadiario-pro-api-v6';

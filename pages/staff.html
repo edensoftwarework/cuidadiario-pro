@@ -78,6 +78,23 @@
                 </div>
             </div>
 
+            <!-- Operadores institucionales P1-C -->
+            <div class="card mb-20" id="operatorsCard">
+                <div class="card-header" id="operadores">
+                    <span class="card-title">🔐 Operadores de estación <span id="operatorsCount" class="badge badge-gray"></span></span>
+                    <button class="btn btn-primary btn-sm" onclick="openNuevoOperator()">+ Nuevo operador</button>
+                </div>
+                <div style="padding:0 18px 12px;color:var(--text-secondary);font-size:.82rem">
+                    Estas identidades no tienen email ni acceso propio. Se utilizan exclusivamente con PIN en una estación compartida.
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nombre</th><th>Rol operativo</th><th>Estado</th><th>Credencial</th><th>Acciones</th></tr></thead>
+                        <tbody id="operatorsTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:20px"><div class="spinner spinner-dark"></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Asignaciones -->
             <div class="card">
                 <div class="card-header">
@@ -132,6 +149,41 @@
                 </div>
                 <div class="modal-footer" style="padding:0;margin-top:10px">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modalStaff')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Operador de estación -->
+<div class="modal-overlay" id="modalOperator">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <span class="modal-title" id="modalOperatorTitle">Nuevo operador</span>
+            <button class="modal-close" onclick="closeModal('modalOperator')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="formOperator" autocomplete="off">
+                <div class="form-group">
+                    <label class="form-label">Nombre visible *</label>
+                    <input type="text" name="oNombre" class="form-control" minlength="2" maxlength="120" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rol operativo *</label>
+                    <select name="oRol" class="form-control" required>
+                        <option value="cuidador_staff">Personal / Operativo</option>
+                        <option value="medico">Médico / Profesional</option>
+                        <option value="admin_institucion">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">PIN de 6 dígitos</label>
+                    <input type="password" name="oPin" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password">
+                    <div class="form-hint" id="operatorPinHint">El PIN es obligatorio y debe tener exactamente 6 dígitos.</div>
+                </div>
+                <div class="modal-footer" style="padding:0;margin-top:10px">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modalOperator')">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>

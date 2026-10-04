@@ -11,19 +11,92 @@ const API_B2B = {
     USER_KEY:      'cd_pro_user',
     LAST_USER_KEY: 'cd_pro_last_user',   // legacy P0-2 cleanup target; no longer written or restored
     ACTIVE_WORKER_KEY: 'cd_active_worker',
+    OPERATOR_TOKEN_KEY: 'cd_operator_token',
+    OPERATOR_CONTEXT_KEY: 'cd_operator_context',
+    OPERATOR_ACTIVITY_KEY: 'cd_operator_last_activity',
+    OPERATOR_IDLE_MS: 60 * 60 * 1000,
+    _operatorChannel: null,
 
     // ---------- Auth storage ----------
     getToken()  { return localStorage.getItem(this.TOKEN_KEY); },
     setToken(t) { localStorage.setItem(this.TOKEN_KEY, t); },
     removeToken() {
+        this.clearOperatorContext('session-ended', true);
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
         localStorage.removeItem(this.LAST_USER_KEY);
         try { sessionStorage.removeItem(this.ACTIVE_WORKER_KEY); } catch {}
         this.purgeLegacyGetCache();
     },
-    getUser()      { const u = localStorage.getItem(this.USER_KEY);      return u ? JSON.parse(u) : null; },
+    getPrincipalUser() { const u = localStorage.getItem(this.USER_KEY); return u ? JSON.parse(u) : null; },
+    getUser() {
+        const principal = this.getPrincipalUser();
+        const operator = this.getOperatorContext();
+        if (!principal || !operator || !principal.shared_mode) return principal;
+        return {
+            ...principal,
+            principal_nombre: principal.nombre,
+            nombre: operator.nombre,
+            rol: operator.rol,
+            operador_b2b_id: operator.id,
+        };
+    },
     setUser(u)  { localStorage.setItem(this.USER_KEY, JSON.stringify(u)); },
+    getOperatorToken() { try { return sessionStorage.getItem(this.OPERATOR_TOKEN_KEY); } catch { return null; } },
+    getOperatorContext() {
+        try {
+            const raw = sessionStorage.getItem(this.OPERATOR_CONTEXT_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed?.id || !parsed?.expires_at || new Date(parsed.expires_at).getTime() <= Date.now()) {
+                this.clearOperatorContext('expired', false);
+                return null;
+            }
+            return parsed;
+        } catch { return null; }
+    },
+    setOperatorContext(token, operator, expiresAt) {
+        sessionStorage.removeItem(this.ACTIVE_WORKER_KEY);
+        sessionStorage.setItem(this.OPERATOR_TOKEN_KEY, token);
+        sessionStorage.setItem(this.OPERATOR_CONTEXT_KEY, JSON.stringify({ ...operator, expires_at: expiresAt }));
+        sessionStorage.setItem(this.OPERATOR_ACTIVITY_KEY, String(Date.now()));
+        this._broadcastOperatorEvent('operator-changed');
+    },
+    clearOperatorContext(reason = 'cleared', broadcast = false) {
+        try {
+            sessionStorage.removeItem(this.OPERATOR_TOKEN_KEY);
+            sessionStorage.removeItem(this.OPERATOR_CONTEXT_KEY);
+            sessionStorage.removeItem(this.OPERATOR_ACTIVITY_KEY);
+            sessionStorage.removeItem(this.ACTIVE_WORKER_KEY);
+        } catch {}
+        if (broadcast) this._broadcastOperatorEvent(reason);
+        try { window.dispatchEvent(new CustomEvent('b2b:operator-cleared', { detail: { reason } })); } catch {}
+    },
+    _broadcastOperatorEvent(reason) {
+        try { this._operatorChannel?.postMessage({ type: 'invalidate', reason, at: Date.now() }); } catch {}
+    },
+    initOperatorLifecycle() {
+        const principal = this.getPrincipalUser();
+        if (!principal?.shared_mode) return;
+        try {
+            if (typeof BroadcastChannel === 'function' && !this._operatorChannel) {
+                this._operatorChannel = new BroadcastChannel('cuidadiario-b2b-operator');
+                this._operatorChannel.addEventListener('message', event => {
+                    if (event.data?.type === 'invalidate') this.clearOperatorContext(event.data.reason || 'other-tab', false);
+                });
+            }
+        } catch {}
+        const markActivity = () => {
+            if (this.getOperatorToken()) sessionStorage.setItem(this.OPERATOR_ACTIVITY_KEY, String(Date.now()));
+        };
+        ['pointerdown', 'keydown', 'touchstart'].forEach(name => window.addEventListener(name, markActivity, { passive: true }));
+        setInterval(() => {
+            const token = this.getOperatorToken();
+            if (!token) return;
+            const last = Number(sessionStorage.getItem(this.OPERATOR_ACTIVITY_KEY) || 0);
+            if (!last || Date.now() - last >= this.OPERATOR_IDLE_MS) this.endOperatorShift('idle');
+        }, 30000);
+    },
     isAuth() {
         const token = this.getToken();
         if (!token) return false;
@@ -44,9 +117,10 @@ const API_B2B = {
     },
 
     // ---------- Headers ----------
-    headers(auth = true) {
+    headers(auth = true, includeOperator = true) {
         const h = { 'Content-Type': 'application/json' };
         if (auth) { const t = this.getToken(); if (t) h['Authorization'] = `Bearer ${t}`; }
+        if (auth && includeOperator) { const t = this.getOperatorToken(); if (t) h['X-B2B-Operator-Token'] = t; }
         return h;
     },
 
@@ -78,6 +152,10 @@ const API_B2B = {
                 code = e.code || null;
                 extra = { pacientes_count: e.pacientes_count, staff_count: e.staff_count, can_use_basico: e.can_use_basico };
             } catch {}
+            if (code === 'OPERATOR_REQUIRED') {
+                this.clearOperatorContext('operator-required', true);
+                try { window.dispatchEvent(new CustomEvent('b2b:operator-required')); } catch {}
+            }
             const apiErr = new Error(msg);
             if (code) apiErr.code = code;
             Object.assign(apiErr, extra);
@@ -168,7 +246,67 @@ const API_B2B = {
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },
     async resetPassword(token, password) { return this.postNoAuth('/api/b2b/auth/reset-password', { token, password }); },
-    logout() { this.removeToken(); window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html'; },
+    logout() {
+        const operatorToken = this.getOperatorToken();
+        if (operatorToken && this.getToken()) {
+            this._fetch(`${this.BASE_URL}/api/b2b/operators/end-shift`, {
+                method: 'POST', headers: this.headers(true, true), body: '{}', keepalive: true,
+            }).catch(() => {});
+        }
+        this.removeToken();
+        window.location.href = (window.location.pathname.includes('/pages/') ? '../' : '') + 'login.html';
+    },
+
+    // ============================================
+    // OPERADORES DE ESTACIÓN COMPARTIDA (P1-C)
+    // ============================================
+    async getOperators(administrative = false) {
+        const suffix = administrative ? '?all=1' : '';
+        return this.handle(await this._fetch(`${this.BASE_URL}/api/b2b/operators${suffix}`, { headers: this.headers(true, false) }));
+    },
+    async createOperator(data) {
+        return this.handle(await this._fetch(`${this.BASE_URL}/api/b2b/operators`, {
+            method: 'POST', headers: this.headers(true, false), body: JSON.stringify(data),
+        }));
+    },
+    async updateOperator(id, data) {
+        return this.handle(await this._fetch(`${this.BASE_URL}/api/b2b/operators/${id}`, {
+            method: 'PATCH', headers: this.headers(true, false), body: JSON.stringify(data),
+        }));
+    },
+    async activateOperator(operatorId, pin) {
+        const rawResponse = await this._fetch(`${this.BASE_URL}/api/b2b/operators/activate`, {
+            method: 'POST', headers: this.headers(true, false), body: JSON.stringify({ operator_id: operatorId, pin }),
+        });
+        if (rawResponse.status === 401) {
+            let operatorError = null;
+            try { operatorError = await rawResponse.clone().json(); } catch {}
+            if (operatorError?.code === 'OPERATOR_PIN_INVALID') {
+                const error = new Error(operatorError.error || 'Operador o PIN inválido');
+                error.code = operatorError.code;
+                throw error;
+            }
+        }
+        const response = await this.handle(rawResponse);
+        this.setOperatorContext(response.operator_token, response.operator, response.expires_at);
+        return response.operator;
+    },
+    async validateOperatorContext() {
+        if (!this.getOperatorToken()) return null;
+        const response = await this.handle(await this._fetch(`${this.BASE_URL}/api/b2b/operators/context`, { headers: this.headers() }));
+        return response.operator;
+    },
+    async endOperatorShift(reason = 'manual') {
+        const hadToken = !!this.getOperatorToken();
+        try {
+            if (hadToken && this.getToken()) {
+                await this._fetch(`${this.BASE_URL}/api/b2b/operators/end-shift`, {
+                    method: 'POST', headers: this.headers(), body: JSON.stringify({ reason }),
+                });
+            }
+        } catch {}
+        this.clearOperatorContext(reason, true);
+    },
 
     // ============================================
     // INSTITUCIÓN
@@ -207,9 +345,9 @@ const API_B2B = {
     async createMedicamento(data)         { return this.post('/api/b2b/medicamentos', data); },
     async updateMedicamento(id, data)     { return this.patch(`/api/b2b/medicamentos/${id}`, data); },
     async deleteMedicamento(id)           { return this.del(`/api/b2b/medicamentos/${id}`); },
-    async registrarToma(id, notas, quien, cantidad, idempotencyKey) {
+    async registrarToma(id, notas, cantidad, idempotencyKey) {
         return this.post(`/api/b2b/medicamentos/${id}/toma`,
-            { notas, _quien: quien || '', cantidad: cantidad || 1 },
+            { notas, cantidad: cantidad || 1 },
             this.idempotencyOptions(idempotencyKey));
     },
     async getHistorialMeds(paciente_id)   { return this.get(`/api/b2b/medicamentos/historial?paciente_id=${paciente_id}`); },
@@ -261,9 +399,9 @@ const API_B2B = {
     async createTarea(data)       { return this.post('/api/b2b/tareas', data); },
     async updateTarea(id, data)   { return this.patch(`/api/b2b/tareas/${id}`, data); },
     async deleteTarea(id)         { return this.del(`/api/b2b/tareas/${id}`); },
-    async completarTarea(id, notas, quien, idempotencyKey) {
+    async completarTarea(id, notas, idempotencyKey) {
         return this.post(`/api/b2b/tareas/${id}/completar`,
-            { notas, _quien: quien || '' },
+            { notas },
             this.idempotencyOptions(idempotencyKey));
     },
     async getHistorialTareas(pid) { return this.get(`/api/b2b/tareas/historial?paciente_id=${pid}`); },
@@ -374,6 +512,7 @@ const API_B2B = {
 
 // P0-1 remains active: remove only legacy /api/b2b GET responses.
 API_B2B.purgeLegacyGetCache();
+API_B2B.initOperatorLifecycle();
 
 // ============================================
 // SERVICE WORKER REGISTRATION

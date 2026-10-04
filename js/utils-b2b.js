@@ -728,189 +728,216 @@ function confirmDialog(message, onConfirm, confirmLabel = 'Confirmar') {
 }
 
 // ============================================
-// MODO ESTACIÓN COMPARTIDA
-// Permite a un único dispositivo ser usado por todo el equipo
-// sin necesidad de múltiples logins/logouts. Cada persona selecciona
-// su nombre antes de registrar; la sesión JWT es siempre la del admin.
+// MODO ESTACIÓN COMPARTIDA — P1-C
+// El principal conserva la sesión B2B. El operador humano se identifica
+// contra el backend mediante ID estable + PIN y nunca por un nombre libre.
 // ============================================
 
-/**
- * Devuelve el nombre que se usará como "registrador" en los registros clínicos.
- * Si el modo estación está ON y hay un trabajador activo → ese nombre.
- * Si no → el nombre del usuario JWT logueado.
- */
 function getRegistrador() {
-    if (localStorage.getItem('cd_shared_mode')) {
-        const w = sessionStorage.getItem('cd_active_worker');
-        if (w) return w;
-    }
-    return API_B2B.getUser()?.nombre || '';
+    return API_B2B.getOperatorContext()?.nombre || API_B2B.getPrincipalUser()?.nombre || '';
 }
 
-/**
- * Clave de localStorage para los trabajadores recientes, con scope por institución.
- * Evita que una institución vea los workers de otra en el mismo dispositivo.
- */
 function _workersKey() {
-    const instId = API_B2B.getUser()?.institucion_id || 'anon';
+    const instId = API_B2B.getPrincipalUser()?.institucion_id || 'anon';
     return `cd_workers_recientes_${instId}`;
 }
 
-/** Guarda quién está trabajando ahora en este dispositivo */
-function setActiveWorker(nombre) {
-    sessionStorage.setItem('cd_active_worker', nombre);
-    // Mantener lista de personas recientes (max 8) en localStorage, con scope por institución
-    try {
-        const recientes = JSON.parse(localStorage.getItem(_workersKey()) || '[]');
-        const filtrados = recientes.filter(n => n !== nombre);
-        filtrados.unshift(nombre);
-        localStorage.setItem(_workersKey(), JSON.stringify(filtrados.slice(0, 8)));
-    } catch {}
-    _actualizarWorkerChip();
-    closeModal('workerSwitcherModal');
-    showToast(`Registrando como: ${nombre}`, 'success', 2000);
-}
-
 function _actualizarWorkerChip() {
-    const nombre = sessionStorage.getItem('cd_active_worker') || API_B2B.getUser()?.nombre || '?';
+    const operator = API_B2B.getOperatorContext();
+    const principal = API_B2B.getPrincipalUser();
+    const nombre = operator?.nombre || principal?.nombre || principal?.email || 'Usuario';
+    const roleLabels = { admin_institucion: 'Administrador', cuidador_staff: 'Personal', medico: 'Médico / Profesional' };
+    const effectiveRole = operator?.rol || principal?.rol;
+    const role = roleLabels[effectiveRole] || effectiveRole || '';
     const inicial = escapeHtml(nombre.charAt(0).toUpperCase());
     const nombreHtml = escapeHtml(nombre);
+    const roleHtml = escapeHtml(role);
 
-    // Topbar chip
     const chip = document.getElementById('workerChip');
     if (chip) {
-        chip.innerHTML = `<span style="width:20px;height:20px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:5px">${inicial}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${nombreHtml}</span>`;
-        chip.title = `Registrando como: ${nombre}\nTocá para cambiar`;
+        chip.innerHTML = `<span class="operator-chip-avatar">${inicial}</span><span class="operator-chip-text"><strong>${nombreHtml}</strong><small>${roleHtml}</small></span>`;
+        chip.title = operator
+            ? `Registrando como ${nombre}. Tocá para cambiar o volver a tu identidad.`
+            : `Registrando como ${nombre}. Tocá para cambiar de persona.`;
+        chip.classList.remove('operator-required');
     }
 
-    // Sidebar widget
     const widget = document.getElementById('sidebarWorkerWidget');
     if (widget) {
         widget.innerHTML = `
             <div class="sidebar-worker-av">${inicial}</div>
             <div class="sidebar-worker-info">
-                <div class="sidebar-worker-label">Registrando como</div>
+                <div class="sidebar-worker-label">Operando como</div>
                 <div class="sidebar-worker-name">${nombreHtml}</div>
+                <div class="sidebar-worker-role">${roleHtml}</div>
             </div>
             <span class="sidebar-worker-change">cambiar</span>`;
     }
 }
 
-/** Inyecta el chip en el topbar Y en el sidebar, añade los estilos CSS necesarios */
 function initSharedStationUI() {
-    if (!localStorage.getItem('cd_shared_mode')) return;
-    // Inyectar CSS una sola vez
+    const principal = API_B2B.getPrincipalUser();
+    if (!principal?.shared_mode) return;
+    try {
+        sessionStorage.removeItem('cd_active_worker');
+        localStorage.removeItem(_workersKey());
+    } catch {}
     if (!document.getElementById('sharedModeCSS')) {
         const style = document.createElement('style');
         style.id = 'sharedModeCSS';
         style.textContent = [
-            '.worker-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}',
-            '.worker-btn{display:flex;align-items:center;gap:8px;padding:9px 14px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--bg-card);cursor:pointer;font-size:.88rem;font-weight:600;flex-basis:calc(50% - 4px);min-width:0;transition:border-color .15s}',
+            '.worker-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}',
+            '.worker-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--bg-card);cursor:pointer;font-size:.88rem;font-weight:600;min-width:0;transition:border-color .15s}',
             '.worker-btn:hover{border-color:var(--pro-primary)}',
             '.worker-btn.active{border-color:var(--pro-primary);background:#EEF2FF;color:var(--pro-primary)}',
             '.worker-btn-av{width:30px;height:30px;border-radius:50%;background:var(--pro-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}',
-            // Sidebar worker widget
+            '.operator-chip-avatar{width:22px;height:22px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}',
+            '.operator-chip-text{display:flex;flex-direction:column;line-height:1.05;text-align:left;overflow:hidden}.operator-chip-text strong{font-size:.75rem;overflow:hidden;text-overflow:ellipsis}.operator-chip-text small{font-size:.62rem;color:var(--text-secondary);margin-top:2px}',
             '.sidebar-worker{padding:8px 14px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s;border-radius:0 0 12px 12px}',
             '.sidebar-worker:hover{background:var(--bg-page)}',
             '.sidebar-worker-av{width:28px;height:28px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
             '.sidebar-worker-info{flex:1;min-width:0}',
             '.sidebar-worker-label{font-size:.68rem;color:var(--text-secondary);line-height:1}',
             '.sidebar-worker-name{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.sidebar-worker-role{font-size:.65rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.sidebar-worker-change{font-size:.68rem;color:var(--pro-primary);flex-shrink:0}',
-            '.collapsed .sidebar-worker-info,.collapsed .sidebar-worker-change,.collapsed .sidebar-worker-label{display:none}',
+            '.collapsed .sidebar-worker-info,.collapsed .sidebar-worker-change{display:none}',
+            '.operator-required-modal{z-index:12000}',
         ].join('');
         document.head.appendChild(style);
     }
-    // Chip en el topbar (compacto)
     const topbarActions = document.querySelector('.topbar-actions');
     if (topbarActions && !document.getElementById('workerChip')) {
         const chip = document.createElement('button');
         chip.id = 'workerChip';
         chip.className = 'btn btn-secondary btn-sm';
-        chip.style.cssText = 'font-size:.78rem;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;max-width:160px;overflow:hidden';
-        chip.title = 'Cambiar quién registra';
-        chip.addEventListener('click', openWorkerSwitcher);
+        chip.style.cssText = 'padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:6px;max-width:190px;overflow:hidden';
+        chip.addEventListener('click', () => openWorkerSwitcher(false));
         topbarActions.insertBefore(chip, topbarActions.firstChild);
     }
-    // Widget en el sidebar footer (más visible, siempre accesible)
     const sidebarFooter = document.querySelector('.sidebar-footer');
     if (sidebarFooter && !document.getElementById('sidebarWorkerWidget')) {
         const widget = document.createElement('div');
         widget.id = 'sidebarWorkerWidget';
         widget.className = 'sidebar-worker';
-        widget.title = 'Cambiar quién está registrando';
-        widget.addEventListener('click', openWorkerSwitcher);
+        widget.title = 'Cambiar quién registra';
+        widget.addEventListener('click', () => openWorkerSwitcher(false));
         sidebarFooter.insertAdjacentElement('afterbegin', widget);
     }
     _actualizarWorkerChip();
+    window.addEventListener('b2b:operator-required', () => openWorkerSwitcher(false));
+    window.addEventListener('b2b:operator-cleared', () => {
+        _actualizarWorkerChip();
+    });
+    const existing = API_B2B.getOperatorContext();
+    if (existing) {
+        API_B2B.validateOperatorContext().catch(() => openWorkerSwitcher(false));
+    }
 }
 
-/** Abre el modal para seleccionar quién está trabajando ahora */
-async function openWorkerSwitcher() {
-    const currentWorker = sessionStorage.getItem('cd_active_worker') || '';
-    const jwtNombre = API_B2B.getUser()?.nombre || '';
-
-    // Unificar: recientes locales (scoped por institución) + staff activo de la DB
-    let recientes = JSON.parse(localStorage.getItem(_workersKey()) || '[]');
+async function openWorkerSwitcher(required = false) {
+    const current = API_B2B.getOperatorContext();
+    const principal = API_B2B.getPrincipalUser();
+    let operators = [];
     try {
-        const staffList = await API_B2B.getStaff();
-        staffList.filter(s => s.activo && s.rol !== 'familiar').forEach(s => {
-            if (!recientes.includes(s.nombre)) recientes.push(s.nombre);
-        });
-        localStorage.setItem(_workersKey(), JSON.stringify(recientes.slice(0, 12)));
-    } catch (_) { /* sin staff disponible, continuar con recientes */ }
-    // Asegurar que el admin siempre aparezca
-    if (jwtNombre && !recientes.includes(jwtNombre)) recientes.unshift(jwtNombre);
+        operators = await API_B2B.getOperators(false);
+    } catch (error) {
+        showToast('No se pudo obtener el directorio de operadores: ' + error.message, 'error');
+    }
 
     let modal = document.getElementById('workerSwitcherModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'workerSwitcherModal';
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay operator-required-modal';
         document.body.appendChild(modal);
     }
+    modal.classList.remove('required');
 
-    // IMPORTANTE: NO usar onclick inline con nombres — se usan data-worker + addEventListener
-    const recBtns = recientes.map(n => {
-        const active = n === currentWorker ? ' active' : '';
-        return `<button class="worker-btn${active}" data-worker="${escapeHtml(n)}" style="display:flex;align-items:center;gap:8px;overflow:hidden;min-width:0;width:100%">
-            <span class="worker-btn-av" style="flex-shrink:0">${escapeHtml(n.charAt(0).toUpperCase())}</span>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${escapeHtml(n)}</span>
+    const roleLabels = { admin_institucion: 'Administrador', cuidador_staff: 'Personal', medico: 'Médico / Profesional' };
+    const principalName = principal?.nombre || principal?.email || 'Mi identidad';
+    const principalRole = roleLabels[principal?.rol] || principal?.rol || '';
+    const principalButton = `<button type="button" class="worker-btn${current ? '' : ' active'}" id="selectPrincipalIdentity">
+        <span class="worker-btn-av">${escapeHtml(principalName.charAt(0).toUpperCase())}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;text-align:left">${escapeHtml(principalName)}<small style="display:block;color:var(--text-secondary);font-weight:400">${escapeHtml(principalRole)} · titular de la sesión</small></span>
+    </button>`;
+    const buttons = operators.map(operator => {
+        const active = operator.id === current?.id ? ' active' : '';
+        return `<button type="button" class="worker-btn${active}" data-operator-id="${safeRecordId(operator.id)}">
+            <span class="worker-btn-av">${escapeHtml(operator.nombre.charAt(0).toUpperCase())}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;text-align:left">${escapeHtml(operator.nombre)}<small style="display:block;color:var(--text-secondary);font-weight:400">${escapeHtml(roleLabels[operator.rol] || operator.rol)}</small></span>
         </button>`;
     }).join('');
 
     modal.innerHTML = `
         <div class="modal modal-sm">
             <div class="modal-header">
-                <span class="modal-title">👥 ¿Quién está registrando?</span>
+                <span class="modal-title">👤 Cambiar quién registra</span>
                 <button class="modal-close" id="workerModalClose">✕</button>
             </div>
             <div class="modal-body">
                 <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">
-                    Seleccioná quién va a registrar las acciones. Sin contraseña.
+                    Tu identidad autenticada no requiere PIN. Si otra persona utiliza esta estación, debe seleccionar su operador e ingresar su PIN. Su contexto dura hasta 8 horas y se bloquea tras 60 minutos de inactividad.
                 </p>
-                ${recientes.length ? `<div class="worker-grid">${recBtns}</div>` : '<p class="text-muted" style="font-size:.82rem">Todavía no hay miembros del staff cargados.</p>'}
-                <div style="border-top:1px solid var(--border-color);margin-top:12px;padding-top:12px">
-                    <p style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">
-                        ¿La persona no aparece en la lista? Primero agregala como miembro del staff.
-                    </p>
-                    <a href="staff.html" class="btn btn-secondary btn-sm" style="width:100%;text-align:center;display:block">
-                        + Ir a gestión de staff
-                    </a>
+                <div class="worker-grid">${principalButton}${buttons}</div>
+                ${operators.length ? '' : '<p class="text-muted" style="font-size:.82rem;margin-bottom:12px">No hay otras personas habilitadas. Podés continuar normalmente con tu identidad.</p>'}
+                <form id="operatorPinForm" style="display:none">
+                    <input type="hidden" id="selectedOperatorId">
+                    <div class="form-group"><label class="form-label">PIN de 6 dígitos</label><input id="operatorPin" class="form-control" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required></div>
+                    <button class="btn btn-primary" type="submit" style="width:100%">Comenzar turno</button>
+                </form>
+                <div style="border-top:1px solid var(--border-color);margin-top:14px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+                    ${current ? '<button type="button" id="endOperatorShift" class="btn btn-secondary btn-sm">Volver a mi identidad</button>' : ''}
+                    ${API_B2B.getPrincipalUser()?.rol === 'admin_institucion' ? '<a href="staff.html#operadores" id="manageOperatorsLink" class="btn btn-secondary btn-sm">Administrar operadores</a>' : ''}
                 </div>
             </div>
         </div>`;
 
-    // Listeners sin inline JS — sin riesgo de SyntaxError por nombres con comillas/caracteres especiales
     modal.querySelector('#workerModalClose').addEventListener('click', () => closeModal('workerSwitcherModal'));
-    modal.querySelectorAll('[data-worker]').forEach(btn => {
-        btn.addEventListener('click', () => setActiveWorker(btn.dataset.worker));
+    modal.querySelector('#selectPrincipalIdentity').addEventListener('click', async event => {
+        event.currentTarget.disabled = true;
+        await API_B2B.endOperatorShift('return-to-principal');
+        showToast(`Registrando como ${principalName}`, 'success');
+        closeModal('workerSwitcherModal');
+        window.location.reload();
     });
+    modal.querySelectorAll('[data-operator-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.querySelectorAll('[data-operator-id]').forEach(candidate => candidate.classList.remove('active'));
+            btn.classList.add('active');
+            modal.querySelector('#selectedOperatorId').value = btn.dataset.operatorId;
+            modal.querySelector('#operatorPinForm').style.display = '';
+            modal.querySelector('#operatorPin').value = '';
+            modal.querySelector('#operatorPin').focus();
+        });
+    });
+    modal.querySelector('#operatorPinForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = event.target.querySelector('[type=submit]');
+        submit.disabled = true;
+        try {
+            const operator = await API_B2B.activateOperator(Number(modal.querySelector('#selectedOperatorId').value), modal.querySelector('#operatorPin').value);
+            showToast(`Operando como ${operator.nombre}`, 'success');
+            closeModal('workerSwitcherModal');
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message, 'error');
+            modal.querySelector('#operatorPin').value = '';
+            modal.querySelector('#operatorPin').focus();
+        } finally { submit.disabled = false; }
+    });
+    modal.querySelector('#endOperatorShift')?.addEventListener('click', async () => {
+        await API_B2B.endOperatorShift('return-to-principal');
+        closeModal('workerSwitcherModal');
+        window.location.reload();
+    });
+    modal.querySelector('#manageOperatorsLink')?.addEventListener('click', () => closeModal('workerSwitcherModal'));
 
     openModal('workerSwitcherModal');
 }
 
-function _agregarNuevoWorker() { /* legacy — ya no se usa */ }
+function setActiveWorker() { throw new Error('P1-C: la identidad nominal sin PIN fue retirada'); }
+function _agregarNuevoWorker() { /* legacy retirado por P1-C */ }
 
 // ============================================
 // OFFLINE BANNER
