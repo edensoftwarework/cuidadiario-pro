@@ -1,6 +1,6 @@
 # Arquitectura técnica de CuidaDiario PRO B2B
 
-**Corte de reconstrucción:** 3 de octubre de 2026, incluyendo inspección manual parcial de Railway del 15/09, recuperación lógica independiente del 28/09, cierre productivo de P0-C, micro-gate de mantenimiento y despliegue productivo verificado de P1-A/P1-B  
+**Corte de reconstrucción:** 4 de octubre de 2026, incluyendo inspección manual parcial de Railway del 15/09, recuperación lógica independiente del 28/09 y cierre productivo de P0-C/P1-A/P1-B/P1-C
 **Naturaleza:** descripción del código y de evidencia externa proporcionada; no es un diseño objetivo ni una certificación integral de producción.
 
 Etiquetas: **[VERIFICADO]** comprobado en código o evidencia externa identificada; **[INFERIDO]** conclusión técnica no observada directamente; **[NO VERIFICADO]** requiere evidencia adicional; **[PENDIENTE]** brecha abierta; **[FUTURO]** diseño aún no implementado; **[COMPARTIDO - NO TOCAR B2C]** puede afectar ambos productos. Cuando se dice “exclusivo B2B” en prosa, la superficie pertenece sólo a PRO.
@@ -68,7 +68,7 @@ El proceso Node, la conexión PostgreSQL, la política CORS, el runner de migrac
 | `pages/configuracion.html` | `configuracion.js` | Institución, cuenta, permisos, plan y caché. |
 | `admin-panel.html` | script embebido | Operación administrativa por clave separada. |
 
-`api-b2b.js` centraliza HTTP, JWT y purga de caché GET B2B heredada. P0-3 retiró el productor/consumidor/sincronizador de mutaciones offline: una clave heredada `cd_offline_queue` no se lee ni se toca. `utils-b2b.js` centraliza la guardia de página, roles, permisos visibles, navegación, campana, estado del plan, modo de estación compartida y helpers de renderizado contextual seguro. Los controles visuales no sustituyen a los controles del backend.
+`api-b2b.js` centraliza HTTP, JWT y purga de caché GET B2B heredada. P0-3 retiró el productor/consumidor/sincronizador de mutaciones offline: una clave heredada `cd_offline_queue` no se lee ni se toca. P1-C separa el token/contexto del operador secundario y lo envía en `X-B2B-Operator-Token`. `utils-b2b.js` centraliza la guardia de página, roles, permisos visibles, navegación, campana, estado del plan, identificación de estación compartida y helpers de renderizado contextual seguro. Los controles visuales no sustituyen a los controles del backend.
 
 Las 15 entradas B2B cargan `api-b2b.js` antes de `maintenance-b2b-v2.js`. El guard toma la base del binding global léxico `API_B2B.BASE_URL`, consulta sin credenciales y con `cache: no-store` el endpoint de estado, bloquea visualmente la UI cuando el backend informa mantenimiento y vuelve a consultar cada 5 s. No usa `localStorage`, Cache Storage ni `sw.js` como estado operativo.
 
@@ -86,8 +86,10 @@ Desde P1-B, `api-b2b.js` admite headers adicionales sólo por llamada y genera `
 | `localStorage` | `cd_api_/api/b2b...` | Copia heredada de respuestas GET B2B creada por versiones anteriores. | **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]:** se elimina selectivamente al cargar `api-b2b.js`; no se crean ni leen copias nuevas. Otras claves `cd_api_` se conservan. |
 | `localStorage` | `cd_offline_queue` | Copia heredada que puede contener método, ruta, cuerpo, datos de salud y operaciones DELETE. | P0-3 la conserva byte a byte en cuarentena: el cliente no la lee, parsea, migra, ejecuta, transmite ni borra automáticamente. **[CERRADO — lógica controlada y gate productivo proporcional aprobados el 30/09/2026]** |
 | `localStorage` | `stock_modelo`, `cd_shared_mode`, `cd_perm_config` | Preferencias operativas/compatibilidad. | Permanece salvo borrado explícito. |
-| `sessionStorage` | `cd_active_worker` | Identidad nominal elegida en estación compartida para la sesión. | P0-2 la elimina con logout, 401 o sesión localmente inválida; otras claves de `sessionStorage` se preservan. |
-| `localStorage` | `cd_workers_recientes_${institucion_id}` | Nombres recientes del selector de estación; no es la selección activa. | Permanece; P0-2 no la modifica. |
+| `sessionStorage` | `cd_active_worker` | Selección nominal heredada de estación compartida. | P1-C la elimina y no vuelve a usarla como identidad; P0-2 también la quita en logout/401. |
+| `localStorage` | `cd_workers_recientes_${institucion_id}` | Nombres recientes del selector heredado. | P1-C elimina selectivamente la clave de la institución al iniciar la UI compartida; no se usa para autenticar. |
+| `sessionStorage` | `cd_operator_token` | Token opaco exclusivamente de operador secundario; el servidor conserva sólo SHA-256. | Sólo la pestaña actual. Se elimina al volver al titular, finalizar/cambiar turno, por 60 min de inactividad, logout/401, expiración a 8 h o invalidación entre pestañas. El principal no usa esta clave. **[P1-C VERIFICADO EN PRODUCCIÓN — 04/10/2026]** |
+| `sessionStorage` | `cd_operator_context`, `cd_operator_last_activity` | ID/nombre/rol/expiración públicos del operador y marca local de actividad humana. | Mismo ciclo que el token; no contiene PIN. **[P1-C VERIFICADO EN PRODUCCIÓN — 04/10/2026]** |
 | Cache Storage | caché del service worker | Estáticos y respuestas GET no-B2B admitidas por su estrategia. Las entradas `/api/b2b/` heredadas se purgan por URL. | **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]:** GET B2B network-only; estáticos y API no-B2B conservan su estrategia. |
 | Historial/URL | token de verificación o recuperación | Query string usada por las páginas correspondientes. | Puede permanecer en historial, sincronización o registros del navegador. |
 | Descargas | archivo exportado o documento | JSON o binario descargado. | Fuera del control posterior de la aplicación. |
@@ -166,12 +168,13 @@ El cuerpo JSON y URL-encoded admite hasta 10 MB, necesario actualmente porque lo
 
 ### 4.2 Inicio y migraciones
 
-El arranque ejecuta `runMigrations()` y luego `runB2BP1Migrations(pool)` antes de abrir el puerto. El runner histórico contiene DDL y transformaciones de B2C y B2B en el mismo archivo/proceso: **[COMPARTIDO - NO TOCAR B2C]**. Parte de ese DDL B2B usa `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` y capturas que ignoran errores; dos migraciones horarias usan la tabla genérica `_migrations`. El runner P1 está separado, usa `schema_migrations_b2b`, valida checksums y bloquea el arranque ante error o divergencia.
+El arranque ejecuta `runMigrations()` y luego `runB2BP1Migrations(pool)` antes de abrir el puerto. El runner histórico contiene DDL y transformaciones de B2C y B2B en el mismo archivo/proceso: **[COMPARTIDO - NO TOCAR B2C]**. Parte de ese DDL B2B usa `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` y capturas que ignoran errores; dos migraciones horarias usan la tabla genérica `_migrations`. El runner P1 está separado, usa `schema_migrations_b2b`, valida checksums y bloquea el arranque ante error o divergencia. `p1c_001_operator_identity` se ejecuta después de las tres migraciones P1-A/P1-B; las cuatro quedaron verificadas en producción.
 
 Consecuencias documentales:
 
 - el esquema histórico descrito en `MODELO_DATOS_B2B.md` sigue combinando reconstrucción de código y evidencia externa;
-- las tres migraciones P1 sí fueron comprobadas en producción por journal, checksums y definiciones estructurales exactas;
+- las cuatro migraciones P1 fueron comprobadas en producción por journal, checksums y definiciones estructurales exactas;
+- la cuarta migración P1-C también fue comprobada previamente sobre una restauración PostgreSQL 18.1 aislada del dump fresco y luego aplicada/verificada en PostgreSQL 17.11 productivo;
 - el servidor P1 no acepta tráfico antes de completar ambos runners;
 - cualquier futura migración B2B debe aislar su SQL, ser aditiva e idempotente y no alterar tablas no B2B.
 
@@ -246,15 +249,24 @@ Existe un limitador de intentos de autenticación en memoria. Se reinicia con el
 
 Los defaults de `permisos_equipo` permiten a médico/personal ver todos los residentes y permiten crear/editar residentes, pero no egresar, borrar, administrar catálogo/equipo o asignar. El administrador puede modificar esta matriz. Para familiares, las secciones predeterminadas visibles son medicamentos, citas, tareas, síntomas, signos, contactos y documentos; notas queda deshabilitada por defecto.
 
-### 5.3 Estación compartida
+### 5.3 Estación compartida e identidad P1-C
 
-El modo compartido mantiene una sola sesión autenticada y permite elegir un nombre de trabajador en el navegador. Algunas altas registran el usuario autenticado como ID y aceptan `_quien` como nombre visible. No hay reautenticación individual del trabajador seleccionado. En consecuencia, el nombre mostrado no prueba por sí solo quién operó.
+**[VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]:** el principal autenticado aparece por defecto como “Registrando como” y opera normalmente sin PIN, fila duplicada ni sesión/timeout de operador. “Cambiar” permite ceder la estación a otra persona registrada en `operadores_b2b`; sólo entonces se valida PIN de seis dígitos, se entrega un token aleatorio de 32 bytes y se guarda únicamente su SHA-256. La sesión secundaria se vincula a institución, principal, operador y versión de credencial, dura hasta 8 horas y vence tras 60 minutos sin actividad. Cero operadores configurados es válido y no bloquea al principal.
+
+El JWT continúa identificando al **principal** (`req.b2bPrincipal`): cuenta institucional revalidada, tenant y propietario de las FK históricas. En `shared_mode`, sin header secundario `req.b2bUser` continúa siendo el principal. Con `X-B2B-Operator-Token` explícito y válido, el **operador secundario** determina rol efectivo y `operador_b2b_id`; un token inválido no cae silenciosamente al principal. Crear/editar operadores y una operación exclusivamente administradora requieren principal administrador; un operador administrador no puede elevar un principal no administrador y una cuenta familiar no puede activar operadores. Volver al titular revoca/elimina el contexto secundario sin PIN.
+
+No se creó una tabla de asignaciones por operador. Para evitar heredar alcance nominal del principal, un contexto de operador usa `assignment_user_id=null`: si su rol no tiene permiso institucional para ver todos los residentes, la autorización por asignación falla cerrada. Esta decisión preserva seguridad pero deja pendiente un diseño explícito si en el futuro se requieren asignaciones individuales de operadores.
+
+El frontend guarda token/contexto/actividad únicamente en `sessionStorage`, valida el contexto en refresh, muestra un indicador permanente y usa `BroadcastChannel` para invalidar otras pestañas al activar/cambiar/finalizar. Un PIN incorrecto conserva la sesión principal. PIN y token no se escriben en `localStorage` ni Cache Storage. **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN — 04/10/2026]:** backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3`, frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`; `maintenance=0`, bridge `0` y login público operativo.
+
+El gate postdeploy read-only confirmó migración/estructura, cero backfill y P1-A/P1-B intactos. El total `base_constraints=10` corresponde exactamente a ocho constraints heredados más dos FK P1-C; el `10/8` inicial fue un falso negativo corregido únicamente en el gate. Tras aplicar la migración, una anomalía requiere forward-fix con mantenimiento/bridge, no rollback automático al runtime pre-P1-C. B2C no fue modificado.
 
 ## 6. Autorización y aislamiento
 
 Controles disponibles:
 
 - `authB2BMiddleware`: JWT B2B y revalidación de usuario/institución/rol/verificación vigentes;
+- contexto de operador P1-C en `shared_mode`: token opaco vigente, mismo tenant/principal, operador activo y versión de credencial; rol efectivo del operador y separación de asignaciones;
 - `requireB2BRole(...)`: lista de roles;
 - `checkB2BPacienteAccess(...)`: institución, rol/permisos y asignación activa;
 - `checkB2BCanDo(...)`: acciones configurables;
@@ -279,7 +291,7 @@ El 30/09/2026 `origin/main` quedó en `db4d2bd756c339e010333bd96e173673388710f4`
 
 ## 7. Dominio y persistencia servidor
 
-Antes de P1 se reconstruyeron 17 tablas B2B principales y la institución como raíz del tenant. P1 agregó `schema_migrations_b2b`, `auditoria_eventos_b2b` y `operaciones_idempotentes_b2b` sin sustituir tablas heredadas. Los documentos se guardan en la columna `documentos_b2b.datos` como base64; no se observó object storage. No existe caché servidor B2B ni almacenamiento de archivos local confirmado.
+Antes de P1 se reconstruyeron 17 tablas B2B principales y la institución como raíz del tenant. P1-A/P1-B agregó `schema_migrations_b2b`, `auditoria_eventos_b2b` y `operaciones_idempotentes_b2b` sin sustituir tablas heredadas. P1-C agregó `operadores_b2b`, `operador_sesiones_b2b` y referencias anulables de operador; no reescribió historia. Los documentos se guardan en la columna `documentos_b2b.datos` como base64; no se observó object storage. No existe caché servidor B2B ni almacenamiento de archivos local confirmado.
 
 La línea base anterior a P1 mezclaba:
 
@@ -290,7 +302,9 @@ La línea base anterior a P1 mezclaba:
 
 P1-A/P1-B sustituyó hacia adelante esos seis borrados físicos por soft-delete, agregó versión prospectiva a 13 tablas y un ledger general allowlisted para las mutaciones cubiertas. No se afirma auditoría histórica retroactiva ni registro general de lecturas/accesos. Los detalles están en `MODELO_DATOS_B2B.md`.
 
-Este estado P1-A/P1-B está **[VERIFICADO EN PRODUCCIÓN / CERRADO — 03/10/2026]**. P1-C (identidad individual del operador) es el siguiente bloque; P1-D (continuidad/ciclo de vida) no se inició. No existe un bloque P1-E en la taxonomía canónica.
+P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]** y P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**. P1-D no se inició. No existe un bloque P1-E.
+
+**Gate predeploy P1-C final y cierre productivo.** El dump oficial del 04/10 restauró sin warnings en PostgreSQL 18.1 aislado. El gate estructural aprobó 185/185 y las regresiones del candidato ajustado 808/808: principal por defecto, operador secundario con PIN, 8 h/60 min, preservación P1-A/P1-B, B2C/no-B2B y upgrade real del service worker. Producción PostgreSQL 17.11 aprobó preflight y gate postdeploy read-only; el frontend y el smoke público también quedaron verificados.
 
 ## 8. Reportes, exportación y documentos
 

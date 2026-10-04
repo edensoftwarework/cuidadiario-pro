@@ -11,10 +11,10 @@ Handoff operativo para continuar CuidaDiario PRO B2B sin depender del historial 
 - Repositorio backend real: `C:\Users\ramos\Desktop\Personal\EDEN SOFTWORK\PROYECTOS\cuidadiario-backend`.
 - **Autoridad de trabajo:** implementación, modificación y pruebas se realizan primero en `C:\Cuidadiario-pro`. Los repositorios Git reales se usan exclusivamente para promoción/despliegue de un paquete ya reconciliado y autorizado; no son el espacio ordinario de desarrollo.
 - Después de cada promoción, todo cambio legítimo y acotado que haya sido necesario durante un gate productivo debe reconciliarse de vuelta hacia `C:\Cuidadiario-pro` por contenido, sin sobrescribir trabajo local posterior. Una diferencia en un repositorio real no adquiere autoridad por el solo hecho de estar desplegada.
-- P0-C y P1-A/P1-B fueron trasladados, desplegados y cerrados. La copia controlada conserva el candidato, pruebas, runbook y documentación reconciliados; los repositorios reales contienen las revisiones productivas autorizadas.
+- P0-C, P1-A/P1-B y P1-C fueron trasladados, desplegados, verificados y cerrados. P1-C quedó en backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3` y frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b` el 04/10/2026.
 - Alcance exclusivo: PRO B2B. B2C continúa fuera de alcance.
 
-## 2. Estado exacto al 03/10/2026
+## 2. Estado exacto al 04/10/2026
 
 - **P0-1:** VERIFICADO EN PRODUCCIÓN — 29/09/2026.
 - **P0-2/P0-3/P0-8:** CERRADOS; frontend consolidado desplegado en el commit `9ec220c4722e528cda77c9ece3d21cb62bcd7068`.
@@ -24,7 +24,7 @@ Handoff operativo para continuar CuidaDiario PRO B2B sin depender del historial 
 - **Mantenimiento B2B:** endpoint backend desplegado en `c598d557f96a43a2ece07f820b8f52c0091d85a0`; guard permanente corregido/versionado desplegado en frontend `ac3e46c9506c02ec62d650fdec4292d8bae7d6a1`; micro-gate productivo OFF→ON→OFF aprobado el 02/10/2026.
 - **P1-A — Trazabilidad y preservación:** IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CLOSED.
 - **P1-B — Integridad de operaciones:** IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CLOSED.
-- **P1-C — Identidad del operador:** NOT STARTED; siguiente bloque.
+- **P1-C — Identidad del operador:** **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CLOSED — 04/10/2026**.
 - **P1-D — Continuidad y ciclo de vida:** NOT STARTED. **No existe P1-E.**
 - **Estado operativo final:** `B2B_MAINTENANCE_MODE=0`, `B2B_P1_BRIDGE_MODE=0`, `/health` saludable, `maintenance:false` y aplicación accesible.
 
@@ -36,6 +36,20 @@ Handoff operativo para continuar CuidaDiario PRO B2B sin depender del historial 
 - Frontend genera UUID por intento crítico sin reactivar ni tocar `cd_offline_queue`.
 - Bridge de continuidad `B2B_P1_BRIDGE_MODE=1`: lectura/login sí, mutaciones B2B —incluido `POST /api/admin/set-plan`— 503, archivados permanecen ocultos. No usar backend pre-P1 como rollback tras migrar.
 - Mercado Pago B2B no se amplió ni reactivó; UI/export del ledger no se implementaron.
+
+### Paquete P1-C productivo y cerrado
+
+- Migración `p1c_001_operator_identity`: directorio `operadores_b2b`, sesiones opacas `operador_sesiones_b2b` y referencias anulables `operador_b2b_id` en auditoría/idempotencia; aditiva, sin backfill ni reinterpretación histórica.
+- Principal: usuario JWT revalidado y propietario de la sesión/FK histórica. Opera como sí mismo por defecto, también en `shared_mode`, sin PIN, operador duplicado, sesión secundaria ni timeout P1-C. Sólo otra persona activa una identidad separada mediante ID+PIN bcrypt; esa sesión dura como máximo 8 h y vence tras 60 min de inactividad. Administración de operadores y acciones exclusivamente AI requieren además principal administrador; una cuenta familiar no puede activar operadores.
+- No hay asignaciones por operador: si su rol no tiene alcance institucional, no hereda las asignaciones del principal y falla cerrado.
+- Auditoría conserva `actor_usuario_id` principal y suma `operador_b2b_id`; idempotencia queda separada por operador sin romper clientes/modo individual.
+- Frontend: muestra al principal por defecto y abre el selector sólo a demanda. Volver al principal revoca el contexto secundario sin PIN. Sólo el operador secundario usa token/contexto/actividad en `sessionStorage`, header `X-B2B-Operator-Token`, ID+PIN, indicador persistente, fin/cambio e invalidación entre pestañas. El selector nominal y `_quien` fueron retirados de los flujos modificados. PIN/token no se guardan en `localStorage` ni Cache Storage.
+- Evidencia runtime vigente: backend P1-C 59/59; P1-A/P1-B 110/110; P0-C 232/232; frontend P1-C 36/36; idempotencia 16/16; XSS 82/82; upgrade SW 43/43; navegador P1-C 24/24; caché 35/35; sesión 88/88; cola 37/37 y mantenimiento/no-B2B 46/46. Total **808/808 PASS**, Chrome 153, loopback, fixtures sintéticos, perfiles temporales y cero tráfico productivo.
+- Gate de dump final: `cuidadiario_produccion_2026-10-04_predeploy_p1c_final.dump`, 10.092.797 bytes, SHA-256 `FCB2AF29069DCFDCF810E7E3C2BB4532A37A4BD7FF2C3C68F89E2766ABBA77E2`, custom/349 líneas. PostgreSQL 18.1 aislado, restore sin warnings y **185/185 PASS**; runner real dos veces, checksum P1-C `2c6cc0eb8aadc7db48d0741e7d3517a4ad62a2dbc901e38dfc6ba18018ffede2`, preservación total y cero operadores/sesiones/backfill.
+- Paquete runtime aprobado: backend `index.js` `28A95F90FB2CD11E6F89B998B6921CAF07444A97CD3B8A6C18BB8E2327C7C323`, `b2b-p1.js` `91D5BDEC205944B27424B08844EACA6F27390B3C07B32C395D6015651D459CD2`, `b2b-p1c.js` `A2496002E70DBA1FEAC21288E0D5E9EAFC9B74D0E56EC54D00900E7856E96484`; frontend `js/api-b2b.js` `CCB0D983FCC2CD09D5567B77D44FCA93F267D127485DE2EB100017203219E556`, `js/utils-b2b.js` `5692E9086C1385C851AB96696143D8482F86595B95F121DF25052025CDD26538`, `js/staff.js` `6226333CC4F7D1A4EB7463B4DF91A91D6D6E918414BF2F22D3FEB73E420834C9`, `js/paciente.js` `67490795757F09449622E013972D2499BF4C917340CACCCFE6004817758E7EEB`, `pages/staff.html` `D110D00C3184948A8B31B5D1D0838535ADFF45DDE23B50CE258A6264CD6B596B`, `sw.js` `51DCA10095B2FCAF6AA4E76D267DCBB8555D83841148D28B61A54031BE4D1B60`.
+- Producción: migración `p1c_001_operator_identity` aplicada con checksum aprobado; gate integral read-only con todos los componentes P1/P1-C correctos y gate corregido `constraints=10/10`, `legacy=8/8`, `p1c_operator_fks=2/2`, `unknown=0`. El `10/8` inicial fue un falso negativo del tooling que omitía del total esperado las dos FK P1-C; no hubo corrección productiva.
+- Estado final: `/health` 200, `maintenance:false`, `B2B_MAINTENANCE_MODE=0`, `B2B_P1_BRIDGE_MODE=0`, ruta P1-C activa, seis blobs frontend exactos y login público operativo. Cero operadores es válido: el principal trabaja como sí mismo sin PIN; sólo otra persona usa operador+PIN, sesión de hasta 8 h y timeout por inactividad de 60 min.
+- No hubo backfill, atribución histórica fabricada ni cambios B2C. P1-A/P1-B permanecen cerrados. Después de la migración, cualquier contingencia P1-C exige forward-fix bajo mantenimiento/bridge; no rollback automático al backend pre-P1-C.
 
 ## 3. Qué implementa el paquete backend P0-C desplegado
 
@@ -73,7 +87,7 @@ Documentación actualizada:
 
 `documentacion/AUDITORIA_SEGURA.md` se preserva sin cambios. `MODELO_DATOS_B2B.md` conserva el modelo P1 controlado y no recibió contenido del micro-gate.
 
-Para distribuir el cliente P1 se modificó únicamente el comentario identificador de `frontend/sw.js`; no cambiaron cachés, rutas ni estrategias. Ese byte P1 quedó desplegado en `c452c23dfd28baccd9f93cc58936523db793ae0e`. El mecanismo de mantenimiento no modificó `sw.js`. No se modificaron manifests/dependencias ni archivos B2C y no se instalaron dependencias.
+Para distribuir el cliente P1-A/P1-B se modificó únicamente el comentario identificador de `frontend/sw.js`; no cambiaron cachés, rutas ni estrategias. Ese byte quedó desplegado en `c452c23dfd28baccd9f93cc58936523db793ae0e`. P1-C volvió a cambiar sólo ese comentario (`/P1-C`) para distribuir sus assets y quedó desplegado en `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`, sin alterar estrategias. El mecanismo de mantenimiento no modificó `sw.js`. No se modificaron manifests/dependencias ni archivos B2C y no se instalaron dependencias.
 
 La reconciliación del 02/10 detectó que ese comentario P1 había sido sustituido por la versión P0 productiva. Se restauró exclusivamente `/P1-B`; el diff contra producción es una línea y el hash raw es `0AB125822EA1C6D74FC5EB703659E105F7A2750C967CC4453C9FF2DA474E4D32` (LF `8E05D1CA773F66108F1AA0368378B22188D3D9BBC1F08A7001D99C59BBC5BD8C`). `p1-service-worker-upgrade.test.js` conservó sus 43 aserciones y recibió sólo endurecimiento del runner para el sandbox Windows. Edge 154.0.4258.48 aprobó 43/43 en loopback: P0 instalado/controlando, `updatefound=1`, P1 activado/controlando, cliente P1 efectivo, idempotencia, purga/network-only B2B, no-B2B preservado y offline fail-closed. Cero servicios externos; perfil temporal eliminado.
 
@@ -136,7 +150,7 @@ Backend productivo: `6502be8b87aacfbb396530e09dbbbf939a6651fc`. Las tres migraci
 
 Frontend productivo: `c452c23dfd28baccd9f93cc58936523db793ae0e`, limitado a `js/api-b2b.js` y `sw.js`. GitHub Pages publicó P1; el worker quedó activado/controlando y el guard de mantenimiento cargó sin overlay con mantenimiento OFF. El smoke público no ejecutó mutaciones ni operaciones sobre residentes reales.
 
-El siguiente bloque es **P1-C — Identidad del operador**, aún no autorizado. P1-D continúa NOT STARTED. No usar `sw.js` como interruptor, no reabrir P1-A/P1-B sin una regresión demostrada y no crear P1-E.
+P1-C quedó **DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 04/10/2026**. El diseño ajustado y el predeploy permanecen en `ESTADO_Y_PLAN_B2B.md` 5.20/5.21; el cierre productivo está en 5.22. P1-D continúa NOT STARTED. No usar `sw.js` como interruptor, no reabrir P1-A/P1-B/P1-C sin una regresión demostrada y no crear P1-E.
 
 ## 9. Orden de lectura
 

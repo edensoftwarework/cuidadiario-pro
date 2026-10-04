@@ -1,7 +1,7 @@
 # Modelo de datos de CuidaDiario PRO B2B
 
-**Fuente:** DDL, migraciones y consultas de `backend/index.js`/`backend/b2b-p1.js`, inspección externa parcial de Railway, recuperación lógica y gate estructural productivo P1.  
-**Alcance:** modelo B2B reconstruido. El gate productivo verificó la estructura P1-A/P1-B; la definición histórica restante, el contenido y la consistencia semántica integral continúan **[NO VERIFICADO]** salvo evidencia expresa.
+**Fuente:** DDL, migraciones y consultas de `backend/index.js`/`backend/b2b-p1.js`/`backend/b2b-p1c.js`, inspección externa parcial de Railway, recuperación lógica y gates P1.
+**Alcance:** modelo B2B reconstruido. Los gates productivos verificaron P1-A/P1-B y P1-C; la definición histórica restante, el contenido y la consistencia semántica integral continúan **[NO VERIFICADO]** salvo evidencia expresa.
 
 **[VERIFICADO] Este documento modela exclusivamente B2B. NO MODIFICAR TABLAS B2C.** Existen tablas de otro producto en la misma base/runner, pero quedan fuera de este modelo. `_migrations` sólo se menciona por ser una dependencia compartida.
 
@@ -21,6 +21,9 @@
 ```mermaid
 erDiagram
     instituciones_b2b ||--o{ usuarios_b2b : contiene
+    instituciones_b2b ||--o{ operadores_b2b : contiene
+    operadores_b2b ||--o{ operador_sesiones_b2b : activa
+    usuarios_b2b ||--o{ operador_sesiones_b2b : principal
     instituciones_b2b ||--o{ pacientes_b2b : contiene
     instituciones_b2b ||--o{ asignaciones_b2b : delimita
     usuarios_b2b ||--o{ asignaciones_b2b : cuidador
@@ -75,6 +78,29 @@ Usuarios institucionales, incluido el administrador.
 | Auditoría mínima | `created_at` |
 
 El API de “eliminar staff” desactiva (`activo=false`); no borra físicamente. Los tokens de recuperación/verificación se almacenan en claro en columnas de la base según el código. Al borrar una institución por fuera del API, la FK podría eliminar usuarios en cascada.
+
+### 3.3 `operadores_b2b` — P1-C productivo
+
+Directorio de personas que operan una estación compartida; no reemplaza `usuarios_b2b` ni crea una cuenta de login.
+
+| Grupo | Campos P1-C |
+|---|---|
+| Claves/tenant | `id BIGSERIAL` PK; `institucion_id` FK `RESTRICT`; nombre único por tenant normalizado con `lower(btrim(nombre))` |
+| Identidad/autorización | `nombre` 2–120; `rol` limitado a `admin_institucion`, `medico`, `cuidador_staff`; `activo` |
+| Credencial | `pin_hash` bcrypt; `credential_version BIGINT > 0` para invalidar sesiones al cambiar PIN/rol/estado |
+| Trazabilidad | `created_by_usuario_id` FK anulable al principal; `created_at`, `updated_at`, `version BIGINT > 0` |
+
+No almacena PIN en claro. No existe operador `familiar`, e-mail, contraseña, JWT ni asignación propia. Cambiar PIN/rol/estado incrementa `credential_version` y revoca sesiones abiertas; cambiar sólo el nombre no lo hace.
+
+### 3.4 `operador_sesiones_b2b` — P1-C productivo
+
+| Grupo | Campos P1-C |
+|---|---|
+| Identidad | `id UUID` PK; `institucion_id`, `operador_b2b_id`, `principal_usuario_id` con FK `RESTRICT` |
+| Secreto derivado | `token_hash CHAR(64) UNIQUE`; el token opaco de 32 bytes sólo se entrega al cliente al activar |
+| Vigencia | `credential_version`, `created_at`, `last_seen_at`, `expires_at`, `revoked_at`; check `expires_at > created_at` |
+
+Esta tabla existe sólo para operadores secundarios. El principal autenticado que trabaja como sí mismo no crea fila aquí ni en `operadores_b2b`. La sesión secundaria exige operador activo, misma versión de credencial, no revocada, máximo 8 horas y `last_seen_at` dentro de 60 minutos. No hay job de purga/retención implementado; la revocación conserva la fila. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026].** Cero operadores/sesiones es un estado válido y fue el estado verificado al desplegar.
 
 ## 4. Residentes y asignaciones
 
@@ -277,6 +303,16 @@ Tres migraciones registradas en `schema_migrations_b2b(version, checksum, applie
 
 Las filas heredadas quedan preservadas y parten de versión prospectiva 1. No se fabrica auditoría previa. La primera modificación futura de una fila heredada captura baseline sanitizado; las siguientes registran diff. Eventos naturales —administraciones, tareas completadas y reposiciones— usan referencia mínima. **[VERIFICADO EN PRODUCCIÓN / CLOSED].**
 
+### 13.3 Extensión P1-C productiva
+
+La migración `p1c_001_operator_identity` (checksum controlado SHA-256 `2c6cc0eb8aadc7db48d0741e7d3517a4ad62a2dbc901e38dfc6ba18018ffede2`) se agrega al journal después de P1-A/P1-B y es exclusivamente aditiva: crea las dos tablas descritas en 3.3/3.4; agrega `operador_b2b_id BIGINT NULL` con FK `RESTRICT` a `auditoria_eventos_b2b` y `operaciones_idempotentes_b2b`; y agrega seis índices propios (nombre/activos, lookup/expiración de sesión, auditoría e idempotencia por operador). No contiene `UPDATE` de filas heredadas ni backfill.
+
+En eventos nuevos, `auditoria_eventos_b2b.actor_usuario_id` identifica siempre al principal. Si el principal trabaja como sí mismo, `operador_b2b_id` queda `NULL` de forma inequívoca; si otra persona toma la estación mediante PIN, identifica a ese operador secundario. Las filas históricas también mantienen `NULL`: no se deduce un operador a partir de `_quien`, nombres visibles o del usuario principal. En idempotencia, sólo el contexto secundario aplica namespacing por operador; el principal y el modo individual mantienen la semántica anterior.
+
+**[PREDEPLOY FINAL APROBADO / NO PRODUCCIÓN — 04/10/2026]:** PostgreSQL 18.1 efímero, migración ejecutada/repetida y nueva semántica principal/operador probada con datos sintéticos. Backend P1-C ajustado: 59/59; principal sin operadores/PIN/fila duplicada, operador secundario 8 h/60 min, retorno/revocación, no elevación, modo individual y B2C. Regresiones P1-A/P1-B: 110/110; P0-C: 232/232; cero intentos externos.
+
+**[GATE ESTRUCTURAL FINAL APROBADO / NO PRODUCCIÓN — 04/10/2026]:** el dump fresco final de 10.092.797 bytes y SHA-256 `FCB2AF29069DCFDCF810E7E3C2BB4532A37A4BD7FF2C3C68F89E2766ABBA77E2` restauró sin warnings. El gate aprobó 185/185: tres migraciones productivas/checksums exactos antes de P1-C; cero colisiones; cuarta migración única e idempotente; 21 columnas, constraints e índices esperados; cero operadores/sesiones/backfill; conteos/fingerprints heredados, esquema B2C/no-B2B y append-only preservados.
+
 **[VERIFICADO SOBRE RESTAURACIÓN AISLADA DEL DUMP FRESCO — 01/10/2026; NO PRODUCCIÓN]:** el esquema real pre-P1 restaurado no contenía ninguno de los objetos/columnas P1. Tras el runner se verificaron los tipos, defaults, NOT NULL, CHECK, PK/unique, cuatro índices y trigger esperados: 13 tablas con `version`, seis con las tres columnas de archivado, journal con tres checksums, ledger e idempotencia vacíos. Los conteos/fingerprints heredados —961 filas B2B y 1.502 no-B2B en 32 tablas— permanecieron iguales y no se fabricó historia. Un ensayo con `version TEXT` preexistente confirmó que `IF NOT EXISTS` no compara definiciones; el preflight productivo debe abortar ante cualquier colisión o drift, aunque el dump examinado tuvo cero.
 
 **[VERIFICADO — EVIDENCIA EXTERNA 15/09/2026]** La instancia PostgreSQL del proyecto Railway `resilient-nature`, entorno `production`, contiene tablas `*_b2b` junto con tablas B2C/no B2B: **[COMPARTIDO - NO TOCAR B2C]**. El servicio estaba Online, con volumen `postgres-volume`, una réplica en `US East (Virginia, USA)`, Private Networking y un TCP Proxy público configurado.
@@ -307,7 +343,7 @@ La diferencia entre las 2 filas de `documentos_b2b` observadas el 15/09 y las 12
 
 ## 15. Comprobaciones aún necesarias
 
-La estructura P1 quedó verificada en producción mediante `PASS|3|13|13|18|35|4|1|1|0|`: tres migraciones/checksums, 13 columnas `version`, 13 checks, 18 columnas soft-delete, 35 columnas core, constraints, cuatro índices, función y trigger append-only. Lo siguiente continúa pendiente fuera de ese gate:
+La estructura P1-A/P1-B quedó verificada en producción mediante `PASS|3|13|13|18|35|4|1|1|0|`. P1-C agregó y verificó la cuarta migración `p1c_001_operator_identity`, 21 columnas en las dos tablas nuevas, seis índices explícitos y dos FK `operador_b2b_id` anulables. El gate postdeploy confirmó cero backfill, cero operadores/sesiones fabricados y referencias históricas `NULL`. El `base_constraints=10/8` inicial fue un falso negativo del gate: los diez son exactamente ocho heredados más las dos FK P1-C; el gate corregido aprobó `10/10`, `8/8`, `2/2`, sin constraints desconocidos. Lo siguiente continúa pendiente fuera de esos gates:
 
 Antes de futuras migraciones se debe verificar, mediante un procedimiento de sólo lectura aprobado:
 

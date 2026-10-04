@@ -1,8 +1,8 @@
 # Mapa de API de CuidaDiario PRO B2B
 
-**Fuente:** declaraciones de rutas y consultas de `backend/index.js` y `backend/b2b-p1.js`, actualizadas con P0-C y P1-A/P1-B desplegados y verificados en producción al 3 de octubre de 2026.  
+**Fuente:** declaraciones de rutas y consultas de `backend/index.js`, `backend/b2b-p1.js` y `backend/b2b-p1c.js`, actualizadas con P0-C/P1-A/P1-B/P1-C productivos al 4 de octubre de 2026.
 **Base pública confirmada en Railway y configurada en el frontend:** `https://cuidadiario-backend-production.up.railway.app`, dirigida al puerto 8080, seguida de la ruta indicada.  
-**Nota:** todos los controladores están actualmente en el mismo archivo; “control” describe lo que el backend ejecuta, no lo que oculta la UI.
+**Nota:** el monolito continúa en `index.js`, pero P1-C registra sus rutas desde `b2b-p1c.js`; “control” describe el backend, no sólo lo que oculta la UI. Las rutas P1-C están activas en la base pública productiva.
 
 **[ACTUAL]** Este inventario describe rutas vigentes en código. Las recomendaciones del final son **[FUTURO]**.
 
@@ -21,6 +21,7 @@
 | `I` | `Idempotency-Key` opcional con resultado persistido y conflicto de payload. |
 | `G` | guard central de residente egresado. |
 | `S` | soft-delete; lecturas normales filtran `deleted_at IS NULL`. |
+| `O` | Contexto secundario opt-in mediante `X-B2B-Operator-Token`: sólo aparece al cambiar desde el principal a otra persona verificada por PIN. Sin header, el principal JWT opera como sí mismo. **[P1-C VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]** |
 | Público | Sin JWT; puede tener rate limit, token de un solo uso o firma de proveedor. |
 
 Abreviaturas de rol: `AI` administrador institucional, `MD` médico, `CS` cuidador/personal, `FA` familiar.
@@ -29,6 +30,7 @@ Abreviaturas de rol: `AI` administrador institucional, `MD` médico, `CS` cuidad
 
 - Las consultas B2B usan `institucion_id` revalidado contra el usuario actual como frontera de tenant.
 - `A` recarga usuario, institución, rol, estado, verificación y permisos actuales en cada petición protegida. Un token con tenant divergente o identidad ya no vigente falla cerrado.
+- En P1-C, `A` conserva el usuario como principal y actor efectivo por defecto, incluso con `shared_mode=true`. Sólo si la petición presenta el header secundario se exige `O`; un token presentado pero inválido/vencido/revocado, operador inactivo o versión de credencial distinta devuelve 428 `OPERATOR_REQUIRED`, sin degradar silenciosamente al principal durante esa petición.
 - Las listas clínicas/operativas exigen `paciente_id` a familiar y personal sin permiso global; administrador/personal con alcance institucional conservan la lista global dentro del tenant.
 - Las mutaciones por ID resuelven primero el recurso, su `paciente_id`, tenant y acceso actual. Los recursos no encontrados, cross-tenant, no asignados o con padre no resoluble no se mutan.
 - Los controles `F` se aplican también a dashboard, reportes, catálogo/reposiciones familiares y documentos.
@@ -36,6 +38,10 @@ Abreviaturas de rol: `AI` administrador institucional, `MD` médico, `CS` cuidad
 - Desde P0-3, `POST`, `PATCH` y `DELETE` son exclusivamente de red: no se encolan ni reintentan automáticamente. Una `cd_offline_queue` heredada permanece byte a byte, sin lectura, migración, transmisión o borrado automático. P1-B agrega idempotencia opcional a toma, tarea completada y carga documental; clientes heredados sin header continúan funcionando. **[P1-B VERIFICADO EN PRODUCCIÓN / CERRADO — 03/10/2026].**
 
 **Estado P1-A/P1-B productivo:** las mutaciones de dominio cubiertas registran ledger sanitizado dentro de la misma transacción; filas editables tienen versión prospectiva; los egresados conservan lectura histórica y bloquean nuevas mutaciones, con cierres administrativos acotados y, donde el código lo contempla, corrección excepcional por AI con motivo; las seis familias `S` preservan la fila y quedan fuera de GET/list/download. Mercado Pago B2B no fue ampliado ni reactivado.
+
+**Estado P1-C:** **DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026.** Backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3`; frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`. El principal autentica y opera como sí mismo sin PIN/sesión secundaria. Otra persona debe activar un operador; entonces aporta identidad/rol efectivos durante hasta 8 h y 60 min de inactividad. Auditoría e idempotencia incorporan `operador_b2b_id` sólo para ese contexto. `_quien` nunca sustituye estas identidades y cero operadores configurados es válido.
+
+El gate postdeploy PostgreSQL 17 read-only confirmó las cuatro migraciones/checksums, estructura P1-C, cero backfill y P1-A/P1-B intactos. El primer `base_constraints=10/8` fue un falso negativo: los diez son ocho heredados más las dos FK P1-C; el gate corregido aprobó `constraints=10/10`, `legacy=8/8`, `p1c_operator_fks=2/2`, `unknown=0`. El cierre dejó mantenimiento `0`, bridge `0`, `/health` sano, `maintenance:false` y los seis blobs frontend aprobados.
 
 **Gate con dump fresco y cierre productivo:** sobre una restauración aislada se confirmaron rutas P1 de idempotencia, versión, soft-delete, egreso, documentos/cuota y bridge. El gate estructural productivo final dio `PASS|3|13|13|18|35|4|1|1|0|`. El bridge permite login/GET y bloquea mutadores HTTP B2B, `verify-subscription`, `auth/verify-email` y `POST /api/admin/set-plan`; no intercepta B2C ni protege migraciones, jobs/timers, SQL administrativo o la sincronización periódica directa de Mercado Pago. Al cierre productivo quedó en `0`.
 
@@ -77,7 +83,7 @@ Estas cuatro rutas están implementadas y existen variables relacionadas por nom
 
 Registro, recuperación, verificación y bienvenida están programados para usar Resend. La variable relacionada existe por nombre, pero el estado operativo externo no fue comprobado. La URL con token puede quedar en historial/cache/logs. El JWT y los helpers de correo son **[COMPARTIDO - NO TOCAR B2C]**.
 
-**[CERRADO — P0-2, 30/09/2026]:** el cliente exige un JWT estructuralmente B2B y temporalmente vigente para atravesar la guardia; no restaura el último usuario offline. Logout y cualquier 401 eliminan token, usuario actual/legado y selección activa de estación, preservando la cola offline y preferencias. La lógica fue verificada exhaustivamente en entorno controlado; el commit `9ec220c` fue desplegado y aprobó un gate productivo proporcional. Esta comprobación cliente no valida firma ni reemplaza `A`; la autenticidad y autorización siguen dependiendo del backend.
+**[CERRADO — P0-2, 30/09/2026]:** el cliente exige un JWT estructuralmente B2B y temporalmente vigente para atravesar la guardia; no restaura el último usuario offline. Logout y los 401 de sesión eliminan token, usuario actual/legado y selección activa de estación, preservando la cola offline y preferencias. Desde P1-C productivo, `401 OPERATOR_PIN_INVALID` se trata como error de credencial secundaria y no cierra el principal. Esta comprobación cliente no valida firma ni reemplaza `A`; la autenticidad y autorización siguen dependiendo del backend.
 
 ## 5. Institución, equipo y asignaciones
 
@@ -92,6 +98,19 @@ Registro, recuperación, verificación y bienvenida están programados para usar
 | `GET /api/b2b/asignaciones` | Lista asignaciones activas con usuario y residente. | `A`; AI o `C(ver_staff/asignar_paciente)` | `staff.js` |
 | `POST /api/b2b/asignaciones` | Crea o reactiva, validando ambos extremos en la institución. | `A`; AI o `C(asignar_paciente)` | `staff.js` |
 | `DELETE /api/b2b/asignaciones/:id` | Desactiva. | `A`; AI o `C(asignar_paciente)` | `staff.js` |
+
+### 5.1 Operadores de estación compartida — P1-C productivo
+
+| Método y ruta | Finalidad / tablas | Control | Consumidor / efecto |
+|---|---|---|---|
+| `GET /api/b2b/operators` | Lista operadores activos del tenant; `?all=1` incluye datos administrativos y desactivados. | `A`; bootstrap sin `O`; `all=1` requiere principal AI. | Selector P1-C; `staff.js` para administración. |
+| `POST /api/b2b/operators` | Crea operador con PIN bcrypt. | `A`; principal AI; nombre/rol/PIN validados; transacción + ledger. | `staff.js`; no crea usuario/JWT. |
+| `PATCH /api/b2b/operators/:id` | Cambia nombre/rol/estado y opcionalmente PIN; revoca sesiones si cambia credencial/rol/estado. | `A`; principal AI; tenant + lock + ledger. | `staff.js`. |
+| `POST /api/b2b/operators/activate` | Al cambiar a otra persona, valida ID+PIN, limita 5 fallos/15 min en memoria y crea sesión opaca de hasta 8 h. | `A`; `shared_mode`; principal familiar bloqueado; operador AI exige principal AI. | Devuelve token una vez y `no-store`; `api-b2b.js` lo guarda sólo en `sessionStorage`. |
+| `GET /api/b2b/operators/context` | Revalida/toca sesión, operador activo, versión, expiración e inactividad. | `A` + header de operador; bootstrap específico. | Refresh/guard frontend; `no-store`. |
+| `POST /api/b2b/operators/end-shift` | Revoca idempotentemente el token de esa pestaña/principal. | `A` + header opcional; bootstrap específico. | Fin de turno; luego limpieza local y broadcast. |
+
+Las rutas operativas usan al principal si no se seleccionó otra persona. Cuando existe `O`, `requireB2BRole` usa el rol del operador; una acción exclusivamente AI exige además principal AI. Sin asignaciones propias por operador, el rol restringido no hereda asignaciones del principal y falla cerrado. Volver al titular revoca `O` y continúa sin PIN. En modo individual la semántica previa permanece.
 
 ## 6. Residentes
 
@@ -186,7 +205,7 @@ Estas rutas actúan sobre B2B, pero están fuera del espacio `/api/b2b/` y depen
 | Sección familiar deshabilitada | `F` | Rutas de módulo, notificaciones, dashboard, reportes, catálogo/reposiciones y documentos. |
 | Plan vencido/límite | `L` / `checkInstPlanForAction` | Principalmente creación/acciones, no todas las mutaciones. |
 | Repetición/retry explícito | `I` en toma/tarea/documento | Opcional y persistido; no reactiva cola offline. |
-| Registro de quién/cuándo | Ledger allowlisted | Actor autenticado vigente; `_quien` no es identidad verificada. |
+| Registro de quién/cuándo | Ledger allowlisted | P1-A productivo registra principal. P1-C productivo suma operador verificado como dimensión separada; historia previa queda `NULL`, sin reinterpretar `_quien`. |
 
 ## 14. Resumen de tablas leídas/modificadas por familia
 
@@ -194,6 +213,7 @@ Estas rutas actúan sobre B2B, pero están fuera del espacio `/api/b2b/` y depen
 |---|---|---|
 | Suscripción/plan | institución, conteos de residentes/usuarios | campos comerciales de `instituciones_b2b` |
 | Auth/perfil | `usuarios_b2b`, `instituciones_b2b` | ambas durante registro; tokens, hash, perfil y preferencias de usuario |
+| Operadores P1-C productivo | `operadores_b2b`, `operador_sesiones_b2b`, principal/institución | directorio/sesiones; `operador_b2b_id` en auditoría e idempotencia |
 | Institución/staff/asignaciones | las tres tablas homónimas y residentes para asignar | institución, usuarios y asignaciones |
 | Residentes | `pacientes_b2b`, permisos/asignaciones | `pacientes_b2b` |
 | Medicamentos | medicamentos, historial, catálogo, residentes/asignaciones | medicamentos, historial de administraciones y stock de catálogo |
@@ -213,6 +233,7 @@ Sin cambiar rutas B2C ni datos existentes:
 1. mantener la matriz negativa P0-C de institución, rol, asignación, sección y estado de sesión como regresión obligatoria;
 2. conservar como regresión obligatoria las garantías ya desplegadas de idempotencia, ledger, versiones y estados lógicos;
 3. diseñar outbox/saga antes de intentar atomicidad con Resend o Mercado Pago;
-4. agregar UI/export del ledger únicamente en P1-D, fuera de esta pasada.
+4. conservar la regresión P1-C y preparar P1-D por separado, sin reabrir los bloques cerrados;
+5. agregar UI/export del ledger únicamente en P1-D, fuera de esta pasada.
 
-P0-C está desplegado y cerrado desde el 30/09/2026. P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**. P1-C es el próximo bloque y P1-D no se inició; no existe P1-E en la taxonomía canónica. Su prioridad y clasificación están en `ESTADO_Y_PLAN_B2B.md`.
+P0-C está desplegado y cerrado desde el 30/09/2026. P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**. P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**; P1-D no se inició y no existe P1-E. Después de la migración P1-C cualquier contingencia requiere forward-fix bajo mantenimiento/bridge, no rollback automático al runtime anterior.

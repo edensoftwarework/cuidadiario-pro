@@ -1,6 +1,6 @@
 # CuidaDiario PRO B2B — documentación canónica
 
-**Estado documental:** vigente al 3 de octubre de 2026; P0, P1-A y P1-B cerrados en producción; P1-C/P1-D no iniciados  
+**Estado documental:** vigente al 4 de octubre de 2026; P0, P1-A, P1-B y **P1-C DESPLEGADOS / VERIFICADOS / DOCUMENTADOS / CERRADOS**; P1-D no iniciado
 **Alcance:** ingeniería inversa del repositorio local más evidencia externa proporcionada; no acredita aquello que se mantiene expresamente como `[NO VERIFICADO]`.  
 **Regla de precedencia:** ante una contradicción, prevalece el código ejecutable actual sobre este documento; la divergencia debe registrarse en `ESTADO_Y_PLAN_B2B.md`.
 
@@ -32,15 +32,16 @@ El 15/09/2026 se inspeccionó manualmente el panel de Railway, sin abrir Console
 |---|---|
 | `backend/index.js` | Aplicación Express monolítica: rutas, autenticación, permisos, SQL, migraciones, integraciones y tareas periódicas. Ejecuta las migraciones históricas y luego las migraciones P1 B2B antes de comenzar a escuchar. **[COMPARTIDO - NO TOCAR B2C]** |
 | `backend/db.js` | Pool PostgreSQL y TLS. **[COMPARTIDO - NO TOCAR B2C]** |
-| `backend/b2b-p1.js` | Migraciones B2B con journal/checksum, transacciones, auditoría sanitizada, idempotencia, guard de egreso y bridge temporal de sólo lectura para ventanas P1. |
+| `backend/b2b-p1.js` | Migraciones B2B con journal/checksum, transacciones, auditoría sanitizada, idempotencia, guard de egreso y bridge temporal de sólo lectura para ventanas P1. Incorpora la migración P1-C al mismo runner. |
+| `backend/b2b-p1c.js` | **[VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]** Migración y runtime exclusivamente B2B para cambios de persona en estación compartida: el principal opera normalmente como sí mismo; sólo un operador secundario usa PIN/sesión opaca. |
 | `backend/package.json` | Dependencias y comando de inicio. **[COMPARTIDO - NO TOCAR B2C]** |
 | `backend/tests/p0-c-authorization.test.js` | Arnés local P0-C: PostgreSQL 18 efímero, esquema mínimo y fixtures sintéticos, JWT local, servidor HTTP real y bloqueo de conexiones externas. No es código de producción. |
 | `frontend/*.html` | Entrada, autenticación, paneles y páginas B2B; también existen páginas ajenas al producto B2B. |
-| `frontend/js/api-b2b.js` | Cliente HTTP B2B, validación local mínima de vigencia del JWT, cierre selectivo de identidad, purga de caché GET B2B heredada, registro del service worker y claves UUID de idempotencia para toma, completar tarea y carga documental. Una `cd_offline_queue` heredada queda intacta y sin consumidor. P0 y el frontend P1 están desplegados. |
+| `frontend/js/api-b2b.js` | Cliente HTTP B2B, validación local mínima de vigencia del JWT, cierre selectivo de identidad, purga de caché GET B2B heredada, claves UUID de idempotencia y contexto/token de operador secundario en `sessionStorage` y header separado. Una `cd_offline_queue` heredada queda intacta y sin consumidor. |
 | `frontend/js/maintenance-b2b-v2.js` | Guardia visual permanente y exclusivamente B2B. Consulta por red `GET /api/b2b/maintenance-status`, reutiliza el binding léxico `API_B2B.BASE_URL`, no persiste estado y sondea cada 5 s. `B2B_MAINTENANCE_MODE` controla sólo esta capa visual; no sustituye la barrera de mutaciones del bridge P1. **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]** |
-| `frontend/js/utils-b2b.js` | Guardia fail-closed de sesión B2B, navegación, roles/permisos, modo compartido, notificaciones y helpers de renderizado contextual seguro. |
+| `frontend/js/utils-b2b.js` | Guardia fail-closed de sesión B2B, navegación, roles/permisos, notificaciones y helpers de renderizado contextual seguro. P1-C muestra al principal por defecto y usa identificación ID+PIN e indicador separado sólo al cambiar a un operador secundario. |
 | `frontend/js/*` restantes | Controladores de cada pantalla B2B. |
-| `frontend/sw.js` | Caché PWA de estáticos y respuestas GET no-B2B; los GET `/api/b2b/` son network-only y se purgan selectivamente. P0-1 está **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]**. El worker P1 del commit `c452c23` conserva las estrategias P0 y fuerza la actualización controlada de `api-b2b.js`; el upgrade P0→P1 aprobó 43 comprobaciones en navegador real. **[COMPARTIDO - NO TOCAR B2C]** |
+| `frontend/sw.js` | Caché PWA de estáticos y respuestas GET no-B2B; los GET `/api/b2b/` son network-only y se purgan selectivamente. P0-1 está **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]**. P1-C cambió sólo el comentario identificador para distribuir bytes nuevos; cachés, rutas y estrategias permanecieron iguales y el asset público fue verificado. **[COMPARTIDO - NO TOCAR B2C]** |
 | `frontend/pages/privacy.html`, `frontend/pages/terms.html` | Declaraciones públicas; algunas no coinciden plenamente con la conducta técnica actual. |
 | `documentacion/` | Documentación canónica y antecedentes. No es código de producción. |
 
@@ -74,6 +75,7 @@ El frontend usa JavaScript sin framework y consume una URL de backend Railway co
 - Renderizado B2B P0-8: datos persistidos, errores, atributos, identificadores y URLs dinámicas usan texto, escape contextual, normalización numérica o listas de protocolos/orígenes permitidos. Payloads HTML/SVG/eventos/URL fueron probados localmente en Chrome sin ejecución. **CERRADO — 30/09/2026:** commit `9ec220c` desplegado; artefactos y arranque público aprobados mediante smoke proporcional, sin repetir payloads contra producción.
 - Autorización backend P0-C (`P0-4` a `P0-7`): el middleware B2B revalida usuario, institución, rol, pertenencia y verificación actuales; documentos, listas, agregados y mutaciones resuelven tenant/residente/asignación/sección antes de exponer o escribir. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 30/09/2026]:** las 232 aserciones aisladas previas no se repitieron; el commit exacto `db4d2bd756c339e010333bd96e173673388710f4` fue desplegado sin migraciones y aprobó el smoke mínimo no destructivo descrito en 7.5.
 - Ventana coordinada B2B: endpoint público de estado desplegado en backend `c598d55` y guard permanente v2 desplegado en frontend `ac3e46c`. El micro-gate productivo OFF→ON→OFF del 02/10/2026 aprobó endpoint `no-store`, pestaña abierta, apertura nueva, Reintentar, salida a normal y preservación B2C/no-B2B, sin credenciales, datos reales ni mutaciones.
+- **P1-C [DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]:** el principal autenticado registra por defecto sin PIN, operador duplicado ni timeout adicional. Sólo al cambiar a otra persona se exige directorio institucional, PIN bcrypt y sesión opaca de hasta 8 h con 60 min de inactividad; auditoría conserva principal y suma operador cuando corresponde. Cero operadores configurados es un estado inicial válido.
 
 La existencia de una pantalla no implica que todos sus controles de autorización, trazabilidad o persistencia sean suficientes. El estado y las brechas conocidas se mantienen en [ESTADO_Y_PLAN_B2B.md](ESTADO_Y_PLAN_B2B.md).
 
@@ -89,6 +91,7 @@ Las categorías confirmadas incluyen:
 - tareas de cuidado y sus cumplimientos;
 - inventario, reposiciones y atribución nominal de acciones;
 - plan, prueba, descuento e identificadores/estado de suscripción.
+- directorio P1-C de operadores (nombre, rol, estado y hashes de PIN), sesiones de operador con digest de token/fechas/revocación y referencias prospectivas de operador en auditoría e idempotencia. No se fabricó atribución histórica.
 
 El detalle de campos, relaciones, retención y eliminación está en [MODELO_DATOS_B2B.md](MODELO_DATOS_B2B.md).
 
@@ -160,6 +163,16 @@ El mecanismo operativo previo a P1 quedó **VERIFICADO EN PRODUCCIÓN**. `GET /a
 
 Dos intentos se abortaron y revirtieron de forma segura: `3dffdcb`→`9251203` dependía de sustituir `sw.js`, impedido por el `max-age=14400` canónico; `a20694e`→`855831f` consultaba `globalThis.API_B2B` aunque la configuración es un binding global léxico. El asset v2 evita reutilizar la copia defectuosa. Esos intentos no forman parte del estado final ni deben repetirse.
 
+### 7.8 P1-C — despliegue productivo y cierre
+
+**[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]** La migración aditiva `p1c_001_operator_identity` creó `operadores_b2b` y `operador_sesiones_b2b`, agregó referencias anulables de operador al ledger y a idempotencia y no reescribió filas previas. En `shared_mode`, la ausencia de header secundario significa que el principal autenticado opera como sí mismo con su rol/permisos normales. Sólo un header explícito activa el contexto de otra persona validada por PIN; si es inválido/vencido/revocado, esa operación falla cerrada. Un operador sin alcance global no hereda asignaciones del principal y una cuenta familiar no puede asumir un operador.
+
+El dump final `cuidadiario_produccion_2026-10-04_predeploy_p1c_final.dump` coincidió con 10.092.797 bytes, SHA-256 `FCB2AF29069DCFDCF810E7E3C2BB4532A37A4BD7FF2C3C68F89E2766ABBA77E2`, formato custom y 349 líneas. Restauró sin warnings en PostgreSQL 18.1 aislado; el gate P1-C aprobó **185/185**, aplicó el runner real dos veces, conservó conteos/fingerprints y estructura no-B2B/B2C, no creó operadores/sesiones ni backfill y preservó el append-only P1. Las regresiones runtime/UX aprobaron **808/808** adicionales con datos sintéticos y cero tráfico productivo. Producción quedó en backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3` y frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`.
+
+El gate productivo PostgreSQL 17 read-only confirmó las cuatro migraciones/checksums, estructura P1-C, cero backfill, cero operadores/sesiones fabricados y P1-A/P1-B intactos. Un primer veredicto `base_constraints=10/8` fue un falso negativo del tooling: el total correcto son los ocho constraints heredados más las dos FK P1-C `operador_b2b_id`; el gate corregido aprobó `constraints=10/10`, `legacy=8/8`, `p1c_operator_fks=2/2`, `unknown=0`. No se corrigió ni mutó producción para resolverlo.
+
+El frontend conserva el JWT principal en su superficie preexistente y guarda token/contexto/actividad del operador sólo en `sessionStorage`; no persiste PIN ni token de operador en `localStorage` o Cache Storage. El PIN es obligatorio sólo para otra persona; las pestañas se invalidan entre sí al cambiar/finalizar turno y un PIN incorrecto no cierra la sesión principal. El smoke final confirmó `/health` 200, `maintenance:false`, ruta P1-C activa, bridge `0`, los seis blobs frontend aprobados y login B2B visible. No se implementaron MFA/biometría, asignaciones por operador ni limpieza programada de sesiones. Después de aplicar la migración, una contingencia requiere forward-fix con mantenimiento/bridge; no corresponde volver automáticamente al runtime pre-P1-C.
+
 ## 8. Guía para futuras intervenciones
 
 Antes de diseñar o modificar B2B:
@@ -177,7 +190,7 @@ La producción no es un banco de pruebas. La lógica debe agotarse primero en un
 
 Para cambios futuros de backend o base: implementar y probar primero con backend/PostgreSQL aislados y datos ficticios; ejecutar matrices negativas de tenant, rol, asignación y recurso; comprobar regresión B2C sin modificar B2C; preparar rollback; obtener aprobación humana; desplegar sólo el código aprobado; y limitar producción a un smoke mínimo de despliegue/configuración/integración. Toda migración requiere backup reciente recuperable, ensayo aislado, rollback o forward-fix, aprobación y verificación productiva agregada/no destructiva. No se crea infraestructura adicional sin una necesidad concreta demostrada.
 
-La ventana P1-A/P1-B ya concluyó. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero no están activos. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. El siguiente bloque es P1-C; P1-D sigue después. No existe P1-E.
+Las ventanas P1-A/P1-B y P1-C ya concluyeron. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero su estado final es `0`. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. P1-D no se inició. No existe P1-E.
 
 ## 9. Índice canónico
 
