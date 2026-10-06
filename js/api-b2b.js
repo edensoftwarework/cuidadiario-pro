@@ -209,7 +209,11 @@ const API_B2B = {
             filename = decodeURIComponent(utf8Name?.[1] || fallbackName?.[1] || filename);
         } catch {}
         filename = filename.replace(/[\\/:*?"<>\r\n|]+/g, '-');
-        return { blob: await response.blob(), filename };
+        return {
+            blob: await response.blob(),
+            filename,
+            receipt: response.headers.get('X-B2B-Export-Receipt') || null,
+        };
     },
     // ---------- B2B writes (network-only) ----------
     // P0-3: any pre-existing cd_offline_queue value is intentionally quarantined.
@@ -262,6 +266,13 @@ const API_B2B = {
     async updateMe(data)          { return this.patch('/api/b2b/auth/me', data); },
     async forgotPassword(email)   { return this.postNoAuth('/api/b2b/auth/forgot-password', { email }); },
     async resetPassword(token, password) { return this.postNoAuth('/api/b2b/auth/reset-password', { token, password }); },
+    async getOffboardingStatus() { return this.get('/api/b2b/offboarding/status'); },
+    async prepareOffboarding(data, idempotencyKey) {
+        return this.post('/api/b2b/offboarding/prepare', data, this.idempotencyOptions(idempotencyKey));
+    },
+    async finalizeOffboarding(data, idempotencyKey) {
+        return this.post('/api/b2b/offboarding/finalize', data, this.idempotencyOptions(idempotencyKey));
+    },
     logout() {
         const operatorToken = this.getOperatorToken();
         if (operatorToken && this.getToken()) {

@@ -163,10 +163,13 @@
                             </div>
                             <div class="danger-zone" style="margin-top:16px">
                                 <div>
-                                    <div style="font-weight:600;margin-bottom:4px">Desactivar institución</div>
-                                    <div style="font-size:.85rem;color:var(--text-secondary)">⚠️ Esta acción bloquea el acceso de todos los usuarios. Es reversible contactando soporte.</div>
+                                    <div style="font-weight:600;margin-bottom:4px">Baja institucional controlada</div>
+                                    <div id="offboardingStatus" style="font-size:.85rem;color:var(--text-secondary)">Consultando estado…</div>
                                 </div>
-                                <button class="btn btn-danger btn-sm" onclick="confirmDialog('¿Confirmar desactivación? Esta acción bloqueará el acceso a todos los usuarios de la institución. Para revertirlo deberás contactar soporte.',()=>showToast('Contactá soporte para esta acción','info'))">Desactivar</button>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                                    <button id="btnPrepararBaja" type="button" class="btn btn-secondary btn-sm" onclick="abrirPreparacionBaja()">Preparar baja</button>
+                                    <button id="btnEfectivizarBaja" type="button" class="btn btn-danger btn-sm" style="display:none" onclick="abrirEfectivizacionBaja()">Efectivizar baja</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -476,6 +479,33 @@
 
         </div>
     </main>
+</div>
+
+<div id="modalPrepararBaja" class="modal-overlay">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-header"><h3>Preparar baja institucional</h3><button type="button" class="modal-close" onclick="closeModal('modalPrepararBaja')">×</button></div>
+        <div class="modal-body">
+            <p style="font-size:.88rem;line-height:1.55">Primero se descargará la exportación institucional final. La institución seguirá operativa hasta que la baja se efectivice en un paso separado.</p>
+            <div class="form-group"><label class="form-label" for="offboardingReason">Motivo</label><textarea id="offboardingReason" class="form-control" rows="3" maxlength="1000"></textarea></div>
+            <div class="form-group"><label class="form-label" for="offboardingPassword">Contraseña actual</label><input id="offboardingPassword" type="password" class="form-control" autocomplete="current-password"></div>
+            <div class="form-group"><label class="form-label" for="offboardingConfirmation">Escribí <strong>INICIAR BAJA</strong></label><input id="offboardingConfirmation" class="form-control" autocomplete="off"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalPrepararBaja')">Cancelar</button><button id="btnConfirmarPreparacionBaja" type="button" class="btn btn-danger" onclick="prepararBajaInstitucional(this)">Exportar y preparar</button></div>
+    </div>
+</div>
+
+<div id="modalEfectivizarBaja" class="modal-overlay">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-header"><h3>Efectivizar baja institucional</h3><button type="button" class="modal-close" onclick="closeModal('modalEfectivizarBaja')">×</button></div>
+        <div class="modal-body">
+            <p style="font-size:.88rem;line-height:1.55"><strong>Esta acción bloqueará el acceso normal y revocará las sesiones secundarias.</strong> Los datos se conservarán en retención; no se eliminarán automáticamente.</p>
+            <div class="form-group"><label class="form-label" for="retentionReviewAt">Fecha futura de revisión (opcional; no autoriza borrado)</label><input id="retentionReviewAt" type="date" class="form-control"></div>
+            <div class="form-group"><label class="form-label" for="retentionNote">Nota de retención (opcional)</label><textarea id="retentionNote" class="form-control" rows="2" maxlength="1000"></textarea></div>
+            <div class="form-group"><label class="form-label" for="offboardingFinalPassword">Contraseña actual</label><input id="offboardingFinalPassword" type="password" class="form-control" autocomplete="current-password"></div>
+            <div class="form-group"><label class="form-label" for="offboardingFinalConfirmation">Escribí <strong>DAR DE BAJA</strong></label><input id="offboardingFinalConfirmation" class="form-control" autocomplete="off"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEfectivizarBaja')">Cancelar</button><button id="btnConfirmarEfectivizacionBaja" type="button" class="btn btn-danger" onclick="efectivizarBajaInstitucional(this)">Efectivizar baja</button></div>
+    </div>
 </div>
 
 <script src="../js/api-b2b.js"></script>

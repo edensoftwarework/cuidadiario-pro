@@ -40,6 +40,7 @@ async function initConfiguracion() {
         cargarInstitucion();
         loadPermisos();
         await cargarEstadoPlan();
+        await cargarEstadoBaja();
         if (new URLSearchParams(window.location.search).get('autoplan')) {
             setTimeout(() => contactarDesarrolladorPlan(), 400);
         }
@@ -408,13 +409,13 @@ async function guardarPermisos() {
     }
 }
 async function descargarExportInstitucional(button) {
-    if (!button || button.disabled) return;
+    if (!button || button.disabled) return null;
     const originalText = button.textContent;
     button.disabled = true;
     button.textContent = 'Generando...';
     showToast('Preparando exportación institucional completa...', 'info');
     try {
-        const { blob, filename } = await API_B2B.download('/api/b2b/institutional-export');
+        const { blob, filename, receipt } = await API_B2B.download('/api/b2b/institutional-export');
         const url = URL.createObjectURL(blob);
         try {
             const link = document.createElement('a');
@@ -428,11 +429,107 @@ async function descargarExportInstitucional(button) {
             setTimeout(() => URL.revokeObjectURL(url), 0);
         }
         showToast('Exportación institucional descargada ✅', 'success');
+        return { receipt };
     } catch (error) {
         showToast(error.message || 'No se pudo generar la exportación institucional', 'error');
+        return null;
     } finally {
         button.disabled = false;
         button.textContent = originalText;
+    }
+}
+
+async function cargarEstadoBaja() {
+    const status = document.getElementById('offboardingStatus');
+    const prepare = document.getElementById('btnPrepararBaja');
+    const finalize = document.getElementById('btnEfectivizarBaja');
+    if (!status) return;
+    try {
+        const lifecycle = await API_B2B.getOffboardingStatus();
+        const prepared = lifecycle.lifecycle_state === 'offboarding_prepared';
+        status.textContent = prepared
+            ? 'Baja preparada. La exportación final fue confirmada; la institución sigue operativa hasta efectivizarla.'
+            : 'Institución activa. Preparar la baja exige descargar primero una exportación institucional final.';
+        if (prepare) prepare.style.display = prepared ? 'none' : '';
+        if (finalize) finalize.style.display = prepared ? '' : 'none';
+    } catch (error) {
+        status.textContent = error.message || 'No se pudo consultar el estado de baja.';
+        if (prepare) prepare.disabled = true;
+        if (finalize) finalize.disabled = true;
+    }
+}
+
+function abrirPreparacionBaja() {
+    ['offboardingReason', 'offboardingPassword', 'offboardingConfirmation'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+    });
+    openModal('modalPrepararBaja');
+}
+
+async function prepararBajaInstitucional(button) {
+    if (!button || button.disabled) return;
+    const reason = document.getElementById('offboardingReason')?.value || '';
+    const currentPassword = document.getElementById('offboardingPassword')?.value || '';
+    const confirmation = document.getElementById('offboardingConfirmation')?.value || '';
+    if (reason.trim().length < 10 || !currentPassword || confirmation !== 'INICIAR BAJA') {
+        showToast('Completá el motivo, la contraseña y la confirmación exacta.', 'warning');
+        return;
+    }
+    const originalText = button.textContent;
+    try {
+        const exported = await descargarExportInstitucional(button);
+        if (!exported?.receipt) throw new Error('La descarga no devolvió evidencia de exportación final.');
+        button.disabled = true;
+        button.textContent = 'Preparando baja...';
+        await API_B2B.prepareOffboarding({
+            reason: reason.trim(), current_password: currentPassword,
+            confirmation, final_export_receipt_id: exported.receipt,
+        }, API_B2B.createIdempotencyKey());
+        document.getElementById('offboardingPassword').value = '';
+        closeModal('modalPrepararBaja');
+        showToast('Baja preparada. La institución continúa operativa hasta la confirmación final.', 'success');
+        await cargarEstadoBaja();
+    } catch (error) {
+        showToast(error.message || 'No se pudo preparar la baja institucional.', 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
+function abrirEfectivizacionBaja() {
+    ['retentionReviewAt', 'retentionNote', 'offboardingFinalPassword', 'offboardingFinalConfirmation'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+    });
+    openModal('modalEfectivizarBaja');
+}
+
+async function efectivizarBajaInstitucional(button) {
+    if (!button || button.disabled) return;
+    const currentPassword = document.getElementById('offboardingFinalPassword')?.value || '';
+    const confirmation = document.getElementById('offboardingFinalConfirmation')?.value || '';
+    if (!currentPassword || confirmation !== 'DAR DE BAJA') {
+        showToast('Ingresá la contraseña y la confirmación exacta.', 'warning');
+        return;
+    }
+    const reviewValue = document.getElementById('retentionReviewAt')?.value || '';
+    const note = document.getElementById('retentionNote')?.value || '';
+    button.disabled = true;
+    try {
+        await API_B2B.finalizeOffboarding({
+            current_password: currentPassword,
+            confirmation,
+            retention_review_at: reviewValue ? `${reviewValue}T12:00:00` : null,
+            retention_note: note.trim() || null,
+        }, API_B2B.createIdempotencyKey());
+        document.getElementById('offboardingFinalPassword').value = '';
+        showToast('Baja efectivizada. Los datos quedan conservados en retención.', 'success');
+        setTimeout(() => API_B2B.logout(), 400);
+    } catch (error) {
+        showToast(error.message || 'No se pudo efectivizar la baja institucional.', 'error');
+        button.disabled = false;
     }
 }
 
