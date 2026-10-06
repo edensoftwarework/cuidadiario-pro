@@ -1,6 +1,6 @@
 # CuidaDiario PRO B2B — documentación canónica
 
-**Estado documental:** vigente al 6 de octubre de 2026; P0, P1-A, P1-B y **P1-C DESPLEGADOS / VERIFICADOS / DOCUMENTADOS / CERRADOS**; **P1-D1 OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL**; **P1-D2 IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO**; P1-D3 no implementado
+**Estado documental:** vigente al 6 de octubre de 2026; **P1 COMPLETO / DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO**. P1-A/P1-B/P1-C/P1-D2/P1-D3 están cerrados en producción; P1-D1 permanece operativo y cerrado para el alcance actual, con la Replica física diferida.
 **Alcance:** ingeniería inversa del repositorio local más evidencia externa proporcionada; no acredita aquello que se mantiene expresamente como `[NO VERIFICADO]`.  
 **Regla de precedencia:** ante una contradicción, prevalece el código ejecutable actual sobre este documento; la divergencia debe registrarse en `ESTADO_Y_PLAN_B2B.md`.
 
@@ -38,6 +38,9 @@ El 15/09/2026 se inspeccionó manualmente el panel de Railway, sin abrir Console
 | `backend/package.json` | Dependencias y comando de inicio. **[COMPARTIDO - NO TOCAR B2C]** |
 | `backend/tests/p0-c-authorization.test.js` | Arnés local P0-C: PostgreSQL 18 efímero, esquema mínimo y fixtures sintéticos, JWT local, servidor HTTP real y bloqueo de conexiones externas. No es código de producción. |
 | `backend/tests/p1-d2-institutional-export.test.js` | Gate integral D2 con PostgreSQL efímero, tenants A/B, B2C sintético, archivados/egresados, documentos, ledger, snapshot concurrente, autorización, ZIP/hashes y limpieza. No es código de producción. |
+| `backend/b2b-p1d3.js` | **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]** Migración y rutas controladas de baja/retención institucional. Registra receipts D2, prepara la baja, la efectiviza sin borrar datos, revoca sesiones/tokens y audita transiciones. |
+| `backend/tests/p1-d3-offboarding.test.js` | Gate D3 con PostgreSQL 18 efímero, datos sintéticos A/B/B2C, concurrencia, aislamiento, bloqueo post-baja y fingerprints de preservación. |
+| `frontend/tests/p1-d3-offboarding-ui.test.js` | Gate focalizado de la secuencia deliberada exportar → preparar → efectivizar y cierre de sesión. |
 | `frontend/*.html` | Entrada, autenticación, paneles y páginas B2B; también existen páginas ajenas al producto B2B. |
 | `frontend/js/api-b2b.js` | Cliente HTTP B2B, validación local mínima de vigencia del JWT, cierre selectivo de identidad, purga de caché GET B2B heredada, claves UUID de idempotencia, contexto/token de operador secundario y descarga D2 explícitamente `no-store`. Una `cd_offline_queue` heredada queda intacta y sin consumidor. |
 | `frontend/js/maintenance-b2b-v2.js` | Guardia visual permanente y exclusivamente B2B. Consulta por red `GET /api/b2b/maintenance-status`, reutiliza el binding léxico `API_B2B.BASE_URL`, no persiste estado y sondea cada 5 s. `B2B_MAINTENANCE_MODE` controla sólo esta capa visual; no sustituye la barrera de mutaciones del bridge P1. **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]** |
@@ -46,7 +49,7 @@ El 15/09/2026 se inspeccionó manualmente el panel de Railway, sin abrir Console
 | `frontend/sw.js` | Caché PWA de estáticos y respuestas GET no-B2B; los GET `/api/b2b/` son network-only y se purgan selectivamente. P0-1 está **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]**. P1-C cambió sólo el comentario identificador para distribuir bytes nuevos; cachés, rutas y estrategias permanecieron iguales y el asset público fue verificado. **[COMPARTIDO - NO TOCAR B2C]** |
 | `frontend/pages/privacy.html`, `frontend/pages/terms.html` | Declaraciones públicas; algunas no coinciden plenamente con la conducta técnica actual. |
 | `documentacion/` | Documentación canónica y antecedentes. No es código de producción. |
-| `ops/p1-d1/` | Paquete operativo local P1-D1 para dump completo de la base compartida, validación, cifrado CMS, manifiesto/hash, retención y restore exclusivamente aislado. **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026**. El restore drill local/loopback fue exitoso; la tarea diaria produjo y validó su primera generación natural a las 20:00 y health corrió naturalmente a las 21:00. La Replica física permanece **DIFERIDA** por indisponibilidad de la segunda PC y no reabre D1. No integra el runtime del producto ni modifica B2C. |
+| `ops/p1-d1/` | Paquete operativo local P1-D1 para dump completo de la base compartida, validación, cifrado CMS, manifiesto/hash, retención y restore exclusivamente aislado. **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026**. El restore drill local/loopback fue exitoso; la tarea diaria produjo y validó su primera generación natural. Para P1-D3 su allowlist se amplió de forma focalizada a las cinco migraciones exactas y el catálogo restaurado aprobó 2/2; las tareas siguen habilitadas. La Replica física permanece **DIFERIDA** y no reabre D1. No integra el runtime del producto ni modifica B2C. |
 | `ops/p1-d2/` | Tooling local de gate: valida ZIP, manifest, hashes, 19 familias, documentos, relaciones/tenant, secretos y exclusión B2C sin persistir extracción ni imprimir filas. Se conserva sólo en la copia controlada; no forma parte del runtime público. |
 
 ## 4. Arquitectura resumida
@@ -177,6 +180,14 @@ El gate productivo PostgreSQL 17 read-only confirmó las cuatro migraciones/chec
 
 El frontend conserva el JWT principal en su superficie preexistente y guarda token/contexto/actividad del operador sólo en `sessionStorage`; no persiste PIN ni token de operador en `localStorage` o Cache Storage. El PIN es obligatorio sólo para otra persona; las pestañas se invalidan entre sí al cambiar/finalizar turno y un PIN incorrecto no cierra la sesión principal. El smoke final confirmó `/health` 200, `maintenance:false`, ruta P1-C activa, bridge `0`, los seis blobs frontend aprobados y login B2B visible. No se implementaron MFA/biometría, asignaciones por operador ni limpieza programada de sesiones. Después de aplicar la migración, una contingencia requiere forward-fix con mantenimiento/bridge; no corresponde volver automáticamente al runtime pre-P1-C.
 
+### 7.9 P1-D3 — despliegue productivo y cierre de P1
+
+**[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 06/10/2026]** Backend `865e56025c9b763b0c9664cdf5ec4e165f32d4e4`; frontend `52260dd13c05ec68b79a58ffe24bb9063ce753ed`. El runner aplicó `p1d3_001_institution_lifecycle` con checksum `65eec6368114a7a6f4891d72f9370ca94ea2bb3bac5d98f5f8b4bd29eb351427` antes de abrir tráfico.
+
+El gate PostgreSQL 17.11 estrictamente read-only aprobó las cinco migraciones, P1-A/B/C y toda la estructura D3. El primer gate abortó correctamente porque buscaba `Los Aromos` por texto y coincidían dos instituciones legítimas. Una consulta read-only identificó inequívocamente al tenant productivo como `instituciones_b2b.id=30`; el criterio se corrigió para usar ese ID estable y el gate final confirmó `active`, `activa=TRUE`, cero estados `offboarding_prepared`/`retained` y todos los campos de baja vacíos. No se modificaron datos para resolver el gate.
+
+No se ejecutaron `prepare`, `finalize`, `DELETE`, purga ni reactivación. Los assets públicos coincidieron con el candidato —salvo el beacon de Cloudflare ya conocido—, login y guard de autenticación funcionaron, `/health` fue 200, `maintenance:false`, y las rutas P1-C/D2/D3 permanecieron protegidas con 401 sin sesión. La regresión B2C compartida aprobó 232/232 y el dominio B2C respondió 200; no se modificaron archivos B2C. P1-D y P1 quedan cerrados; no existe P1-E.
+
 ## 8. Guía para futuras intervenciones
 
 Antes de diseñar o modificar B2B:
@@ -194,7 +205,7 @@ La producción no es un banco de pruebas. La lógica debe agotarse primero en un
 
 Para cambios futuros de backend o base: implementar y probar primero con backend/PostgreSQL aislados y datos ficticios; ejecutar matrices negativas de tenant, rol, asignación y recurso; comprobar regresión B2C sin modificar B2C; preparar rollback; obtener aprobación humana; desplegar sólo el código aprobado; y limitar producción a un smoke mínimo de despliegue/configuración/integración. Toda migración requiere backup reciente recuperable, ensayo aislado, rollback o forward-fix, aprobación y verificación productiva agregada/no destructiva. No se crea infraestructura adicional sin una necesidad concreta demostrada.
 
-Las ventanas P1-A/P1-B y P1-C ya concluyeron. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero su estado final es `0`. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. P1-D1 está cerrado para su alcance actual; P1-D2 está implementado, desplegado, verificado en producción y cerrado; P1-D3 no se inició. El detalle está en `ESTADO_Y_PLAN_B2B.md` 5.23/5.24. No existe P1-E.
+Las ventanas P1-A/P1-B/P1-C y P1-D concluyeron. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero su estado final es `0`. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. P1-D1 está cerrado para su alcance actual; P1-D2 y P1-D3 están desplegados/cerrados. **P1 está completo y cerrado.** No existe P1-E.
 
 ## 9. Índice canónico
 

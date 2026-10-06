@@ -1,6 +1,6 @@
 # Mapa de API de CuidaDiario PRO B2B
 
-**Fuente:** declaraciones de rutas y consultas de `backend/index.js`, `backend/b2b-p1.js`, `backend/b2b-p1c.js` y `backend/b2b-p1d2.js`, actualizadas con P0-C/P1-A/P1-B/P1-C/P1-D2 productivos al 6 de octubre de 2026.
+**Fuente:** declaraciones de rutas y consultas de `backend/index.js`, módulos P1/P1-C/P1-D2/P1-D3, frontend y verificación productiva; P1-D3 quedó desplegado/cerrado el 6 de octubre de 2026.
 **Base pública confirmada en Railway y configurada en el frontend:** `https://cuidadiario-backend-production.up.railway.app`, dirigida al puerto 8080, seguida de la ruta indicada.  
 **Nota:** el monolito continúa en `index.js`, pero P1-C y P1-D2 registran rutas desde módulos propios; “control” describe el backend, no sólo lo que oculta la UI. Las rutas P1-C y P1-D2 están activas en producción.
 
@@ -175,7 +175,10 @@ Consumidor principal: `paciente.js`; las vistas de cuidador/familiar consumen su
 | `GET /api/b2b/dashboard` | Conteos, staff agregado, citas, síntomas, notas urgentes, cumpleaños y stock. | `A`; asignaciones/alcance institucional + `F` por bloque para FA | `dashboard.js` | Medicación, tareas, citas, síntomas y notas se omiten/ponen en cero cuando la sección familiar está deshabilitada. |
 | `GET /api/b2b/reportes` | Ficha y series de un residente en un período. | `A P`; exige `paciente_id`; `F` por bloque para FA | `reportes.js` | Medicación/historial, citas, tareas, síntomas, signos, contactos y notas respetan la sección vigente. |
 | `GET /api/b2b/reporte/export` | Exportación JSON institucional. | `A`, comprobación AI interna | `configuracion.js` | No incluye asignaciones, catálogo/reposiciones, tareas activas, documentos ni historial de citas; no es backup completo restaurable. |
-| `GET /api/b2b/institutional-export` | ZIP institucional v1 con manifest/hashes, JSON/JSONL, vistas CSV, documentos y ledger. | `A R(AI)`; revalidación de principal/operador/tenant dentro de snapshot read-only | `configuracion.js` mediante `api.download()` | **[VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026].** Incluye activos, inactivos, egresados y soft-deleted; excluye credenciales, sesiones, idempotencia, `_migrations` y B2C. `private, no-store`. |
+| `GET /api/b2b/institutional-export` | ZIP institucional v1 con manifest/hashes, JSON/JSONL, vistas CSV, documentos y ledger. | `A R(AI)`; revalidación de principal/operador/tenant dentro de snapshot read-only | `configuracion.js` mediante `api.download()` | D2/D3 productivos: después de cerrar/verificar el ZIP se registra un receipt técnico y se expone `X-B2B-Export-Receipt`; no se almacena el ZIP ni se mutan datos clínicos. |
+| `GET /api/b2b/offboarding/status` | Estado de ciclo de vida/retención, sin IDs internos de actor/receipt. | Principal `admin_institucion`; rechaza cualquier operador secundario | Administración avanzada | **[DESPLEGADO / PROTEGIDO / CERRADO].** Sin sesión responde 401; Los Aromos `id=30` fue verificado `active`. |
+| `POST /api/b2b/offboarding/prepare` | Vincula receipt D2 del mismo tenant, motivo y confirmación; pasa `active → offboarding_prepared`. | Principal admin + contraseña actual + `INICIAR BAJA` + `Idempotency-Key`; lock transaccional | Modal de preparación | Mantiene `activa=TRUE`; D2 y operación normal siguen disponibles. Audita una transición. |
+| `POST /api/b2b/offboarding/finalize` | Pasa `offboarding_prepared → retained`, bloquea institución y revoca accesos técnicos. | Principal admin + contraseña actual + `DAR DE BAJA` + `Idempotency-Key`; lock transaccional | Modal de efectivización | `activa=FALSE`; revoca sesiones P1-C y anula tokens reset/verificación. No borra datos ni habilita purga/reactivación. |
 
 ## 11. Documentos
 
@@ -237,4 +240,4 @@ Sin cambiar rutas B2C ni datos existentes:
 4. conservar la regresión P1-C/P1-D2 sin reabrir los bloques cerrados;
 5. mantener la exportación del ledger P1-D2 sólo lectura y no añadir mutaciones de auditoría.
 
-P0-C está desplegado y cerrado desde el 30/09/2026. P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**. P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**; P1-D1 está cerrado para su alcance actual; P1-D2 está **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]**; P1-D3 no se inició y no existe P1-E. Después de la migración P1-C cualquier contingencia requiere forward-fix bajo mantenimiento/bridge, no rollback automático al runtime anterior.
+P0/P1-A/P1-B/P1-C están cerrados; P1-D1 está cerrado para su alcance actual y P1-D2/P1-D3 están desplegados/cerrados. El gate read-only confirmó cinco migraciones y Los Aromos productivo `id=30` activo, sin offboarding; el smoke público confirmó las rutas P1-C/D2/D3 protegidas. **P1-D y P1 están cerrados; no existe P1-E.**

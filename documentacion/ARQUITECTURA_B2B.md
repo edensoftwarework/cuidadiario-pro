@@ -1,6 +1,6 @@
 # Arquitectura técnica de CuidaDiario PRO B2B
 
-**Corte de reconstrucción:** 6 de octubre de 2026, incluyendo inspección manual parcial de Railway del 15/09, recuperación lógica independiente del 28/09 y cierre productivo de P0-C/P1-A/P1-B/P1-C/P1-D1/P1-D2
+**Corte de reconstrucción:** 6 de octubre de 2026, incluyendo cierre productivo de P0-C y P1-A/P1-B/P1-C/P1-D1/P1-D2/P1-D3; P1 completo está desplegado, verificado, documentado y cerrado
 **Naturaleza:** descripción del código y de evidencia externa proporcionada; no es un diseño objetivo ni una certificación integral de producción.
 
 Etiquetas: **[VERIFICADO]** comprobado en código o evidencia externa identificada; **[INFERIDO]** conclusión técnica no observada directamente; **[NO VERIFICADO]** requiere evidencia adicional; **[PENDIENTE]** brecha abierta; **[FUTURO]** diseño aún no implementado; **[COMPARTIDO - NO TOCAR B2C]** puede afectar ambos productos. Cuando se dice “exclusivo B2B” en prosa, la superficie pertenece sólo a PRO.
@@ -168,7 +168,7 @@ El cuerpo JSON y URL-encoded admite hasta 10 MB, necesario actualmente porque lo
 
 ### 4.2 Inicio y migraciones
 
-El arranque ejecuta `runMigrations()` y luego `runB2BP1Migrations(pool)` antes de abrir el puerto. El runner histórico contiene DDL y transformaciones de B2C y B2B en el mismo archivo/proceso: **[COMPARTIDO - NO TOCAR B2C]**. Parte de ese DDL B2B usa `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` y capturas que ignoran errores; dos migraciones horarias usan la tabla genérica `_migrations`. El runner P1 está separado, usa `schema_migrations_b2b`, valida checksums y bloquea el arranque ante error o divergencia. `p1c_001_operator_identity` se ejecuta después de las tres migraciones P1-A/P1-B; las cuatro quedaron verificadas en producción.
+El arranque ejecuta `runMigrations()` y luego `runB2BP1Migrations(pool)` antes de abrir el puerto. El runner histórico contiene DDL y transformaciones de B2C y B2B en el mismo archivo/proceso: **[COMPARTIDO - NO TOCAR B2C]**. El runner P1 separado usa `schema_migrations_b2b`, valida checksums y bloquea el arranque ante error o divergencia. Las cinco migraciones hasta P1-D3 están verificadas en producción; `p1d3_001_institution_lifecycle` es aditiva/idempotente y quedó registrada con su checksum aprobado.
 
 Consecuencias documentales:
 
@@ -193,6 +193,14 @@ El bridge no cubre el runner, jobs/timers, SQL administrativo ni el bloque direc
 ### Arquitectura P1-D2 desplegada
 
 `backend/b2b-p1d2.js` encapsula la exportación institucional completa sin migraciones ni mutaciones. `GET /api/b2b/institutional-export` exige el middleware B2B vigente y rol principal `admin_institucion`; si existe operador secundario, también debe conservar rol administrador. La identidad e institución activas se revalidan dentro de una transacción `REPEATABLE READ READ ONLY` antes de consultar cualquier familia.
+
+### Arquitectura P1-D3 desplegada y cerrada
+
+`backend/b2b-p1d3.js` agrega la máquina mínima `active → offboarding_prepared → retained`. D2 continúa generando el ZIP dentro de su snapshot read-only y, sólo después de cerrarlo y calcular hash/tamaño, registra una evidencia técnica UUID en `institucion_exportaciones_b2b`; no almacena el ZIP ni contenido clínico. El administrador principal, sin operador secundario activo, confirma contraseña, motivo, frase deliberada y receipt del mismo tenant para preparar la baja. En `offboarding_prepared` la institución sigue activa y D2/operación normal continúan disponibles.
+
+La efectivización transaccional fija `activa=FALSE` y `lifecycle_state='retained'`, revoca lógicamente sesiones P1-C y anula tokens de reset/verificación. El middleware central revalida estado/tenant en cada request, por lo que JWT anteriores, lecturas, mutaciones, documentos, reportes y D2 quedan bloqueados. Login y flujos laterales también exigen estado operativo; jobs B2B y actualizaciones Mercado Pago latentes excluyen instituciones retenidas. No existe endpoint de reactivación ni purga automática en este alcance. `retention_review_at` sólo agenda revisión humana: nunca autoriza un `DELETE`.
+
+El backend `865e56025c9b763b0c9664cdf5ec4e165f32d4e4` y el frontend `52260dd13c05ec68b79a58ffe24bb9063ce753ed` quedaron desplegados el 06/10/2026. El gate PostgreSQL 17.11 read-only confirmó las cinco migraciones/checksums, estructura P1-A/B/C/D3 y el tenant productivo Los Aromos `id=30` en `active`, `activa=TRUE`, sin offboarding. Un ABORT previo fue el comportamiento fail-closed correcto de una búsqueda textual ambigua; la identificación se corrigió sólo en el gate, nunca en datos. No se ejecutaron `prepare`, `finalize`, `DELETE` ni purga.
 
 Las consultas son allowlists explícitas con `institucion_id`; el grafo de residentes, usuarios, asignaciones, recursos y operadores se valida antes de entregar. El ZIP se escribe incrementalmente en un directorio temporal no público, un archivo por vez, y se elimina después de enviar, ante error o cancelación. Los documentos se decodifican individualmente a rutas físicas basadas en ID; sus nombres originales quedan sólo como metadato. `manifest.json`, `manifest.sha256` y `checksums.sha256` permiten verificar versión, conteos, migraciones, exclusiones y hash/tamaño de cada payload. Las respuestas usan `private, no-store`, y no se registra contenido sensible. **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026].** Backend `1c50efce685e59ac89fbf762364741d39ffd28dd`; frontend `b86342ea07bf0bc5619b96bff77ead61a1ca50f8`.
 
@@ -308,7 +316,7 @@ La línea base anterior a P1 mezclaba:
 
 P1-A/P1-B sustituyó hacia adelante esos seis borrados físicos por soft-delete, agregó versión prospectiva a 13 tablas y un ledger general allowlisted para las mutaciones cubiertas. No se afirma auditoría histórica retroactiva ni registro general de lecturas/accesos. Los detalles están en `MODELO_DATOS_B2B.md`.
 
-P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**, P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**, P1-D1 está cerrado para su alcance actual y P1-D2 está **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]**. P1-D3 no se inició. No existe un bloque P1-E.
+P1-A/P1-B/P1-C están cerrados, P1-D1 está cerrado para su alcance actual y P1-D2/P1-D3 están cerrados. **P1-D y P1 están completos, desplegados, verificados, documentados y cerrados.** No existe un bloque P1-E.
 
 **Gate predeploy P1-C final y cierre productivo.** El dump oficial del 04/10 restauró sin warnings en PostgreSQL 18.1 aislado. El gate estructural aprobó 185/185 y las regresiones del candidato ajustado 808/808: principal por defecto, operador secundario con PIN, 8 h/60 min, preservación P1-A/P1-B, B2C/no-B2B y upgrade real del service worker. Producción PostgreSQL 17.11 aprobó preflight y gate postdeploy read-only; el frontend y el smoke público también quedaron verificados.
 

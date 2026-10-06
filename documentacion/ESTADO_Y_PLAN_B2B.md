@@ -46,13 +46,14 @@ Una fila puede tener más de una naturaleza, pero se identifica una principal pa
 | P1-C — identidad del operador | **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 04/10/2026]** Backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3`; frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`. Principal por defecto; operador/PIN sólo para otra persona; 8 h/60 min. |
 | P1-D1 — backup/recuperación | **[OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026]** Backup CMS diario, validación, health y restore drill local/loopback. Replica física diferida sin reabrir D1. |
 | P1-D2 — exportación institucional | **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]** Backend `1c50efce685e59ac89fbf762364741d39ffd28dd`; frontend `b86342ea07bf0bc5619b96bff77ead61a1ca50f8`. ZIP tenant-safe con manifest/hashes, 19 familias institucionales, documentos, operadores sanitizados y ledger JSONL/CSV; sin migración ni mutación. |
+| P1-D3 — offboarding/retención | **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 06/10/2026]** Estado aditivo `active → offboarding_prepared → retained`, receipt D2 tenant-safe, bloqueo central, revocación P1-C/tokens y retención sin purga automática. |
 | Mantenimiento | Endpoint backend `maintenance-status` (`c598d55`) y guard frontend versionado `maintenance-b2b-v2.js` (`ac3e46c`) desplegados. Micro-gate OFF→ON→OFF **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]**. Durante P1 también se verificó el bridge; al cierre ambos modos quedaron en `0`. |
 
 ### 2.2 Datos que pueden persistir al cerrar sesión o terminar el servicio
 
 | Lugar | Qué puede permanecer | Control actual |
 |---|---|---|
-| PostgreSQL | Todo el dominio B2B, hashes/tokens y documentos base64. | Sin baja institucional automatizada ni política de retención ejecutable observada. |
+| PostgreSQL | Todo el dominio B2B, hashes/tokens y documentos base64. | P1-D3 aporta baja institucional deliberada y retención sin borrado; no existe purga automática ni política legal de conservación determinada por el sistema. |
 | `localStorage` | Cola offline heredada, preferencias, nombres recientes de estación y, antes de cargar el cliente P0-2, una posible copia `cd_pro_last_user`; podrían existir respuestas GET `cd_api_/api/b2b...` creadas por versiones anteriores hasta cargar el cliente actualizado. | P0-1 purga sólo copias GET B2B. P0-2 retira identidad heredada. P0-3 deja `cd_offline_queue` en cuarentena byte a byte, sin leerla, ejecutarla o borrarla. **[P0-1/P0-2/P0-3 CERRADOS]** |
 | Cache Storage | Estáticos y respuestas GET no-B2B; podrían existir respuestas B2B heredadas hasta activar el service worker actualizado. | **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]:** purga selectiva por URL y GET B2B network-only. |
 | `sessionStorage` | Selección nominal heredada `cd_active_worker`; desde P1-C, token/contexto/actividad del operador secundario. | P1-C elimina la selección nominal y conserva las tres claves nuevas sólo por pestaña; las elimina en fin/cambio/inactividad/logout/401/expiración. PIN/token no pasan a `localStorage` ni Cache Storage. **[VERIFICADO EN PRODUCCIÓN — 04/10/2026]** |
@@ -65,6 +66,7 @@ Una fila puede tener más de una naturaleza, pero se identifica una principal pa
 - **Exportación productiva actual:** administrador descarga/visualiza un conjunto JSON convertido en reporte imprimible. Incluye institución, residentes, staff, medicamentos, administraciones, citas, cumplimientos, síntomas, signos, contactos y notas.
 - **Omisiones de la exportación productiva heredada:** asignaciones, catálogo y reposiciones, tareas activas, documentos/binarios, preferencias/configuración completa e historial de citas independiente. No hay importador/restaurador.
 - **P1-D2 productivo:** agrega un ZIP institucional v1 allowlisted con esas omisiones cubiertas, estados inactivos/egresados/soft-deleted, documentos, operadores sin PIN y auditoría sanitizada; contiene manifest, hashes y formatos JSON/JSONL/CSV. No es backup PostgreSQL ni importador.
+- **P1-D3 productivo y cerrado:** prepara la baja sólo después de una exportación D2 confirmada, mantiene operación durante la preparación y, al efectivizar, bloquea acceso/revoca sesiones y tokens sin eliminar ninguna fila. La fecha de retención sólo habilita revisión humana futura. El gate de cierre comprobó que Los Aromos (`id=30`) permanece `active`, `activa=TRUE`, sin preparación ni retención ejecutadas.
 - **Conservación actual:** filas activas y desactivadas permanecen en PostgreSQL; tres historiales parciales conservan eventos. No hay política técnica general de retención.
 - **Eliminación en producción documentada:** desactivación para usuarios, residentes, asignaciones, medicamentos, tareas y catálogo; borrado físico para citas, síntomas, signos, contactos, notas y documentos. **Copia P1 local:** esas seis familias usan soft-delete prospectivo y documentos archivados conservan bytes/cuota.
 - **Recuperación actual:** la aplicación puede descargar documentos y generar un export parcial no reimportable. **[VERIFICADO]** Existe una ruta de recuperación lógica completa probada el 28/09/2026 mediante `pg_dump` y `pg_restore` en PostgreSQL local aislado. **[NO VERIFICADO]** Los snapshots Railway, PITR, programación, política de retención y RPO/RTO no fueron probados.
@@ -137,7 +139,7 @@ La función append-only coincidió byte a byte con la migración (`prosrc_md5=08
 
 El dump fresco `cuidadiario_produccion_2026-10-02_predeploy_p1.dump` (10.079.205 bytes, 325 líneas TOC, SHA-256 `30656BC093BFE7CD1E02014B176E883E42D462109DF7A57CD8352A4F22388CAB`) se restauró en PostgreSQL 18.1 efímero/local. El gate aislado aprobó 363/363 pruebas y el clúster fue eliminado sin tráfico externo. Esta evidencia es propia del despliegue P1-A/P1-B; no cierra P1-D.
 
-Taxonomía canónica: **P1-A — Trazabilidad y preservación: CERRADO; P1-B — Integridad de operaciones: CERRADO; P1-C — Identidad del operador: DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO; P1-D1 — Backup y recuperación: OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL; P1-D2 — IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO; P1-D3 — NO IMPLEMENTADO. P1-D completo permanece abierto únicamente por P1-D3. No existe P1-E.**
+Taxonomía canónica: **P1-A/B/C: CERRADOS; P1-D1: OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL; P1-D2: DESPLEGADO / VERIFICADO / CERRADO; P1-D3: IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO. P1-D está CERRADO y P1 completo. No existe P1-E.**
 
 ## 3. Hallazgos priorizados
 
@@ -269,17 +271,17 @@ El bloqueo real que mantenía abierta la Etapa 0 era no haber demostrado una rec
 
 ### 5.3 Etapas consolidadas
 
-| Etapa | Alcance mínimo | Criterio de salida | Estado al 04/10/2026 |
+| Etapa | Alcance mínimo | Criterio de salida | Estado al 06/10/2026 |
 |---|---|---|---|
 | 0. Verificación externa | Inspección Railway del 15/09 más dump/restauración lógica independiente del 28/09. Permanecen pendientes los mecanismos administrados, política y controles de continuidad. | Inventario consolidado, backup identificable y restauración aislada exitosa. | **COMPLETA CON PENDIENTES NO BLOQUEANTES** |
 | 1. Contención cliente/sesión | Secreto obligatorio, revalidación B2B, no caché sensible, logout completo, cola segregada, tokens fuera de URL. | Pruebas muestran que otro usuario/tenant no recibe copias y una sesión revocada no opera. | **P0 CERRADO EN PRODUCCIÓN:** P0-1/P0-2/P0-3/P0-4/P0-8 cerrados. El fallback secreto y tokens en URL permanecen como backlog separado, sin reabrir los bloques P0 aceptados. |
 | 2. Autorización uniforme | Guard de recurso/residente/sección en todas las rutas y agregados. | Matriz automatizada AI/MD/CS/FA × tenant × asignación × sección sin escapes. | **VERIFICADO EN PRODUCCIÓN / P0 CERRADO:** P0-5/P0-6/P0-7; matriz exhaustiva controlada y gate productivo proporcional. |
 | 3. Integridad y trazabilidad | P1-A preservación/trazabilidad; P1-B integridad; P1-C identidad verificable del operador. | Mutaciones nuevas atribuibles y repetibles con seguridad; operador verificable en estación compartida. | **COMPLETA: P1-A/P1-B/P1-C CERRADOS EN PRODUCCIÓN.** |
-| 4. Continuidad y ciclo de vida | P1-D: export completo versionado, restore periódico, retención/baja y logs controlados. | Exportación reconciliada y simulacro documentado sin tocar producción. | **EN IMPLEMENTACIÓN: P1-D1 OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL; D2/D3 NO IMPLEMENTADOS** |
+| 4. Continuidad y ciclo de vida | P1-D: export completo versionado, restore periódico y retención/baja controlada. | D1/D2 cerrados; D3 promovido y verificado productivamente sin pérdida. | **COMPLETA: P1-D1/D2/D3 CERRADOS; P1-D3 VERIFICADO EN PRODUCCIÓN SIN PÉRDIDA** |
 | 5. Funciones de Los Aromos | Evolución, indicaciones versionadas, incidentes, estados temporales, metadatos y dashboards. | Criterios de aceptación del cliente y permisos aprobados sobre datos de prueba. | **NO INICIADA** |
 | 6. Piloto controlado | Capacitación, soporte, métricas, rollback y seguimiento. | Piloto aprobado antes de ampliar alcance. | **NO INICIADA** |
 
-La documentación canónica no equivale por sí sola a avance de implementación. La Etapa 0 está cerrada sólo en el sentido anterior. P0 y la Etapa 3 —P1-A/P1-B/P1-C— están desplegados, verificados en producción y cerrados. P1-D1 tiene Primary, cifrado/custodia, health/tareas locales, backup productivo validado, restore drill aislado y primer ciclo automático comprobados; queda cerrado para el alcance actual. La Replica física permanece diferida por indisponibilidad de la segunda PC y no reabre D1. D2/D3 no fueron implementados. Las funciones nuevas de Los Aromos no se iniciaron.
+La documentación canónica no equivale por sí sola a avance productivo. La evidencia de despliegue y los gates específicos cierran P0 y P1-A/B/C/D. P1-D1 queda cerrado para el alcance actual y su Replica física diferida no lo reabre; P1-D2 y P1-D3 están cerrados. P1 está completo. Las funciones nuevas de Los Aromos no se iniciaron.
 
 P0-2 + P0-3 + P0-8 fueron publicados como un único paquete frontend controlado en el commit `9ec220c4722e528cda77c9ece3d21cb62bcd7068`, manteniendo evidencia, aceptación y rollback separados por bloque.
 
@@ -452,7 +454,7 @@ P0-C completó implementación y prueba controlada con backend/PostgreSQL aislad
 1. **P1-A — Trazabilidad y preservación: VERIFICADO EN PRODUCCIÓN / CERRADO.** Auditoría prospectiva append-only, versionado, soft-delete y guard de egreso.
 2. **P1-B — Integridad de operaciones: VERIFICADO EN PRODUCCIÓN / CERRADO.** Transacciones, locks e idempotencia en operaciones críticas cubiertas.
 3. **P1-C — Identidad del operador: DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026.** Principal por defecto y operador secundario verificable como dimensiones separadas.
-4. **P1-D — Continuidad y ciclo de vida: EN IMPLEMENTACIÓN (04/10/2026).** D1 backup/restore está implementado y verificado en copia controlada, no desplegado; D2 export/ledger y D3 offboarding/retención/logs no fueron implementados. Diseño y evidencia en 5.23.
+4. **P1-D — Continuidad y ciclo de vida: COMPLETO / DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO (06/10/2026).** D1 está operativo y cerrado para el alcance actual; D2 y D3 fueron desplegados y verificados productivamente. La Replica física diferida de D1 no reabre el bloque. Diseño y evidencia en 5.23–5.25.
 
 No existe P1-E. P1-D incluye la limpieza de tokens B2B expirados y sesiones técnicas necesaria para el ciclo de vida; un rediseño criptográfico general de JWT/secretos o del middleware compartido mantiene su prioridad propia y no debe inventarse como P1-E.
 
@@ -663,7 +665,7 @@ El primer gate integral informó `base_constraints=10/8` aunque todos los demás
 
 ### 5.23 P1-D — auditoría y diseño de continuidad y ciclo de vida — 04/10/2026
 
-**Veredicto general:** **P1-D ABIERTO ÚNICAMENTE POR P1-D3.** La auditoría/diseño se conserva como base. P1-D1 está **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL** al 05/10/2026; P1-D2 está **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO** al 06/10/2026; P1-D3 permanece **NO IMPLEMENTADO**. Los accesos productivos D1 fueron exclusivamente `pg_dump` read-only; los restores fueron sólo locales/loopback. D2 ejecutó exactamente una exportación read-only autorizada, sin DDL/DML, migraciones, cambios de esquema, cambios B2C ni cambios P1-D1.
+**Veredicto general:** **P1-D CERRADO — 06/10/2026. P1 COMPLETO / DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO.** D1 está cerrado para el alcance actual; D2 y D3 están desplegados/verificados/cerrados. No existe P1-E.
 
 #### Diagnóstico actual
 
@@ -733,10 +735,10 @@ Los backups históricos no se editan para “borrar” una institución: la deci
 
 | Prioridad | Estado/riesgo/impacto | Solución y tipo | Dependencia | Riesgo B2C |
 |---|---|---|---|---|
-| **P1-D CRÍTICO** | D1 está operativo: tarea diaria/health activas, restore drill y primer ciclo natural verificados. D2 está desplegado/verificado/cerrado; D3 no se inició. Replica física diferida y RPO/RTO no constituyen SLA ni garantía histórica. | Configurar Replica cuando exista la segunda PC, sin reabrir D1; abordar D3 sólo con autorización separada. | Para Replica: segunda PC/credencial/ruta. Para D3: decisiones externas de retención/offboarding. | Alto en restore porque la DB es compartida; cero cambios a tablas B2C. |
+| **P1-D CERRADO** | D1/D2/D3 están cerrados; Replica física diferida y RPO/RTO no constituyen SLA. | Mantener los gates y configurar Replica cuando exista la segunda PC sin reabrir D1. | Decisión externa posterior para cualquier supresión. | D3 es exclusivamente B2B y su regresión B2C pasó 232/232. |
 | **P1-D CERRADO** | El reporte heredado continúa parcial, pero la exportación institucional completa P1-D2 ya está disponible y verificada. | Mantener export v1 allowlisted, consistente y versionado; custodiar explícitamente cada ZIP descargado. | D1 vigente; canal de entrega/custodia operativo por caso. | Bajo: consultas exclusivamente B2B allowlisted; gate sintético y gate productivo confirmaron B2C ausente. |
 | **P1-D NECESARIO** | Restore probado pero no periódico ni cronometrado; RTO no demostrable. | Simulacro aislado mensual→trimestral y runbook con gates. Procedimiento + automatización local. | D1. | Alto sólo si alguien apunta al destino equivocado; barreras de loopback/nombre test obligatorias. |
-| **P1-D NECESARIO** | No existe workflow de offboarding/retención; un DELETE directo activaría cascadas. | Estado aditivo, export/entrega, desactivación, hold y decisión separada de supresión. Migración + código + decisión humana. | D2 y criterio externo de retención. | Bajo si es exclusivamente B2B; prohibir tocar FK compartidas. |
+| **P1-D CERRADO** | El workflow D3 está desplegado; Los Aromos continúa activo y no se ejecutó una baja real. | Mantener el gate read-only y exigir autorización separada para cualquier offboarding futuro. | Decisión humana por caso. | Bajo: migración sólo B2B y sin DELETE; B2C quedó comprobado. |
 | **P1-D NECESARIO** | Ledger existe pero no tiene consulta/export útil. | Endpoint admin read-only paginado y archivos JSONL/CSV en el paquete. Código. | Export v1. | Nulo si sólo consulta `auditoria_eventos_b2b` por tenant. |
 | **P1-D NECESARIO** | Sesiones, idempotencia y tokens expirados permanecen; datos técnicos crecen y secretos en claro sobreviven. | Limpieza B2B selectiva y configurable, con métricas y dry-run. Código/job + decisión operativa. | Migración/índices actuales; ledger no se toca. | Bajo, pero el runner/backend son compartidos: regresión B2C obligatoria. |
 | **P1-D NECESARIO** | Dumps, descargas, cola heredada y copias de navegador pueden sobrevivir al cierre. | Inventario/custodia y checklist; borrado local explícito selectivo. Procedimiento + frontend acotado. | Offboarding. | Medio si se limpia storage indiscriminadamente; usar allowlist B2B. |
@@ -748,7 +750,7 @@ Los backups históricos no se editan para “borrar” una institución: la deci
 
 1. **P1-D1 — Backup, custodia y restore comprobable.** Implementa script/runbook diario y simulacro periódico para sostener RPO 24 h/RTO 8 h. No requiere migración ni ventana; requiere que Matías configure el destino cifrado, la tarea programada, el aviso de fallo y participe en el simulacro. Pruebas: entorno sintético/aislado, corrupción/hash, fallo de destino, restore completo y preservación B2C sin inspeccionar contenido.
 2. **P1-D2 — Export institucional v1 y acceso al ledger.** **CERRADO — 06/10/2026:** sustituye el falso “backup completo” por paquete tenant-safe, documentos y auditoría útil. No requirió migración; usa lectura/snapshot y escritura incremental a ZIP temporal. La custodia de cada descarga sigue siendo una decisión humana operativa.
-3. **P1-D3 — Offboarding, retención y limpieza técnica.** Agrega estado aditivo de ciclo de vida, transición controlada a inactiva, revocación/limpieza selectiva, inventario de copias y redacción de logs. Requiere migración B2B aditiva y una ventana corta con mantenimiento/bridge; Matías debe aprobar plazos operativos, hold, responsables y cambios manuales de proveedores. Pruebas de transición, reintento, tenant, cero DELETE clínico, dry-run, jobs y regresión B2C.
+3. **P1-D3 — Offboarding y retención.** **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 06/10/2026.** Agrega estado aditivo, evidencia D2, transición controlada, revocación selectiva y retención fail-safe sin purga. Cualquier supresión futura, limpieza masiva o reactivación queda fuera de este alcance y requiere decisión/gate separados.
 
 **Orden:** D1 → D2 → D3. No implementar P1-D2 sin un backup vigente y recuperable; no ejecutar un offboarding real durante las pruebas; no iniciar P1-E porque no existe.
 
@@ -816,7 +818,21 @@ El health posterior mostró inicialmente `age_hours=-2,99` pese a un backup reci
 
 Se ejecutó **exactamente una** exportación institucional productiva. El ZIP `cuidadiario-institutional-export/v1` midió 31.522 bytes y tuvo SHA-256 `948e251fdcb9fc120e96d491f011124b7c01c7a1b86a69286be3271da525e8c6`. El validador local, sin extracción persistente ni impresión de filas/valores, confirmó manifest y checksums, 19/19 familias, documentos, relaciones/tenant único, secretos ausentes y B2C ausente. El archivo se eliminó después de validarlo; no quedaron ZIPs coincidentes ni temporales. No hubo mutaciones, migraciones, cambios de esquema, cambios P1-D1 ni cambios B2C.
 
-**Límites vigentes:** el ZIP no incorpora cifrado, no existe importador automático y los límites iniciales son 250.000 filas y 512 MiB. Las futuras descargas requieren custodia institucional explícita. P1-D3 continúa **NO INICIADO**; P1-D queda abierto únicamente por ese bloque.
+**Límites vigentes:** el ZIP no incorpora cifrado, no existe importador automático y los límites iniciales son 250.000 filas y 512 MiB. Las futuras descargas requieren custodia institucional explícita. P1-D3 fue promovido y verificado posteriormente; P1-D quedó cerrado el 06/10/2026.
+
+#### Implementación, despliegue y cierre P1-D3 — 06/10/2026
+
+**Estado:** **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO.** La migración `p1d3_001_institution_lifecycle` (SHA-256 `65eec6368114a7a6f4891d72f9370ca94ea2bb3bac5d98f5f8b4bd29eb351427`) agrega sólo estructura B2B aditiva: lifecycle en institución y receipts D2 técnicos con FK `RESTRICT`. El default `active` preservó filas existentes; no contiene DROP/TRUNCATE/DELETE ni backfill histórico fabricado.
+
+La secuencia implementada es D2 final → `offboarding_prepared` → confirmación separada → `retained`. El receipt debe ser del mismo tenant, estar sin usar y tener hasta 24 h; es una regla técnica de frescura, no un plazo legal. Sólo el principal `admin_institucion`, sin operador secundario, puede actuar y debe revalidar contraseña, frases deliberadas e `Idempotency-Key`. Preparar conserva `activa=TRUE`; efectivizar fija `activa=FALSE`, revoca sesiones P1-C y anula tokens reset/verificación. El middleware central bloquea JWT viejos, login, lecturas, mutaciones, documentos, reportes y D2. Jobs B2B/Mercado Pago latente excluyen retenidos. No existe reactivación ni purga automática; `retention_review_at` nunca autoriza borrado.
+
+**Gates controlados:** D3 90/90; UX 17/17; P1-A/B 110/110; P1-C 59/59; D2 537/537; autorización/B2C 232/232; cache 35/35; idempotencia frontend 16/16; upgrade SW real 43/43; validador D2 5/5. PostgreSQL 18 efímero, tenants A/B y B2C sintético, Chrome 153 para SW, cero tráfico externo. Fingerprints demostraron que dominio clínico, documentos, ledger previo y B2C permanecieron intactos.
+
+**Promoción y producción.** Backend `865e56025c9b763b0c9664cdf5ec4e165f32d4e4`; frontend `52260dd13c05ec68b79a58ffe24bb9063ce753ed`. PostgreSQL 17.11 aprobó el gate final read-only: 5/5 migraciones, 13/13 versiones/checks, 18/18 soft-delete, base 35/35 y 10/10 constraints, P1-C 2 tablas/21 columnas/14 constraints/6 índices/2 referencias, append-only 1/1, D3 9 columnas institucionales/9 receipts/8 constraints/3 índices. Los Aromos productivo quedó identificado inequívocamente como `instituciones_b2b.id=30`, `active`, `activa=TRUE`, sin preparación ni finalización.
+
+El primer gate D3 abortó correctamente con `los_aromos=2/1`: el filtro textual coincidía con la residencia productiva y una institución de prueba legítima. La consulta diagnóstica read-only distinguió ambos tenants por metadatos/agregados mínimos y confirmó el ID 30; se corrigió exclusivamente el gate para identidad estable. El gate sintético del criterio aprobó 7/7 y el gate productivo corregido terminó PASS. No se modificaron datos para resolverlo.
+
+**Continuidad y smoke.** P1-D1 fue adaptado de forma focalizada para exigir exactamente las cinco migraciones; el backup sintético cifrado emitió manifest de cinco y el catálogo restaurado aprobó 2/2. Las tareas reales siguen habilitadas y D1 continúa operativo/cerrado. Los cuatro assets P1-D3 públicos coincidieron con el candidato descontando sólo el beacon Cloudflare; login y redirección auth funcionaron, `/health` fue 200, `maintenance:false`, y P1-C/D2/D3 respondieron 401 sin sesión. B2C mantuvo 232/232 y su dominio respondió 200. No se ejecutaron `prepare`, `finalize`, `DELETE`, purga ni mutaciones de prueba sobre Los Aromos.
 
 ## 6. Evidencia externa y puntos todavía no verificados
 
