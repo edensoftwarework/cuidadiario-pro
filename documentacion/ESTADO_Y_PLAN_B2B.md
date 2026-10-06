@@ -1,7 +1,7 @@
 # Estado y plan técnico de CuidaDiario PRO B2B
 
-**Corte:** 3 de octubre de 2026  
-**Propósito:** consolidar el estado real, las auditorías previas, la evidencia externa, el cierre productivo de P0 y P1-A/P1-B/P1-C y los requerimientos de Los Aromos en un plan mínimo, aditivo y sin pérdida de datos.
+**Corte:** 6 de octubre de 2026
+**Propósito:** consolidar el estado real, las auditorías previas, la evidencia externa, el cierre productivo de P0/P1-A/P1-B/P1-C/P1-D1/P1-D2 y los requerimientos de Los Aromos en un plan mínimo, aditivo y sin pérdida de datos.
 **No contiene conclusiones jurídicas.** Las bases, plazos, roles jurídicos, contratos y obligaciones aplicables deben ser determinados por asesoramiento externo usando esta realidad técnica.
 
 Etiquetas: **[VERIFICADO]** comprobado en código o evidencia externa identificada; **[INFERIDO]** conclusión técnica no observada directamente; **[NO VERIFICADO]** requiere evidencia adicional y no equivale a una afirmación negativa; **[PENDIENTE]** brecha o acción abierta; **[FUTURO]** diseño aún no implementado; **[COMPARTIDO - NO TOCAR B2C]** superficie común.
@@ -36,7 +36,7 @@ Una fila puede tener más de una naturaleza, pero se identifica una principal pa
 | Medicación | Indicaciones activas e historial append-only de administraciones. |
 | Tareas | Programación activa e historial append-only de cumplimientos. |
 | Otros registros | Citas, síntomas, signos, contactos, notas, documentos e inventario/reposiciones. |
-| Operación | Dashboard, notificaciones visuales, reportes y exportación institucional parcial. |
+| Operación | Dashboard, notificaciones visuales y reportes. El export heredado continúa parcial; P1-D2 agrega un ZIP institucional completo desplegado y verificado. |
 | Offline | **P0-1 [VERIFICADO EN PRODUCCIÓN — 29/09/2026]. P0-2/P0-3 [CERRADOS — 30/09/2026]:** lógica exhaustivamente verificada en entorno controlado; commit `9ec220c` desplegado y gate productivo proporcional aprobado. Sin JWT B2B localmente vigente no se restaura el último perfil; logout/401 limpian identidad/estación; mutaciones B2B son sólo de red y la cola heredada permanece byte a byte en cuarentena. |
 | Comercial | Planes/prueba y administración manual. La integración Mercado Pago existe en código/configuración, pero está inactiva en el frontend B2B y Los Aromos no la utiliza. |
 | Proveedores | Railway verificado como hosting de backend/PostgreSQL. Resend existe en código/configuración, pero su operación externa no fue comprobada. Mercado Pago queda latente/inactivo. No se demostró web push B2B. |
@@ -44,6 +44,8 @@ Una fila puede tener más de una naturaleza, pero se identifica una principal pa
 | P1-A — trazabilidad/preservación | **[VERIFICADO EN PRODUCCIÓN / CERRADO — 03/10/2026]** Ledger prospectivo append-only, versionado en 13 tablas, soft-delete en seis familias, guard de egreso y auditoría sanitizada. |
 | P1-B — integridad de operaciones | **[VERIFICADO EN PRODUCCIÓN / CERRADO — 03/10/2026]** Transacciones críticas, idempotencia persistida y claves UUID frontend en toma, completar tarea y carga documental. |
 | P1-C — identidad del operador | **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / DOCUMENTADO / CERRADO — 04/10/2026]** Backend `24b234af0e48b7017b3d9f5a0b32f26e67b26dd3`; frontend `7bb50132bdccdb62f8c02d0691b4bf98c4310d6b`. Principal por defecto; operador/PIN sólo para otra persona; 8 h/60 min. |
+| P1-D1 — backup/recuperación | **[OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026]** Backup CMS diario, validación, health y restore drill local/loopback. Replica física diferida sin reabrir D1. |
+| P1-D2 — exportación institucional | **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]** Backend `1c50efce685e59ac89fbf762364741d39ffd28dd`; frontend `b86342ea07bf0bc5619b96bff77ead61a1ca50f8`. ZIP tenant-safe con manifest/hashes, 19 familias institucionales, documentos, operadores sanitizados y ledger JSONL/CSV; sin migración ni mutación. |
 | Mantenimiento | Endpoint backend `maintenance-status` (`c598d55`) y guard frontend versionado `maintenance-b2b-v2.js` (`ac3e46c`) desplegados. Micro-gate OFF→ON→OFF **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]**. Durante P1 también se verificó el bridge; al cierre ambos modos quedaron en `0`. |
 
 ### 2.2 Datos que pueden persistir al cerrar sesión o terminar el servicio
@@ -60,8 +62,9 @@ Una fila puede tener más de una naturaleza, pero se identifica una principal pa
 
 ### 2.3 Exportación, conservación, eliminación y recuperación
 
-- **Exportación actual:** administrador descarga/visualiza un conjunto JSON convertido en reporte imprimible. Incluye institución, residentes, staff, medicamentos, administraciones, citas, cumplimientos, síntomas, signos, contactos y notas.
-- **Omisiones de esa exportación:** asignaciones, catálogo y reposiciones, tareas activas, documentos/binarios, preferencias/configuración completa e historial de citas independiente. No hay importador/restaurador.
+- **Exportación productiva actual:** administrador descarga/visualiza un conjunto JSON convertido en reporte imprimible. Incluye institución, residentes, staff, medicamentos, administraciones, citas, cumplimientos, síntomas, signos, contactos y notas.
+- **Omisiones de la exportación productiva heredada:** asignaciones, catálogo y reposiciones, tareas activas, documentos/binarios, preferencias/configuración completa e historial de citas independiente. No hay importador/restaurador.
+- **P1-D2 productivo:** agrega un ZIP institucional v1 allowlisted con esas omisiones cubiertas, estados inactivos/egresados/soft-deleted, documentos, operadores sin PIN y auditoría sanitizada; contiene manifest, hashes y formatos JSON/JSONL/CSV. No es backup PostgreSQL ni importador.
 - **Conservación actual:** filas activas y desactivadas permanecen en PostgreSQL; tres historiales parciales conservan eventos. No hay política técnica general de retención.
 - **Eliminación en producción documentada:** desactivación para usuarios, residentes, asignaciones, medicamentos, tareas y catálogo; borrado físico para citas, síntomas, signos, contactos, notas y documentos. **Copia P1 local:** esas seis familias usan soft-delete prospectivo y documentos archivados conservan bytes/cuota.
 - **Recuperación actual:** la aplicación puede descargar documentos y generar un export parcial no reimportable. **[VERIFICADO]** Existe una ruta de recuperación lógica completa probada el 28/09/2026 mediante `pg_dump` y `pg_restore` en PostgreSQL local aislado. **[NO VERIFICADO]** Los snapshots Railway, PITR, programación, política de retención y RPO/RTO no fueron probados.
@@ -134,7 +137,7 @@ La función append-only coincidió byte a byte con la migración (`prosrc_md5=08
 
 El dump fresco `cuidadiario_produccion_2026-10-02_predeploy_p1.dump` (10.079.205 bytes, 325 líneas TOC, SHA-256 `30656BC093BFE7CD1E02014B176E883E42D462109DF7A57CD8352A4F22388CAB`) se restauró en PostgreSQL 18.1 efímero/local. El gate aislado aprobó 363/363 pruebas y el clúster fue eliminado sin tráfico externo. Esta evidencia es propia del despliegue P1-A/P1-B; no cierra P1-D.
 
-Taxonomía canónica: **P1-A — Trazabilidad y preservación: CERRADO; P1-B — Integridad de operaciones: CERRADO; P1-C — Identidad del operador: DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO; P1-D — Continuidad y ciclo de vida: NO INICIADO. No existe P1-E.**
+Taxonomía canónica: **P1-A — Trazabilidad y preservación: CERRADO; P1-B — Integridad de operaciones: CERRADO; P1-C — Identidad del operador: DESPLEGADO / VERIFICADO / DOCUMENTADO / CERRADO; P1-D1 — Backup y recuperación: OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL; P1-D2 — IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO; P1-D3 — NO IMPLEMENTADO. P1-D completo permanece abierto únicamente por P1-D3. No existe P1-E.**
 
 ## 3. Hallazgos priorizados
 
@@ -266,17 +269,17 @@ El bloqueo real que mantenía abierta la Etapa 0 era no haber demostrado una rec
 
 ### 5.3 Etapas consolidadas
 
-| Etapa | Alcance mínimo | Criterio de salida | Estado al 03/10/2026 |
+| Etapa | Alcance mínimo | Criterio de salida | Estado al 04/10/2026 |
 |---|---|---|---|
 | 0. Verificación externa | Inspección Railway del 15/09 más dump/restauración lógica independiente del 28/09. Permanecen pendientes los mecanismos administrados, política y controles de continuidad. | Inventario consolidado, backup identificable y restauración aislada exitosa. | **COMPLETA CON PENDIENTES NO BLOQUEANTES** |
 | 1. Contención cliente/sesión | Secreto obligatorio, revalidación B2B, no caché sensible, logout completo, cola segregada, tokens fuera de URL. | Pruebas muestran que otro usuario/tenant no recibe copias y una sesión revocada no opera. | **P0 CERRADO EN PRODUCCIÓN:** P0-1/P0-2/P0-3/P0-4/P0-8 cerrados. El fallback secreto y tokens en URL permanecen como backlog separado, sin reabrir los bloques P0 aceptados. |
 | 2. Autorización uniforme | Guard de recurso/residente/sección en todas las rutas y agregados. | Matriz automatizada AI/MD/CS/FA × tenant × asignación × sección sin escapes. | **VERIFICADO EN PRODUCCIÓN / P0 CERRADO:** P0-5/P0-6/P0-7; matriz exhaustiva controlada y gate productivo proporcional. |
 | 3. Integridad y trazabilidad | P1-A preservación/trazabilidad; P1-B integridad; P1-C identidad verificable del operador. | Mutaciones nuevas atribuibles y repetibles con seguridad; operador verificable en estación compartida. | **COMPLETA: P1-A/P1-B/P1-C CERRADOS EN PRODUCCIÓN.** |
-| 4. Continuidad y ciclo de vida | P1-D: export completo versionado, restore periódico, retención/baja y logs controlados. | Exportación reconciliada y simulacro documentado sin tocar producción. | **P1-D NO INICIADO** |
+| 4. Continuidad y ciclo de vida | P1-D: export completo versionado, restore periódico, retención/baja y logs controlados. | Exportación reconciliada y simulacro documentado sin tocar producción. | **EN IMPLEMENTACIÓN: P1-D1 OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL; D2/D3 NO IMPLEMENTADOS** |
 | 5. Funciones de Los Aromos | Evolución, indicaciones versionadas, incidentes, estados temporales, metadatos y dashboards. | Criterios de aceptación del cliente y permisos aprobados sobre datos de prueba. | **NO INICIADA** |
 | 6. Piloto controlado | Capacitación, soporte, métricas, rollback y seguimiento. | Piloto aprobado antes de ampliar alcance. | **NO INICIADA** |
 
-La documentación canónica no equivale por sí sola a avance de implementación. La Etapa 0 está cerrada sólo en el sentido anterior. P0 y la Etapa 3 —P1-A/P1-B/P1-C— están desplegados, verificados en producción y cerrados. P1-D y las funciones nuevas de Los Aromos no se iniciaron.
+La documentación canónica no equivale por sí sola a avance de implementación. La Etapa 0 está cerrada sólo en el sentido anterior. P0 y la Etapa 3 —P1-A/P1-B/P1-C— están desplegados, verificados en producción y cerrados. P1-D1 tiene Primary, cifrado/custodia, health/tareas locales, backup productivo validado, restore drill aislado y primer ciclo automático comprobados; queda cerrado para el alcance actual. La Replica física permanece diferida por indisponibilidad de la segunda PC y no reabre D1. D2/D3 no fueron implementados. Las funciones nuevas de Los Aromos no se iniciaron.
 
 P0-2 + P0-3 + P0-8 fueron publicados como un único paquete frontend controlado en el commit `9ec220c4722e528cda77c9ece3d21cb62bcd7068`, manteniendo evidencia, aceptación y rollback separados por bloque.
 
@@ -449,9 +452,9 @@ P0-C completó implementación y prueba controlada con backend/PostgreSQL aislad
 1. **P1-A — Trazabilidad y preservación: VERIFICADO EN PRODUCCIÓN / CERRADO.** Auditoría prospectiva append-only, versionado, soft-delete y guard de egreso.
 2. **P1-B — Integridad de operaciones: VERIFICADO EN PRODUCCIÓN / CERRADO.** Transacciones, locks e idempotencia en operaciones críticas cubiertas.
 3. **P1-C — Identidad del operador: DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026.** Principal por defecto y operador secundario verificable como dimensiones separadas.
-4. **P1-D — Continuidad y ciclo de vida: NO INICIADO.** UI/export del ledger, exportación B2B completa/versionada, backups programados, custodia, restauraciones periódicas, RPO/RTO, retención/baja institucional y tratamiento de logs.
+4. **P1-D — Continuidad y ciclo de vida: EN IMPLEMENTACIÓN (04/10/2026).** D1 backup/restore está implementado y verificado en copia controlada, no desplegado; D2 export/ledger y D3 offboarding/retención/logs no fueron implementados. Diseño y evidencia en 5.23.
 
-No existe P1-E. Digest/vida de tokens y otros endurecimientos mantienen su prioridad propia; no deben renombrarse como un bloque P1 adicional.
+No existe P1-E. P1-D incluye la limpieza de tokens B2B expirados y sesiones técnicas necesaria para el ciclo de vida; un rediseño criptográfico general de JWT/secretos o del middleware compartido mantiene su prioridad propia y no debe inventarse como P1-E.
 
 Las capacidades clínicas/operativas nuevas solicitadas por Los Aromos permanecen en 3.3 y no forman parte de P0 ni deben incluirse incidentalmente en esas entregas.
 
@@ -626,7 +629,7 @@ Checksums esperados del SQL reconciliado: `p1_001_foundations` `30243e4ba7212cb4
 - `p1c_001_operator_identity` conserva exactamente sus bytes y checksum `2c6cc0eb8aadc7db48d0741e7d3517a4ad62a2dbc901e38dfc6ba18018ffede2`; fue aplicada una vez, sin migración correctiva, backfill ni reinterpretación retrospectiva.
 - Evidencia vigente: **808/808 PASS** distribuidas en backend P1-C 59, frontend P1-C 36, navegador real P1-C 24, P1-A/P1-B 110, P0-C 232, idempotencia 16, XSS 82, upgrade SW 43, caché 35, sesión 88, cola 37 y mantenimiento/no-B2B 46. Sintaxis aprobada, fixtures sintéticos, PostgreSQL efímero/loopback cuando correspondió, perfiles temporales eliminados y cero tráfico productivo.
 
-**Siguiente paso:** P1-D permanece no iniciado y exige autorización/diseño separado. No reabrir P1-C sin una regresión demostrada.
+**Siguiente paso:** P1-D tiene auditoría/diseño separados en 5.23 y exige autorización de implementación. No reabrir P1-C sin una regresión demostrada.
 
 ### 5.21 Predeploy final P1-C ajustado — evidencia histórica aprobada
 
@@ -658,6 +661,163 @@ El primer gate integral informó `base_constraints=10/8` aunque todos los demás
 
 **Estado final.** `/health` respondió 200, `/api/b2b/maintenance-status` respondió `maintenance:false`, `B2B_MAINTENANCE_MODE=0` y `B2B_P1_BRIDGE_MODE=0`. Con bridge OFF, una petición sintética inválida/inautenticada recibió 401 `Token B2B requerido`, no 503 `B2B_P1_BRIDGE_READ_ONLY`; no se ejecutó ninguna mutación ni se usaron datos reales. Después de aplicar esta migración, una contingencia debe resolverse mediante forward-fix con mantenimiento/bridge, nunca mediante rollback automático al runtime pre-P1-C.
 
+### 5.23 P1-D — auditoría y diseño de continuidad y ciclo de vida — 04/10/2026
+
+**Veredicto general:** **P1-D ABIERTO ÚNICAMENTE POR P1-D3.** La auditoría/diseño se conserva como base. P1-D1 está **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL** al 05/10/2026; P1-D2 está **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO** al 06/10/2026; P1-D3 permanece **NO IMPLEMENTADO**. Los accesos productivos D1 fueron exclusivamente `pg_dump` read-only; los restores fueron sólo locales/loopback. D2 ejecutó exactamente una exportación read-only autorizada, sin DDL/DML, migraciones, cambios de esquema, cambios B2C ni cambios P1-D1.
+
+#### Diagnóstico actual
+
+- La recuperación lógica completa de la base compartida ya fue demostrada más de una vez mediante dump custom y restauración aislada. P1-D1 dispone de Primary cifrado, health local, tarea diaria activa, artefactos productivos validados, restore drill cronometrado y primer ciclo automático comprobado. La Replica física está diferida; los snapshots Railway observados continúan sin restauración comprobada y no deben ser la base del objetivo de recuperación.
+- `GET /api/b2b/reporte/export` ejecuta once consultas filtradas por `institucion_id` y entrega institución parcial, residentes, staff sanitizado, medicamentos, administraciones, citas no archivadas, cumplimientos, síntomas/signos/contactos/notas no archivados. No incluye asignaciones, tareas activas, catálogo, reposiciones, `historial_citas_b2b`, documentos, soft-deleted, operadores P1-C, ledger, idempotencia, sesiones ni configuración institucional completa. La UI lo presenta como “backup completo”/PDF aunque construye un reporte HTML imprimible a partir de JSON. No es backup, no es reimportable y no sirve por sí solo para offboarding.
+- Las 17 tablas de dominio heredadas y las tablas P1/P1-C usan `institucion_id` como frontera, salvo el journal global `schema_migrations_b2b`. Una exportación por tenant es técnicamente viable si usa una allowlist fija, parámetros enlazados y una única transacción `REPEATABLE READ READ ONLY`; no es seguro derivarla de nombres, filtros de UI o un dump completo compartido.
+- PostgreSQL conserva filas activas, inactivas, egresadas y archivadas, documentos base64, ledger, idempotencia, operadores y sesiones. No hay baja institucional ejecutable ni endpoint de borrado de institución. Las FK históricas con `ON DELETE CASCADE` hacen inaceptable usar un `DELETE` directo como procedimiento de salida.
+- JWT B2B dura 30 días, pero cada request protegido revalida usuario/institución; desactivar la institución bloquea los JWT existentes. Reset tokens (1 h) y verification tokens (72 h) quedan en claro hasta uso/rotación y no existe limpieza de valores expirados. Las sesiones secundarias vencen funcionalmente a 8 h/60 min y se revocan, pero sus filas no se purgan. Idempotencia expira conceptualmente a 90 días, pero tampoco se purga.
+- Logout/401 limpia identidad y operador local; preferencias, descargas y la `cd_offline_queue` heredada pueden sobrevivir. La cola permanece intencionalmente en cuarentena y no debe ejecutarse ni borrarse en silencio. Los GET B2B ya no permanecen en `localStorage` o Cache Storage.
+- El backend usa logs de consola por ruta/error y registra explícitamente algunos e-mails, IDs, nombres de institución y notas administrativas. No imprime cuerpos clínicos de forma intencional en las rutas inspeccionadas, pero `err.message` puede contener detalle técnico. Contenido, acceso y retención efectiva de Railway, Resend, GitHub Pages/Cloudflare y Mercado Pago siguen **[NO VERIFICADO]**.
+
+#### Objetivo proporcional de recuperación
+
+- **RPO propuesto: 24 horas.** Es coherente con un único cliente activo y unos 40 residentes, siempre que exista un dump lógico automático diario exitoso y monitoreado fuera de Railway. Hoy es un objetivo, no una garantía: un proceso manual ocasional no lo cumple de forma demostrable.
+- **RTO propuesto: 8 horas desde la declaración del incidente.** La base es pequeña y la restauración lógica fue rápida, pero el tiempo debe cubrir diagnóstico, selección/verificación del artefacto, provisión de PostgreSQL, restore completo de la base compartida, configuración del backend, gates read-only, health y reapertura controlada. Prometer menos sin automatización, staging permanente ni guardia operativa sería débil.
+- Mínimo para sostenerlos: dump custom completo diario; hash SHA-256 y manifiesto; destino cifrado con ACL fuera de Railway; verificación `pg_restore --list`; alerta/registro de éxito o fallo; siete generaciones diarias, cuatro semanales y seis mensuales como **valor operativo inicial configurable**, sujeto a decisión organizacional/contractual/jurídica; restauración aislada mensual hasta acumular tres simulacros verdes y luego trimestral; runbook cronometrado.
+- Puede seguir siendo manual la autorización de restaurar, elección del punto, provisión del destino, conmutación del backend y reapertura. Deben automatizarse generación, hash, rotación, comprobación de legibilidad y aviso de fallo. Depender de memoria humana para el dump diario no satisface el RPO.
+- El backup de desastre debe seguir siendo **completo de la instancia compartida** para preservar consistencia B2B/no-B2B. Cualquier restore productivo puede afectar B2C y exige autorización separada; el export por institución no sustituye ese backup. Los snapshots Railway son una capa suplementaria sólo después de un restore de prueba.
+
+#### Paquete de exportación institucional objetivo
+
+Contenedor ZIP con identificador de formato `cuidadiario-pro-export/v1`, generado dentro de una transacción `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY` y compuesto por:
+
+```text
+manifest.json
+README.txt
+data/institucion.json
+data/*.jsonl
+views/*.csv
+audit/eventos.jsonl
+audit/eventos.csv
+documents/index.jsonl
+documents/<documento_id>/<nombre-seguro>
+checksums.sha256
+```
+
+El manifest debe contener versión, `institucion_id` y nombre, instante UTC, versión del exportador, migraciones/checksums P1 aplicados, conteos por recurso, cantidad/tamaño de documentos, inclusiones/exclusiones y hash de cada archivo. JSON/JSONL UTF-8 es el formato canónico; CSV es una vista de conveniencia, no la fuente para restaurar. Los nombres físicos de documentos se basan en ID y el nombre original queda como metadato para impedir traversal/colisiones.
+
+Política de contenido:
+
+- incluir institución y configuración operativa/comercial pertinente; usuarios/staff activos e inactivos sin credenciales; residentes activos, desactivados y egresados; asignaciones; medicación/administraciones; catálogo/reposiciones; citas/tareas y sus historiales; síntomas; signos; contactos; notas; documentos activos y archivados; operadores activos/inactivos sin `pin_hash`; ledger completo del tenant ya sanitizado;
+- conservar `deleted_at`, `deleted_by`, `deletion_reason`, `activo`, fechas/motivos de egreso, versiones y claves relacionales para que el paquete no oculte historia;
+- decodificar cada documento a su binario original, calcular SHA-256 y reconciliarlo contra `tamanio_bytes`; nunca omitir documentos archivados silenciosamente;
+- excluir `password_hash`, `pin_hash`, reset/verification tokens y sus valores, JWT, `token_hash` de sesiones, claves/request hashes/resultados de idempotencia, secretos de proveedor y variables de entorno;
+- no entregar filas de `operador_sesiones_b2b` ni `operaciones_idempotentes_b2b`: son estado técnico efímero, no datos portables del cliente. El manifest sólo informa que fueron excluidas por diseño y puede incluir conteos agregados por estado;
+- representar `schema_migrations_b2b` sólo como lista de versión/checksum en el manifest; excluir `_migrations` por ser compartida **[COMPARTIDO - NO TOCAR B2C]**;
+- validar antes de entregar que toda fila permita `institucion_id` único e igual al solicitado, que cada FK residente/usuario/operador pertenezca al paquete o esté justificadamente anulada, que los conteos pre/post coincidan, que no existan claves prohibidas y que `checksums.sha256` sea íntegro.
+
+El admin institucional puede solicitar/generar el paquete, pero una primera implementación debe evitar cargar todo en memoria o insertar bytes en HTML. El reporte PDF actual debe renombrarse como reporte parcial o reemplazarse visualmente cuando el export completo exista. El ledger necesita como mínimo paginación/filtros read-only para admin y export JSONL/CSV; no se agregan rutas de modificación.
+
+#### Offboarding y retención
+
+Flujo objetivo: solicitud y verificación de autoridad; decisión humana sobre alcance/plazos/holds; snapshot lógico de continuidad vigente; generación del export final consistente; validación automática y revisión de manifest; cifrado y entrega por canal acordado con clave separada; confirmación de recepción; desactivación institucional; revocación de sesiones secundarias y limpieza de tokens de recuperación/verificación; registro de estado/fechas/hash del paquete; retención o hold; y sólo al vencer una decisión expresa, plan separado de supresión/anonimización.
+
+La implementación mínima debe agregar estado de ciclo de vida exclusivamente B2B —preferentemente una tabla one-to-one aditiva con institución, estado, fechas, referencia/hash de export, retención configurable, hold y versión—. `instituciones_b2b.activa=false` continúa siendo la barrera inmediata de acceso. No se diseña `DELETE CASCADE`, purga clínica automática ni reescritura del ledger. La eliminación/anonimización final requiere inventario, backup, autorización y definición jurídica externa; puede concluir que ciertos datos/ledger deban conservarse.
+
+Los backups históricos no se editan para “borrar” una institución: la decisión debe reflejarse en la rotación y fecha de expiración de cada copia, con acceso restringido y prohibición de restaurarla como operación normal después del offboarding. Descargas y copias en dispositivos requieren checklist/atestación del cliente; la aplicación no puede borrarlas remotamente. La `cd_offline_queue` requiere una acción explícita y selectiva por dispositivo, sin ejecutarla y sin tocar claves B2C/no-B2B.
+
+#### Limpieza técnica y logs
+
+- Añadir job B2B acotado e idempotente para anular reset/verification tokens expirados; purgar sesiones de operador vencidas/revocadas tras un plazo técnico configurable; y eliminar idempotencia sólo después de `expires_at` más una gracia configurable. Valores iniciales sugeridos: 7 días de gracia para tokens/idempotencia y 30 días para sesiones; son decisiones operativas, no plazos legales.
+- No purgar ledger, documentos, filas soft-deleted ni historia clínica/operativa por este job. Ninguna limpieza toca B2C.
+- Estructurar/redactar logs: ruta/evento, status, request ID y IDs mínimos; no e-mail, nombre institucional, nota libre, tokens, query strings sensibles, bodies ni contenido documental/clínico. Verificar manualmente en Railway/Resend/Cloudflare la retención, accesos y mecanismo de eliminación; ausencia de evidencia no se interpreta como ausencia de logs.
+- Inventariar copias locales existentes, dueño, ubicación, cifrado, hash, fecha, retención y destrucción. Los dumps completos contienen B2C y B2B y se tratan como activos sensibles compartidos.
+
+#### Hallazgos priorizados P1-D
+
+| Prioridad | Estado/riesgo/impacto | Solución y tipo | Dependencia | Riesgo B2C |
+|---|---|---|---|---|
+| **P1-D CRÍTICO** | D1 está operativo: tarea diaria/health activas, restore drill y primer ciclo natural verificados. D2 está desplegado/verificado/cerrado; D3 no se inició. Replica física diferida y RPO/RTO no constituyen SLA ni garantía histórica. | Configurar Replica cuando exista la segunda PC, sin reabrir D1; abordar D3 sólo con autorización separada. | Para Replica: segunda PC/credencial/ruta. Para D3: decisiones externas de retención/offboarding. | Alto en restore porque la DB es compartida; cero cambios a tablas B2C. |
+| **P1-D CERRADO** | El reporte heredado continúa parcial, pero la exportación institucional completa P1-D2 ya está disponible y verificada. | Mantener export v1 allowlisted, consistente y versionado; custodiar explícitamente cada ZIP descargado. | D1 vigente; canal de entrega/custodia operativo por caso. | Bajo: consultas exclusivamente B2B allowlisted; gate sintético y gate productivo confirmaron B2C ausente. |
+| **P1-D NECESARIO** | Restore probado pero no periódico ni cronometrado; RTO no demostrable. | Simulacro aislado mensual→trimestral y runbook con gates. Procedimiento + automatización local. | D1. | Alto sólo si alguien apunta al destino equivocado; barreras de loopback/nombre test obligatorias. |
+| **P1-D NECESARIO** | No existe workflow de offboarding/retención; un DELETE directo activaría cascadas. | Estado aditivo, export/entrega, desactivación, hold y decisión separada de supresión. Migración + código + decisión humana. | D2 y criterio externo de retención. | Bajo si es exclusivamente B2B; prohibir tocar FK compartidas. |
+| **P1-D NECESARIO** | Ledger existe pero no tiene consulta/export útil. | Endpoint admin read-only paginado y archivos JSONL/CSV en el paquete. Código. | Export v1. | Nulo si sólo consulta `auditoria_eventos_b2b` por tenant. |
+| **P1-D NECESARIO** | Sesiones, idempotencia y tokens expirados permanecen; datos técnicos crecen y secretos en claro sobreviven. | Limpieza B2B selectiva y configurable, con métricas y dry-run. Código/job + decisión operativa. | Migración/índices actuales; ledger no se toca. | Bajo, pero el runner/backend son compartidos: regresión B2C obligatoria. |
+| **P1-D NECESARIO** | Dumps, descargas, cola heredada y copias de navegador pueden sobrevivir al cierre. | Inventario/custodia y checklist; borrado local explícito selectivo. Procedimiento + frontend acotado. | Offboarding. | Medio si se limpia storage indiscriminadamente; usar allowlist B2B. |
+| **P1-D NECESARIO** | Logs de código incluyen e-mails/nombres/notas; retención del proveedor no verificada. | Redacción estructurada + verificación manual de retención/acceso. Código + configuración/procedimiento. | Acceso humano a paneles. | Medio: logger es compartido; no cambiar B2C sin pruebas. |
+| **P1-D DESEABLE** | Dos snapshots Railway existen pero nunca fueron restaurados. | Restore aislado de uno antes de considerarlo respaldo confiable. Procedimiento manual. | Disponibilidad/plan Railway. | Alto si el restore no es aislado; nunca restaurar sobre producción. |
+| **FUERA DE P1-D** | HA multi-región, réplica caliente, PITR pago, SIEM/WORM, object storage y borrado clínico automático no son necesarios para el objetivo actual. | Reevaluar sólo por crecimiento, contrato o exigencia externa. | Decisión futura. | Potencialmente alto; no iniciar ahora. |
+
+#### Implementación mínima propuesta
+
+1. **P1-D1 — Backup, custodia y restore comprobable.** Implementa script/runbook diario y simulacro periódico para sostener RPO 24 h/RTO 8 h. No requiere migración ni ventana; requiere que Matías configure el destino cifrado, la tarea programada, el aviso de fallo y participe en el simulacro. Pruebas: entorno sintético/aislado, corrupción/hash, fallo de destino, restore completo y preservación B2C sin inspeccionar contenido.
+2. **P1-D2 — Export institucional v1 y acceso al ledger.** **CERRADO — 06/10/2026:** sustituye el falso “backup completo” por paquete tenant-safe, documentos y auditoría útil. No requirió migración; usa lectura/snapshot y escritura incremental a ZIP temporal. La custodia de cada descarga sigue siendo una decisión humana operativa.
+3. **P1-D3 — Offboarding, retención y limpieza técnica.** Agrega estado aditivo de ciclo de vida, transición controlada a inactiva, revocación/limpieza selectiva, inventario de copias y redacción de logs. Requiere migración B2B aditiva y una ventana corta con mantenimiento/bridge; Matías debe aprobar plazos operativos, hold, responsables y cambios manuales de proveedores. Pruebas de transición, reintento, tenant, cero DELETE clínico, dry-run, jobs y regresión B2C.
+
+**Orden:** D1 → D2 → D3. No implementar P1-D2 sin un backup vigente y recuperable; no ejecutar un offboarding real durante las pruebas; no iniciar P1-E porque no existe.
+
+#### Implementación controlada P1-D1 — 04/10/2026
+
+**Estado:** **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026.** `ops/p1-d1/` no toca backend, frontend, esquema, Railway, repositorios reales ni B2C; sus únicos accesos productivos son `pg_dump` read-only para el backup inicial autorizado y la ejecución automática diaria.
+
+- El motor PowerShell obtiene la credencial desde una variable de proceso o archivo DPAPI ligado a la cuenta de tarea; nunca pasa la URL/contraseña por argumentos ni la incluye en manifiestos o estados. Para orígenes no-loopback exige reconocimiento explícito y rechaza SSL desactivado.
+- Ejecuta un `pg_dump` custom de la base completa compartida en memoria, lo valida con `pg_restore --list`, comprueba exclusivamente versiones/checksums de `schema_migrations_b2b` en lectura, cifra el dump en memoria mediante CMS/PKCS#7 y persiste sólo el artefacto cifrado más un manifiesto SHA-256. Las escrituras de artefacto/metadatos son atómicas.
+- El almacén necesita un marcador propio; la retención sólo elimina pares administrados dentro de ese árbol. Política inicial configurable: siete diarias, cuatro semanales y seis mensuales. El estado `SUCCESS`/`FAILURE` y el exit code fallan cerrados sin registrar mensajes crudos que puedan contener secretos.
+- La restauración sólo acepta PostgreSQL en loopback, una base inexistente con prefijo `cuidadiario_p1d1_restore_` y confirmación explícita. Restaura la base compartida completa, verifica por catálogo tablas P1/P1-C, checksums y presencia no-B2B, y elimina la base temporal por defecto. Un restore productivo continúa fuera del arnés y requiere autorización B2B/B2C separada.
+- El runbook conserva la regla post-P1: ante desastre se restaura en infraestructura nueva/aislada y se usa runtime compatible o forward-fix bajo mantenimiento/bridge; no se vuelve ingenuamente a un backend pre-P1.
+- Gate controlado: **51/51 PASS**, PowerShell 7.6.5 y PostgreSQL 18.1 efímero, certificado local temporal, rutas con espacios y fixtures sintéticos B2B/no-B2B. Cubrió éxito, fallo real de `pg_dump`, vacío/corrupción, hash/manifiesto, retención 7/4/6, restore aislado, base destino existente, confirmación/nombre/loopback, credenciales ausentes, bloqueo de origen remoto antes de red, no exposición de secretos y limpieza. No hubo tráfico externo ni datos reales.
+
+**Alcance operativo actual:** la notebook personal fue adoptada conscientemente como ejecutor proporcional, con la limitación explícita de que apagada no produce backups. Primary local, ACL, capacidad, cifrado CMS, custodia separada PFX/contraseña, secreto DPAPI, Task Scheduler, backups productivos cifrados, restore drill y primera ejecución natural fueron verificados. La segunda PC/credencial/ruta de Replica no está disponible y queda diferida sin bloquear ni reabrir D1. RPO 24 h/RTO 8 h siguen siendo objetivos técnicos, no SLA ni garantías históricas.
+
+**Gate operativo preparado — 04/10/2026.** Se aprobó usar inicialmente la notebook Windows del responsable como ejecutor y almacén primario cifrado y otra PC Windows como segunda copia física intermitente, aceptando explícitamente que un equipo apagado no genera puntos retrospectivos. El paquete ahora distingue almacén `Primary`/`Replica`; la tarea diaria conserva `StartWhenAvailable=True`; la réplica es aditiva, reintenta cada seis horas, verifica hash y no copia secretos ni borra por espejo; la retención 7/4/6 del destino sólo se activa conscientemente. `Get-CuidaDiarioBackupHealth.ps1` informa último intento fallido, backup ausente/atrasado >24 h, huecos >24 h entre generaciones retenidas —aunque el catch-up posterior sea exitoso—, réplica ausente/offline/atrasada y faltantes retenidos, con exit code estable.
+
+El delta operativo aprobó **33/33 pruebas sintéticas**: roles/reconocimientos, backup vigente/atrasado y hueco de cobertura, réplica vacía/actual/behind/offline, catch-up/idempotencia, hash/copia por pares, no copia de DPAPI/PFX, no mirror-delete, retención consciente, fallo visible y cero temporales. No se repitieron las 51 pruebas D1 ya aprobadas y no hubo producción, Railway, PostgreSQL, repositorios reales ni B2C.
+
+**Checkpoint de instalación local — 05/10/2026.** La verificación administrativa real confirmó `C:` completamente descifrado: BitLocker `ProtectionStatus=Off`, `EncryptionMethod=None`, `VolumeStatus=FullyDecrypted`, `0 %`. Por decisión humana esto no bloquea D1: queda registrado como limitación operativa y se mantiene como condición absoluta que el dump exista sólo en memoria antes de cifrarse CMS/PKCS#7 y que únicamente el `.dump.p7m` cifrado pueda persistir. Se inicializó `C:\CuidaDiario_Backups` como `Primary`, con aproximadamente 445 GiB libres y herencia ACL deshabilitada; sólo `MSI\ramos`, SYSTEM y Administradores tienen acceso. El marcador registra `VolumeEncryptionStatus=Disabled` y reconocimiento del cifrado de artefacto. No existen dump plano, PFX ni credencial DPAPI dentro del Primary.
+
+La configuración no secreta quedó en `C:\Users\ramos\AppData\Local\CuidaDiario\P1-D1`, fuera del Primary y con la misma restricción ACL. Se creó el certificado CMS real `CN=CuidaDiario P1-D1 Recovery`; la clave privada exportable permaneció temporalmente en `Cert:\CurrentUser\My` hasta exportar/verificar el PFX y luego fue retirada. El health inicial escribió estado no sensible y devolvió correctamente `ATTENTION`, `P1D1_BACKUP_MISSING` y `P1D1_REPLICA_NOT_CONFIGURED`. No se accedió a Railway/PostgreSQL, no se ejecutó `pg_dump`, no se modificó B2C ni repositorios reales.
+
+**Incidente local de bootstrap y reparación — 05/10/2026.** El PFX se exportó a la custodia offline KINGSTON y fue verificado con contraseña: 3.596 bytes, SHA-256 `95897903FE77497C8AC1DD0E840B9B7B4066CF322D59263D840FDB0607EF0ACC`, thumbprint `7F6FE0E20ABFE650F69376E3EECDFA4CB76B444E` y clave privada presente. Después de retirar la clave privada temporal de Windows, la verificación public-only detectó que faltaba `recovery-public.cer`; el gate de reparación mostró además `P1D1_CONFIG_MISSING`. El diagnóstico autorizado comprobó que el directorio local P1-D1 completo no existía antes de reparar. La causa de la desaparición es **NO DEMOSTRABLE**: no existe evidencia de qué proceso lo eliminó y no se presume una causa.
+
+El avance se detuvo antes de DPAPI, Task Scheduler, Railway, PostgreSQL o `pg_dump`. Se corrigió el bootstrap para admitir `-RepairMissing`: recrea atómicamente sólo configuración/estado deterministas ausentes, preserva y valida copias existentes y aborta ante drift; no genera certificado, secreto ni Replica. Se agregó `Test-CuidaDiarioLocalConfiguration.ps1`. La reparación real reconstruyó configuración/estado y extrajo exclusivamente la parte pública desde el PFX existente. Veredicto final `PASS`: configuración parseable; `CmsRecipient` canónico; mismo thumbprint; `.cer` sin clave privada; clave privada ausente de `Cert:\CurrentUser\My`; `Protect-CmsMessage` public-only PASS; PFX sin cambios; Primary con cero PFX/dump plano/DPAPI; health esperado `ATTENTION / P1D1_BACKUP_MISSING / P1D1_REPLICA_NOT_CONFIGURED`; Replica nula. La prueba focalizada del delta aprobó **12/12** casos, incluido repair idempotente, preservación, rechazo de drift y consumidor real de health. No fue un incidente de producción.
+
+**Credencial local DPAPI — 05/10/2026.** Gate real `PASS`: `SECRET_STORED_DPAPI`, ligado y descifrable sólo bajo `MSI\ramos`, URL PostgreSQL válida/remota con SSL no deshabilitado, variable `DATABASE_PUBLIC_URL` retirada, configuración local válida, Replica sin configurar y Primary con cero PFX/dump plano/DPAPI. La URL no se imprimió ni se usó para conectarse. El registro de tareas quedó preparado fail-closed: exige configuración, certificado, DPAPI descifrable y misma identidad; creará health habilitado y backup de las 20:00 deshabilitado hasta la autorización explícita del primer acceso productivo. No se registra tarea Replica.
+
+**Abort seguro y corrección del runtime de tareas — 05/10/2026.** El primer intento de registro abortó antes de solicitar la contraseña porque la Windows PowerShell elevada no resolvía `pwsh.exe` mediante `PATH`. La comprobación posterior encontró PowerShell Core 7.6.5 únicamente en el runtime privado de Codex y confirmó que `CuidaDiario-P1D1-Daily-Backup` y `CuidaDiario-P1D1-Daily-Health` no existen; no hubo ejecución parcial, `pg_dump` ni conexión productiva. El tooling dejó de usar `Get-Command pwsh.exe`: ahora requiere una ruta explícita, valida Core >= 7 y SHA-256, rechaza Windows PowerShell 5.1 y comprueba que las acciones registradas señalen exactamente al runtime esperado. En ese checkpoint se preparó una copia operacional fija bajo `C:\ProgramData\CuidaDiario\P1-D1\Runtime`, con validación antes/después y ACL restringida; aún no se había ejecutado su instalación elevada ni el registro real.
+
+**Segundo intento de registro — 05/10/2026.** La copia operacional quedó efectivamente presente y fue revalidada read-only: Core 7.6.5, `pwsh.exe` SHA-256 `362A356CE7F0940EC74F73A8FC2C990A2CC24A38A11C90BBD8ECA947110AD139`, 658 archivos y 699 objetos con ACL protegida limitada a `MSI\ramos`, SYSTEM y Administradores. Tras introducir la contraseña, la consola Windows PowerShell se cerró sin veredicto. Se demostró que el cierre del host provino del `exit 1` del bloque envolvente al entrar en `catch`; no puede reconstruirse qué excepción de registro disparó ese `catch` porque no había log. Las dos tareas permanecen ausentes y no hubo backup ni acceso productivo. El registrador recibió log de etapas no sensibles y `-PreflightOnly`; este preflight aprobó localmente, creó el log esperado y dejó cero tareas. El próximo intento no reinstalará el runtime, no usará `exit` y conservará transcript incluso ante ABORT.
+
+El intento instrumentado con la contraseña real confirmó luego `BACKUP_REGISTER_PASS`, `HEALTH_REGISTER_PASS` y `REGISTER_COMPLETE`; el único fallo fue `P1D1_TASK_USER_MISMATCH_BACKUP` en el validador posterior, y el rollback eliminó ambas tareas. También demostró que un `finally` pegado fuera de una unidad sintáctica podía interpretarse como comando separado. No quedó persistida la representación textual concreta de `Principal.UserId`, por lo que no se presume cuál fue; sí quedó demostrada la corrección: comparar el SID canónico de Windows en lugar del texto. `MSI\ramos` y `ramos` resuelven al mismo SID local `S-1-5-21-62501617-763334010-2234187081-1001`, mientras un SID diferente falla cerrado. La prueba focalizada del nuevo validador aprobó **17/17**: equivalencia textual segura, rechazo de otra identidad, estados Enabled, `Password`, `StartWhenAvailable`, `IgnoreNew`, batería, runtime exacto y Replica ausente. El próximo bloque está encapsulado en `& { ... }`, mantiene transcript/log y no usa `exit`.
+
+**Task Scheduler aprobado — 05/10/2026.** El gate real finalizó `PASS`: Task Scheduler normalizó ambas identidades a `ramos`, cuyo SID coincidió con `MSI\ramos`. Backup quedó registrada/deshabilitada a las 20:00 y health registrada/habilitada a las 21:00; ambas usan `LogonType=Password`, `StartWhenAvailable=True`, `MultipleInstances=IgnoreNew`, permiten batería, no se detienen al cambiar a batería y ejecutan exactamente PowerShell Core 7.6.5 aprobado. Replica sigue ausente. No hubo ejecución manual, backup ni artefacto durante ese gate.
+
+**Primer intento de backup productivo — 05/10/2026.** Con autorización humana expresa, el preflight focalizado aprobó configuración, certificado public-only, DPAPI, herramientas PostgreSQL, Primary, tareas y cero dump plano. Se inició exactamente una ejecución canónica/read-only de `pg_dump`; terminó `ABORT / P1D1_UNEXPECTED_FAILURE`, estado `FAILURE`, backup ID `full-shared-20261005T182121Z-ec771ab3`, sin artefacto/manifest, `.dump` plano ni temporal. Logs y manifest inexistente no expusieron secretos; Backup permaneció deshabilitada y no hubo restore, DDL ni DML.
+
+El fallo fue reproducido sin red usando sólo el dump predeploy conocido: `pg_restore --list` obtenía correctamente el TOC pero cerraba stdin antes de que Windows terminara de escribir los 10.078.861 bytes, generando “Ha terminado la canalización”. `Invoke-P1D1Process` ahora tolera exclusivamente `IOException`/`ObjectDisposedException` de escritura temprana y usa el exit code real del proceso como autoridad. Prueba focalizada posterior: TOC→SHA-256→CMS PASS, 310 entradas, artefacto cifrado sintético en memoria de 18.390.320 bytes; un archivo corrupto siguió rechazado como `P1D1_ARCHIVE_INVALID`. Se agregó etapa segura a fallos inesperados. No se repitió acceso productivo: hace falta nueva autorización antes del reintento.
+
+**Reintento único del primer backup — 05/10/2026.** Con autorización humana explícita se repitieron sólo los prechecks mínimos y se ejecutó exactamente una invocación canónica/read-only. Veredicto `PASS`: backup ID `full-shared-20261005T194139Z-42dc9d6a`; `.dump.p7m` CMS de 18.439.124 bytes; SHA-256 `904deb04c85db6833f389fac2ff483a77e4821cb69a89f8832592e1d6c63b981`; manifest `VALIDATED`; 358 entradas TOC; cuatro migraciones P1/P1-C exactas; validación shallow PASS; hash/tamaño coincidentes. El escaneo de manifest/transcript/log dio cero patrones de URL/contraseña/secreto/PIN/PFX y el Primary quedó con cero dump plano, temporales o archivos sensibles. Backup permaneció deshabilitada, health habilitada y Replica ausente. No hubo restore, DDL/DML ni cambios de datos.
+
+El health posterior mostró inicialmente `age_hours=-2,99` pese a un backup recién creado. La causa fue local y demostrada: PowerShell 7.6 convertía automáticamente `createdAtUtc` desde JSON a `DateTime`; volver a convertirlo a string descartaba el sufijo UTC y lo reinterpretaba como hora local. `Get-P1D1ManifestInventory` ahora usa `ConvertFrom-Json -DateKind String`. Prueba focalizada **4/4 PASS**; health real posterior: `BACKUP=OK/P1D1_BACKUP_CURRENT`, edad 0,08 h, `REPLICA=NOT_CONFIGURED/P1D1_REPLICA_NOT_CONFIGURED`, `OVERALL=ATTENTION` esperado.
+
+**Restore drill real — 05/10/2026.** El artefacto productivo inicial fue descifrado y restaurado exclusivamente en PostgreSQL local/loopback, sobre la base temporal nueva y allowlisted `cuidadiario_p1d1_restore_20261005_194139`. Veredicto `PASS`: restore exitoso; catálogo P1/P1-C y cuatro checksums válidos; presencia estructural no-B2B preservada; duración `00:00:04.618`; cero conexiones/mutaciones productivas; base temporal eliminada. Tras limpiar quedaron cero `.dump` planos y cero materiales criptográficos temporales.
+
+**Habilitación y primer ciclo natural — 05/10/2026.** El gate de habilitación dejó Backup activa a las 20:00 y Health activa a las 21:00, ambas `Password`, `StartWhenAvailable=True`, `IgnoreNew`, compatibles con batería y sobre el runtime PowerShell Core 7.6.5 aprobado. Sin ejecución manual, Backup corrió a `20:00:01` con `LastTaskResult=0` y creó `full-shared-20261005T230001Z-a5ba68b5`: `.dump.p7m` de 18.439.144 bytes, SHA-256 `7a2c2a066158aa456395948ad237c927f81531fa18d130496069e27445c9db92`, manifest válido, 358 entradas TOC, cuatro migraciones P1/P1-C exactas y validador canónico shallow `PASS`. Health corrió a `21:00:01`; `LastTaskResult=2` es el resultado diseñado para `OVERALL=ATTENTION`, cuya única causa fue `P1D1_REPLICA_NOT_CONFIGURED`, mientras Backup informó `OK/P1D1_BACKUP_CURRENT`. Primary quedó con cero `.dump` plano, temporales sensibles, PFX o patrones de secreto en manifest/estado/logs. No hubo restore, conexión productiva adicional iniciada manualmente ni mutaciones.
+
+**Cierre D1:** P1-D1 queda **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026**. La Replica física continúa **DIFERIDA** porque la segunda PC no está disponible; no se simula y no reabre D1.
+
+#### Implementación y cierre productivo P1-D2 — 05/10/2026 a 06/10/2026
+
+**Estado:** **IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO.** No modifica esquema ni datos y no altera P1-D1, B2C ni el endpoint heredado `/api/b2b/reporte/export`.
+
+- `backend/b2b-p1d2.js` registra `GET /api/b2b/institutional-export`. Sólo un principal institucional activo con rol `admin_institucion` puede exportar; si actúa un operador secundario, éste también debe conservar rol administrador. La autorización se revalida dentro de un snapshot `REPEATABLE READ READ ONLY`.
+- El ZIP v1 incluye `manifest.json`, su digest, `checksums.sha256`, README, JSON/JSONL canónico, vistas CSV, ledger JSONL/CSV, índice documental y binarios por ruta segura basada en ID. Incluye 19 familias: institución, usuarios, residentes, asignaciones, medicación/historial, catálogo/reposiciones, citas/historial, tareas/historial, síntomas, signos, contactos, notas, documentos, operadores y auditoría.
+- Se preservan activos, inactivos, egresados y soft-deleted. Cada consulta filtra `institucion_id`; el grafo relacional completo se valida fail-closed. Los documentos se procesan de a uno, se verifican por hash/tamaño y no pueden generar traversal ni colisiones. El ZIP se escribe incrementalmente en temporal no público y se elimina después de envío, error o cancelación.
+- Se excluyen `password_hash`, tokens de verificación/recuperación, `pin_hash`, sesiones de operador, idempotencia, secretos/proveedores/entorno, `_migrations` y toda tabla B2C. `schema_migrations_b2b` se representa sólo mediante las cuatro versiones/checksums aprobadas. Auditoría se vuelve a sanitizar recursivamente; el backend no registra contenido del paquete.
+- La UI administrativa ofrece “Exportación institucional completa” con progreso/error y descarga Blob, mientras conserva el reporte imprimible parcial como acción separada. `api-b2b.js` usa `fetch` network-only/no-store y los headers normales de autenticación/operador.
+- Gate controlado: prueba dedicada **537/537 PASS** sobre PostgreSQL 18 efímero con tenants A/B, fila B2C, estados archivados/egresados, soft-delete, documentos con nombres hostiles, sanitización, autorización, snapshot concurrente, hashes/manifest y limpieza temporal. Regresiones focalizadas: P0-1 cache **35/35 PASS** e idempotencia frontend **16/16 PASS**. Total focalizado: **588 PASS**, cero intentos externos y cero datos reales.
+
+**Despliegue y gate productivo — 06/10/2026.** Backend `1c50efce685e59ac89fbf762364741d39ffd28dd` y frontend `b86342ea07bf0bc5619b96bff77ead61a1ca50f8` quedaron publicados. El service worker cambió sólo su marcador de distribución `/P1-D2`; sus estrategias permanecieron iguales. El smoke público real aprobó 23/23 en Chrome 153: worker activo/controlador, purga B2B selectiva, no-B2B preservado, cero mutaciones y sólo el GET permanente de mantenimiento. `/health` respondió 200, `maintenance:false`; el export nuevo y el reporte heredado respondieron 401 sin autenticación.
+
+Se ejecutó **exactamente una** exportación institucional productiva. El ZIP `cuidadiario-institutional-export/v1` midió 31.522 bytes y tuvo SHA-256 `948e251fdcb9fc120e96d491f011124b7c01c7a1b86a69286be3271da525e8c6`. El validador local, sin extracción persistente ni impresión de filas/valores, confirmó manifest y checksums, 19/19 familias, documentos, relaciones/tenant único, secretos ausentes y B2C ausente. El archivo se eliminó después de validarlo; no quedaron ZIPs coincidentes ni temporales. No hubo mutaciones, migraciones, cambios de esquema, cambios P1-D1 ni cambios B2C.
+
+**Límites vigentes:** el ZIP no incorpora cifrado, no existe importador automático y los límites iniciales son 250.000 filas y 512 MiB. Las futuras descargas requieren custodia institucional explícita. P1-D3 continúa **NO INICIADO**; P1-D queda abierto únicamente por ese bloque.
+
 ## 6. Evidencia externa y puntos todavía no verificados
 
 ### 6.1 Alcance de la verificación realizada
@@ -673,9 +833,9 @@ La presencia de una variable por nombre no valida su valor, alcance, rotación n
 - esquema histórico fuera de P1, FK/extensiones/timezone y estado de `_migrations`; la estructura P1, sus cuatro índices, función, trigger y `schema_migrations_b2b` sí quedaron verificados;
 - conteos y tamaños B2B por tabla/institución, salvo los cinco totales agregados del 28/09; huérfanos, duplicados e integridad semántica;
 - cifrado efectivo en reposo/en tránsito y controles aplicados al TCP Proxy público;
-- restaurabilidad de los dos snapshots Railway, política/retención efectiva, backup automático, PITR activo y última restauración por esos mecanismos;
-- RPO/RTO, frecuencia y monitoreo de continuidad;
-- cifrado, acceso, custodia, retención y eliminación segura de los dumps locales conservados;
+- restaurabilidad de los dos snapshots Railway, política/retención efectiva, backup automático Railway, PITR activo y última restauración por esos mecanismos; esto no incluye P1-D1 local, cuyo primer ciclo automático sí quedó verificado;
+- cumplimiento histórico sostenido de RPO/RTO; P1-D1 comprobó una generación natural y un restore drill, pero RPO 24 h/RTO 8 h continúan como objetivos técnicos, no SLA;
+- comportamiento histórico de la retención/eliminación local y Replica física; cifrado CMS, ACL/custodia actual del Primary y ausencia de dumps planos sí quedaron verificados para P1-D1;
 - forks, ambientes de staging y otras copias fuera de Railway distintas del dump verificado;
 - procedimiento efectivo de baja, exportación, retención y destrucción.
 

@@ -1,6 +1,6 @@
 # Modelo de datos de CuidaDiario PRO B2B
 
-**Fuente:** DDL, migraciones y consultas de `backend/index.js`/`backend/b2b-p1.js`/`backend/b2b-p1c.js`, inspección externa parcial de Railway, recuperación lógica y gates P1.
+**Fuente:** DDL, migraciones y consultas de `backend/index.js`/`backend/b2b-p1.js`/`backend/b2b-p1c.js`/`backend/b2b-p1d2.js`, inspección externa parcial de Railway, recuperación lógica y gates P1.
 **Alcance:** modelo B2B reconstruido. Los gates productivos verificaron P1-A/P1-B y P1-C; la definición histórica restante, el contenido y la consistencia semántica integral continúan **[NO VERIFICADO]** salvo evidencia expresa.
 
 **[VERIFICADO] Este documento modela exclusivamente B2B. NO MODIFICAR TABLAS B2C.** Existen tablas de otro producto en la misma base/runner, pero quedan fuera de este modelo. `_migrations` sólo se menciona por ser una dependencia compartida.
@@ -282,17 +282,23 @@ Esas capacidades son **PROPUESTAS**. No deben inferirse de las tablas actuales n
 | `signos_vitales_b2b` | `/api/b2b/signos-vitales`, reportes y export. | Medición de salud, notas y actor. |
 | `contactos_b2b` | `/api/b2b/contactos`, reportes y export. | Identidad, relación, teléfono y e-mail de terceros. |
 | `notas_b2b` | `/api/b2b/notas`, dashboard, notificaciones, reportes y export. | Texto libre potencialmente clínico/personal y actor. |
-| `documentos_b2b` | `/api/b2b/documentos`, `/api/b2b/documentos/:id/download` y su DELETE. No forma parte del export actual. | Contenido binario arbitrario, metadatos y actor de carga. |
+| `documentos_b2b` | `/api/b2b/documentos`, `/api/b2b/documentos/:id/download` y su DELETE. P1-D2 la exporta con índice JSONL y binario original por ID. | Contenido binario arbitrario, metadatos y actor de carga. |
 
 El método, middleware y consumidor de cada ruta se detalla en `MAPA_API_B2B.md`.
 
-### 13.1 Relaciones usadas por la autorización P0-C
+### 13.1 Inventario P1-D2 de exportación institucional
+
+La ruta productiva `/api/b2b/institutional-export` lee por `institucion_id` exactamente estas familias: `instituciones_b2b`, `usuarios_b2b`, `pacientes_b2b`, `asignaciones_b2b`, `medicamentos_b2b`, `historial_medicamentos_b2b`, `catalogo_medicamentos_b2b`, `historial_restock_b2b`, `citas_b2b`, `historial_citas_b2b`, `tareas_b2b`, `historial_tareas_b2b`, `sintomas_b2b`, `signos_vitales_b2b`, `contactos_b2b`, `notas_b2b`, `documentos_b2b`, `operadores_b2b` y `auditoria_eventos_b2b`. Incluye estados inactivos, egresados y soft-deleted, con sus marcas/versiones y relaciones.
+
+`usuarios_b2b` y `operadores_b2b` usan proyecciones sin `password_hash`, tokens de verificación/recuperación ni `pin_hash`. El ledger se vuelve a sanitizar recursivamente y nunca incorpora bytes/base64 documental. `operador_sesiones_b2b` y `operaciones_idempotentes_b2b` se excluyen por ser estado técnico no portable; `schema_migrations_b2b` aparece únicamente como versión/checksum en el manifest. `_migrations` y cualquier tabla B2C quedan fuera. La implementación no agrega columnas, tablas, constraints ni migraciones. **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026].** El gate real confirmó 19/19 familias, aislamiento de un único tenant, checksums/documentos válidos y ausencia de secretos/B2C sin imprimir filas ni valores.
+
+### 13.2 Relaciones usadas por la autorización P0-C
 
 Sin alterar claves ni filas existentes, P0-C usa `usuarios_b2b -> instituciones_b2b` para estado e identidad vigentes; `asignaciones_b2b` activas para el alcance restringido; `pacientes_b2b.institucion_id` como raíz del recurso; y `paciente_id` de cada tabla clínica/operativa para autorizar antes de leer o mutar. Catálogo y reposiciones admiten el caso institucional (`paciente_id IS NULL`) sólo según rol/permiso; cuando tienen residente deben corresponder al mismo tenant y alcance. Los recursos sin residente padre resoluble fallan cerrados. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 30/09/2026].** El despliegue no ejecutó SQL, migraciones, cambios de esquema ni modificación retrospectiva de filas.
 
 ## 14. Fotografía externa de producción
 
-### 13.2 Extensiones P1-A/P1-B productivas
+### 14.1 Extensiones P1-A/P1-B productivas
 
 Tres migraciones registradas en `schema_migrations_b2b(version, checksum, applied_at)` agregan, sin DROP/TRUNCATE ni reescritura de filas:
 
@@ -303,7 +309,7 @@ Tres migraciones registradas en `schema_migrations_b2b(version, checksum, applie
 
 Las filas heredadas quedan preservadas y parten de versión prospectiva 1. No se fabrica auditoría previa. La primera modificación futura de una fila heredada captura baseline sanitizado; las siguientes registran diff. Eventos naturales —administraciones, tareas completadas y reposiciones— usan referencia mínima. **[VERIFICADO EN PRODUCCIÓN / CLOSED].**
 
-### 13.3 Extensión P1-C productiva
+### 14.2 Extensión P1-C productiva
 
 La migración `p1c_001_operator_identity` (checksum controlado SHA-256 `2c6cc0eb8aadc7db48d0741e7d3517a4ad62a2dbc901e38dfc6ba18018ffede2`) se agrega al journal después de P1-A/P1-B y es exclusivamente aditiva: crea las dos tablas descritas en 3.3/3.4; agrega `operador_b2b_id BIGINT NULL` con FK `RESTRICT` a `auditoria_eventos_b2b` y `operaciones_idempotentes_b2b`; y agrega seis índices propios (nombre/activos, lookup/expiración de sesión, auditoría e idempotencia por operador). No contiene `UPDATE` de filas heredadas ni backfill.
 

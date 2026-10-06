@@ -1,6 +1,6 @@
 # CuidaDiario PRO B2B — documentación canónica
 
-**Estado documental:** vigente al 4 de octubre de 2026; P0, P1-A, P1-B y **P1-C DESPLEGADOS / VERIFICADOS / DOCUMENTADOS / CERRADOS**; P1-D no iniciado
+**Estado documental:** vigente al 6 de octubre de 2026; P0, P1-A, P1-B y **P1-C DESPLEGADOS / VERIFICADOS / DOCUMENTADOS / CERRADOS**; **P1-D1 OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL**; **P1-D2 IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO**; P1-D3 no implementado
 **Alcance:** ingeniería inversa del repositorio local más evidencia externa proporcionada; no acredita aquello que se mantiene expresamente como `[NO VERIFICADO]`.  
 **Regla de precedencia:** ante una contradicción, prevalece el código ejecutable actual sobre este documento; la divergencia debe registrarse en `ESTADO_Y_PLAN_B2B.md`.
 
@@ -34,16 +34,20 @@ El 15/09/2026 se inspeccionó manualmente el panel de Railway, sin abrir Console
 | `backend/db.js` | Pool PostgreSQL y TLS. **[COMPARTIDO - NO TOCAR B2C]** |
 | `backend/b2b-p1.js` | Migraciones B2B con journal/checksum, transacciones, auditoría sanitizada, idempotencia, guard de egreso y bridge temporal de sólo lectura para ventanas P1. Incorpora la migración P1-C al mismo runner. |
 | `backend/b2b-p1c.js` | **[VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]** Migración y runtime exclusivamente B2B para cambios de persona en estación compartida: el principal opera normalmente como sí mismo; sólo un operador secundario usa PIN/sesión opaca. |
+| `backend/b2b-p1d2.js` | **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]** Exportación institucional ZIP tenant-safe: snapshot PostgreSQL read-only consistente, allowlist de familias/campos, sanitización de auditoría, documentos originales, manifest/hashes, ZIP temporal y limpieza. No agrega migraciones ni dependencias. |
 | `backend/package.json` | Dependencias y comando de inicio. **[COMPARTIDO - NO TOCAR B2C]** |
 | `backend/tests/p0-c-authorization.test.js` | Arnés local P0-C: PostgreSQL 18 efímero, esquema mínimo y fixtures sintéticos, JWT local, servidor HTTP real y bloqueo de conexiones externas. No es código de producción. |
+| `backend/tests/p1-d2-institutional-export.test.js` | Gate integral D2 con PostgreSQL efímero, tenants A/B, B2C sintético, archivados/egresados, documentos, ledger, snapshot concurrente, autorización, ZIP/hashes y limpieza. No es código de producción. |
 | `frontend/*.html` | Entrada, autenticación, paneles y páginas B2B; también existen páginas ajenas al producto B2B. |
-| `frontend/js/api-b2b.js` | Cliente HTTP B2B, validación local mínima de vigencia del JWT, cierre selectivo de identidad, purga de caché GET B2B heredada, claves UUID de idempotencia y contexto/token de operador secundario en `sessionStorage` y header separado. Una `cd_offline_queue` heredada queda intacta y sin consumidor. |
+| `frontend/js/api-b2b.js` | Cliente HTTP B2B, validación local mínima de vigencia del JWT, cierre selectivo de identidad, purga de caché GET B2B heredada, claves UUID de idempotencia, contexto/token de operador secundario y descarga D2 explícitamente `no-store`. Una `cd_offline_queue` heredada queda intacta y sin consumidor. |
 | `frontend/js/maintenance-b2b-v2.js` | Guardia visual permanente y exclusivamente B2B. Consulta por red `GET /api/b2b/maintenance-status`, reutiliza el binding léxico `API_B2B.BASE_URL`, no persiste estado y sondea cada 5 s. `B2B_MAINTENANCE_MODE` controla sólo esta capa visual; no sustituye la barrera de mutaciones del bridge P1. **[VERIFICADO EN PRODUCCIÓN — 02/10/2026]** |
 | `frontend/js/utils-b2b.js` | Guardia fail-closed de sesión B2B, navegación, roles/permisos, notificaciones y helpers de renderizado contextual seguro. P1-C muestra al principal por defecto y usa identificación ID+PIN e indicador separado sólo al cambiar a un operador secundario. |
 | `frontend/js/*` restantes | Controladores de cada pantalla B2B. |
 | `frontend/sw.js` | Caché PWA de estáticos y respuestas GET no-B2B; los GET `/api/b2b/` son network-only y se purgan selectivamente. P0-1 está **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]**. P1-C cambió sólo el comentario identificador para distribuir bytes nuevos; cachés, rutas y estrategias permanecieron iguales y el asset público fue verificado. **[COMPARTIDO - NO TOCAR B2C]** |
 | `frontend/pages/privacy.html`, `frontend/pages/terms.html` | Declaraciones públicas; algunas no coinciden plenamente con la conducta técnica actual. |
 | `documentacion/` | Documentación canónica y antecedentes. No es código de producción. |
+| `ops/p1-d1/` | Paquete operativo local P1-D1 para dump completo de la base compartida, validación, cifrado CMS, manifiesto/hash, retención y restore exclusivamente aislado. **OPERATIVO / VERIFICADO / CERRADO PARA EL ALCANCE ACTUAL — 05/10/2026**. El restore drill local/loopback fue exitoso; la tarea diaria produjo y validó su primera generación natural a las 20:00 y health corrió naturalmente a las 21:00. La Replica física permanece **DIFERIDA** por indisponibilidad de la segunda PC y no reabre D1. No integra el runtime del producto ni modifica B2C. |
+| `ops/p1-d2/` | Tooling local de gate: valida ZIP, manifest, hashes, 19 familias, documentos, relaciones/tenant, secretos y exclusión B2C sin persistir extracción ni imprimir filas. Se conserva sólo en la copia controlada; no forma parte del runtime público. |
 
 ## 4. Arquitectura resumida
 
@@ -69,7 +73,7 @@ El frontend usa JavaScript sin framework y consume una URL de backend Railway co
 - Tareas programadas e historial de cumplimientos.
 - Citas, síntomas, signos vitales, contactos, notas y documentos.
 - Catálogo/inventario institucional o asociado a un residente e historial de reposiciones.
-- Panel, campana de notificaciones, reportes y exportación JSON.
+- Panel, campana de notificaciones y reportes. El reporte JSON/PDF parcial preexistente se conserva; P1-D2 agrega un ZIP institucional completo, portable y verificable, desplegado y verificado en producción.
 - Código y configuración de suscripciones B2B mediante Mercado Pago —actualmente inactivos/no utilizados por Los Aromos— y correos transaccionales mediante Resend, cuyo estado operativo externo no fue verificado.
 - Operación PWA parcial y modo de estación compartida. P0-2/P0-3 requieren JWT B2B localmente vigente en páginas protegidas; logout/401 retiran identidad/estación; consultas y mutaciones B2B requieren red; no se crean ni reenvían operaciones offline. Una `cd_offline_queue` heredada permanece byte a byte en cuarentena, sin lectura, borrado o transmisión automática. **CERRADOS — 30/09/2026:** lógica exhaustiva local y gate productivo proporcional del commit `9ec220c` aprobados.
 - Renderizado B2B P0-8: datos persistidos, errores, atributos, identificadores y URLs dinámicas usan texto, escape contextual, normalización numérica o listas de protocolos/orígenes permitidos. Payloads HTML/SVG/eventos/URL fueron probados localmente en Chrome sin ejecución. **CERRADO — 30/09/2026:** commit `9ec220c` desplegado; artefactos y arranque público aprobados mediante smoke proporcional, sin repetir payloads contra producción.
@@ -190,7 +194,7 @@ La producción no es un banco de pruebas. La lógica debe agotarse primero en un
 
 Para cambios futuros de backend o base: implementar y probar primero con backend/PostgreSQL aislados y datos ficticios; ejecutar matrices negativas de tenant, rol, asignación y recurso; comprobar regresión B2C sin modificar B2C; preparar rollback; obtener aprobación humana; desplegar sólo el código aprobado; y limitar producción a un smoke mínimo de despliegue/configuración/integración. Toda migración requiere backup reciente recuperable, ensayo aislado, rollback o forward-fix, aprobación y verificación productiva agregada/no destructiva. No se crea infraestructura adicional sin una necesidad concreta demostrada.
 
-Las ventanas P1-A/P1-B y P1-C ya concluyeron. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero su estado final es `0`. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. P1-D no se inició. No existe P1-E.
+Las ventanas P1-A/P1-B y P1-C ya concluyeron. Mantenimiento y bridge quedan disponibles para futuras ventanas autorizadas, pero su estado final es `0`. El bridge es la barrera técnica de mutaciones y el overlay sólo comunicación visual. Nunca cambiar `sw.js` para alternar la ventana. P1-D1 está cerrado para su alcance actual; P1-D2 está implementado, desplegado, verificado en producción y cerrado; P1-D3 no se inició. El detalle está en `ESTADO_Y_PLAN_B2B.md` 5.23/5.24. No existe P1-E.
 
 ## 9. Índice canónico
 

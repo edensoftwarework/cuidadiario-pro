@@ -1,6 +1,6 @@
 # Arquitectura técnica de CuidaDiario PRO B2B
 
-**Corte de reconstrucción:** 4 de octubre de 2026, incluyendo inspección manual parcial de Railway del 15/09, recuperación lógica independiente del 28/09 y cierre productivo de P0-C/P1-A/P1-B/P1-C
+**Corte de reconstrucción:** 6 de octubre de 2026, incluyendo inspección manual parcial de Railway del 15/09, recuperación lógica independiente del 28/09 y cierre productivo de P0-C/P1-A/P1-B/P1-C/P1-D1/P1-D2
 **Naturaleza:** descripción del código y de evidencia externa proporcionada; no es un diseño objetivo ni una certificación integral de producción.
 
 Etiquetas: **[VERIFICADO]** comprobado en código o evidencia externa identificada; **[INFERIDO]** conclusión técnica no observada directamente; **[NO VERIFICADO]** requiere evidencia adicional; **[PENDIENTE]** brecha abierta; **[FUTURO]** diseño aún no implementado; **[COMPARTIDO - NO TOCAR B2C]** puede afectar ambos productos. Cuando se dice “exclusivo B2B” en prosa, la superficie pertenece sólo a PRO.
@@ -190,6 +190,12 @@ El ledger no expone rutas normales de modificación. Un trigger rechaza `UPDATE`
 
 El bridge no cubre el runner, jobs/timers, SQL administrativo ni el bloque directo de sincronización B2B de Mercado Pago. Con una sola réplica y rollout/drenaje Railway **[NO VERIFICADO]**, no se lo considera suficiente para evitar una escritura pre-P1 en vuelo. La estrategia de disponibilidad es **C — ventana coordinada breve**; backend P1 primero, smoke estructural/read-only, frontend P1 después. Tras la primera operación con soft-delete, el backend pre-P1 es un rollback inseguro.
 
+### Arquitectura P1-D2 desplegada
+
+`backend/b2b-p1d2.js` encapsula la exportación institucional completa sin migraciones ni mutaciones. `GET /api/b2b/institutional-export` exige el middleware B2B vigente y rol principal `admin_institucion`; si existe operador secundario, también debe conservar rol administrador. La identidad e institución activas se revalidan dentro de una transacción `REPEATABLE READ READ ONLY` antes de consultar cualquier familia.
+
+Las consultas son allowlists explícitas con `institucion_id`; el grafo de residentes, usuarios, asignaciones, recursos y operadores se valida antes de entregar. El ZIP se escribe incrementalmente en un directorio temporal no público, un archivo por vez, y se elimina después de enviar, ante error o cancelación. Los documentos se decodifican individualmente a rutas físicas basadas en ID; sus nombres originales quedan sólo como metadato. `manifest.json`, `manifest.sha256` y `checksums.sha256` permiten verificar versión, conteos, migraciones, exclusiones y hash/tamaño de cada payload. Las respuestas usan `private, no-store`, y no se registra contenido sensible. **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026].** Backend `1c50efce685e59ac89fbf762364741d39ffd28dd`; frontend `b86342ea07bf0bc5619b96bff77ead61a1ca50f8`.
+
 ### 4.3 Despliegue Railway verificado externamente
 
 La inspección manual del 15/09/2026 confirmó:
@@ -302,20 +308,23 @@ La línea base anterior a P1 mezclaba:
 
 P1-A/P1-B sustituyó hacia adelante esos seis borrados físicos por soft-delete, agregó versión prospectiva a 13 tablas y un ledger general allowlisted para las mutaciones cubiertas. No se afirma auditoría histórica retroactiva ni registro general de lecturas/accesos. Los detalles están en `MODELO_DATOS_B2B.md`.
 
-P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]** y P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**. P1-D no se inició. No existe un bloque P1-E.
+P1-A/P1-B están **[VERIFICADOS EN PRODUCCIÓN / CERRADOS — 03/10/2026]**, P1-C está **[DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 04/10/2026]**, P1-D1 está cerrado para su alcance actual y P1-D2 está **[IMPLEMENTADO / DESPLEGADO / VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026]**. P1-D3 no se inició. No existe un bloque P1-E.
 
 **Gate predeploy P1-C final y cierre productivo.** El dump oficial del 04/10 restauró sin warnings en PostgreSQL 18.1 aislado. El gate estructural aprobó 185/185 y las regresiones del candidato ajustado 808/808: principal por defecto, operador secundario con PIN, 8 h/60 min, preservación P1-A/P1-B, B2C/no-B2B y upgrade real del service worker. Producción PostgreSQL 17.11 aprobó preflight y gate postdeploy read-only; el frontend y el smoke público también quedaron verificados.
 
 ## 8. Reportes, exportación y documentos
 
 - `GET /api/b2b/reportes` devuelve métricas agregadas y actividad según filtros.
-- `GET /api/b2b/reporte/export` arma un JSON institucional con múltiples tablas B2B.
+- `GET /api/b2b/reporte/export` conserva el reporte JSON institucional parcial heredado.
+- `GET /api/b2b/institutional-export` genera para administrador un ZIP institucional completo, tenant-safe y verificable; incluye documentos, archivados/egresados, operadores sanitizados y ledger JSONL/CSV. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 06/10/2026].**
 - `POST /api/b2b/documentos` recibe base64, MIME, nombre y tamaño y los persiste en PostgreSQL.
 - `GET /api/b2b/documentos/:id/download` devuelve el archivo autenticado para descarga.
 
 P0-5, ya desplegado, hace que listar/subir/descargar/eliminar aplique `no-store`; descarga y eliminación resuelven primero documento, tenant, residente/asignación y sección familiar. El borrado conserva además la regla existente de administrador o subidor. Acceso denegado o recurso ajeno/inexistente no devuelve bytes y usa 404 para evitar enumeración. **[VERIFICADO EN PRODUCCIÓN / CERRADO — 30/09/2026].**
 
 **[VERIFICADO EN PRODUCCIÓN — 29/09/2026]:** las respuestas GET B2B no quedan en `localStorage` ni Cache Storage; respuestas no-B2B conservan su estrategia. Una descarga/exportación todavía puede permanecer en el sistema operativo, copias de seguridad o sincronización del dispositivo fuera del control de la aplicación.
+
+El export P1-D2 no es un backup PostgreSQL ni incorpora un importador automático. Excluye hashes/credenciales/tokens, sesiones secundarias e idempotencia; representa `schema_migrations_b2b` sólo por versión/checksum y no consulta `_migrations` ni tablas B2C. El único ZIP del gate productivo se validó localmente y se eliminó después; las descargas operativas futuras continúan requiriendo custodia institucional porque el ZIP no incorpora cifrado propio.
 
 ## 9. Integraciones externas
 
