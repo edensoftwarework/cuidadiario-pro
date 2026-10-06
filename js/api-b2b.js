@@ -195,6 +195,22 @@ const API_B2B = {
     async get(path) {
         return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
     },
+    async download(path) {
+        const response = await this._fetch(`${this.BASE_URL}${path}`, {
+            headers: this.headers(),
+            cache: 'no-store',
+        });
+        if (!response.ok) return this.handle(response);
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const utf8Name = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+        const fallbackName = /filename="?([^";]+)"?/i.exec(disposition);
+        let filename = 'cuidadiario-export-institucional.zip';
+        try {
+            filename = decodeURIComponent(utf8Name?.[1] || fallbackName?.[1] || filename);
+        } catch {}
+        filename = filename.replace(/[\\/:*?"<>\r\n|]+/g, '-');
+        return { blob: await response.blob(), filename };
+    },
     // ---------- B2B writes (network-only) ----------
     // P0-3: any pre-existing cd_offline_queue value is intentionally quarantined.
     // This client never reads, writes, parses, migrates, deletes or transmits it.

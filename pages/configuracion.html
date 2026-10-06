@@ -149,10 +149,17 @@
                         <div class="card-body">
                             <div class="danger-zone">
                                 <div>
-                                    <div style="font-weight:600;margin-bottom:4px">Exportar todos los datos</div>
-                                    <div style="font-size:.85rem;color:var(--text-secondary)">Descargá un backup completo de todos los datos de la institución en formato PDF.</div>
+                                    <div style="font-weight:600;margin-bottom:4px">Exportación institucional completa</div>
+                                    <div style="font-size:.85rem;color:var(--text-secondary)">Descargá un ZIP verificable con los datos, documentos e historial institucional. Puede tardar unos minutos.</div>
                                 </div>
-                                <button class="btn btn-secondary btn-sm" onclick="exportarDatos()">📦 Exportar</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="descargarExportInstitucional(this)">📦 Descargar ZIP</button>
+                            </div>
+                            <div class="danger-zone" style="margin-top:16px">
+                                <div>
+                                    <div style="font-weight:600;margin-bottom:4px">Reporte imprimible</div>
+                                    <div style="font-size:.85rem;color:var(--text-secondary)">Abrí el reporte parcial existente para imprimirlo o guardarlo como PDF. No reemplaza la exportación completa.</div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="exportarDatos()">🖨️ Abrir reporte</button>
                             </div>
                             <div class="danger-zone" style="margin-top:16px">
                                 <div>

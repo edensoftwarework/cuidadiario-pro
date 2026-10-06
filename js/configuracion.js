@@ -407,6 +407,35 @@ async function guardarPermisos() {
         if (btn2) { btn2.disabled = false; btn2.textContent = '👨‍👩‍👧 Guardar permisos del familiar'; }
     }
 }
+async function descargarExportInstitucional(button) {
+    if (!button || button.disabled) return;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generando...';
+    showToast('Preparando exportación institucional completa...', 'info');
+    try {
+        const { blob, filename } = await API_B2B.download('/api/b2b/institutional-export');
+        const url = URL.createObjectURL(blob);
+        try {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } finally {
+            setTimeout(() => URL.revokeObjectURL(url), 0);
+        }
+        showToast('Exportación institucional descargada ✅', 'success');
+    } catch (error) {
+        showToast(error.message || 'No se pudo generar la exportación institucional', 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
 async function exportarDatos() {
     showToast('Generando reporte... puede tardar unos segundos.', 'info');
     try {
