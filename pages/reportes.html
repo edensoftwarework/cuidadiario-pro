@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reportes — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
@@ -49,32 +49,49 @@
             <button class="topbar-menu-btn" id="mobileMenuBtn">☰</button>
             <div class="topbar-title">📋 Reportes</div>
             <div class="topbar-actions">
-                <button class="btn btn-secondary" id="btnPrint" onclick="window.print()" style="display:none">🖨️ Imprimir / PDF</button>
+                <button class="btn btn-secondary" id="btnPrint" onclick="window.print()" style="display:none"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#print"></use></svg> Imprimir / PDF</button>
                 <span class="topbar-institucion" id="topbarInstitucion">—</span>
             </div>
         </div>
 
         <div class="page-content">
+            <section class="card direction-dashboard no-print" id="direccionDashboard" style="margin-bottom:20px">
+                <div class="card-header"><div><div class="report-kicker">GESTIÓN INSTITUCIONAL</div><h2 class="card-title">Dashboard de Dirección</h2></div><span class="text-muted" id="direccionActualizado">Sin actualizar</span></div>
+                <div class="card-body">
+                    <form id="formDireccion" class="direction-filters">
+                        <div class="direction-filter-fields">
+                            <div class="form-group"><label class="form-label" for="direccionDesde">Desde</label><input class="form-control" type="date" id="direccionDesde" required></div>
+                            <div class="form-group"><label class="form-label" for="direccionHasta">Hasta (sin incluir)</label><input class="form-control" type="date" id="direccionHasta" required></div>
+                        </div>
+                        <div class="direction-filter-actions"><button class="btn btn-primary" type="submit">Actualizar indicadores</button></div>
+                    </form>
+                    <p class="text-muted" style="margin:0 0 16px">El período comienza en la fecha «Desde» y termina antes del día indicado en «Hasta». Los indicadores de estado actual se calculan al momento de actualizar.</p>
+                    <div id="direccionLoader" class="page-loader" style="display:none"><div class="spinner spinner-dark"></div> Calculando indicadores…</div>
+                    <div id="direccionError" class="alert alert-danger" style="display:none"></div>
+                    <div id="direccionKpis" class="direction-kpis"></div>
+                    <details class="direction-definitions"><summary>Cómo se calculan estos indicadores</summary><div id="direccionDefinitions"></div></details>
+                </div>
+            </section>
             <!-- Filtros -->
-            <div class="card" style="margin-bottom:20px">
+            <div class="card report-controls no-print" style="margin-bottom:20px">
                 <div class="card-header">
-                    <h3 class="card-title">🔍 Generar reporte</h3>
+                    <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#search"></use></svg> Generar reporte</h3>
                 </div>
                 <div class="card-body">
                     <form id="formReporte" onsubmit="generarReporte(event)">
                         <div class="form-grid form-grid-3">
                             <div class="form-group">
-                                <label class="form-label">Paciente *</label>
+                                <label class="form-label" for="reportePacienteId">Paciente *</label>
                                 <select id="reportePacienteId" class="form-control" required>
                                     <option value="">— Seleccionar paciente —</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Desde</label>
+                                <label class="form-label" for="reporteDesde">Desde</label>
                                 <input type="date" id="reporteDesde" class="form-control">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Hasta</label>
+                                <label class="form-label" for="reporteHasta">Hasta</label>
                                 <input type="date" id="reporteHasta" class="form-control">
                             </div>
                         </div>
@@ -87,7 +104,7 @@
                             <label class="form-check"><input type="checkbox" name="incNotas" checked><span>Notas internas</span></label>
                         </div>
                         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-                            <button type="submit" class="btn btn-primary">📋 Generar reporte</button>
+                            <button type="submit" class="btn btn-primary"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#report"></use></svg> Generar reporte</button>
                         </div>
                     </form>
                 </div>
@@ -108,7 +125,7 @@
                 <!-- Medicamentos y tomas -->
                 <div class="card report-section" id="reporteMedicamentos" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">💊 Medicamentos y registro de tomas</h3>
+                        <h3 class="card-title">Medicamentos y registro de tomas</h3>
                     </div>
                     <div class="card-body" id="reporteMedicamentosBody"></div>
                 </div>
@@ -116,7 +133,7 @@
                 <!-- Citas -->
                 <div class="card report-section" id="reporteCitas" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">📅 Historial de citas</h3>
+                        <h3 class="card-title">Historial de citas</h3>
                     </div>
                     <div class="card-body" id="reporteCitasBody"></div>
                 </div>
@@ -124,7 +141,7 @@
                 <!-- Síntomas -->
                 <div class="card report-section" id="reporteSintomas" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">&#x1FA7A; Síntomas registrados</h3>
+                        <h3 class="card-title">Síntomas registrados</h3>
                     </div>
                     <div class="card-body" id="reporteSintomasBody"></div>
                 </div>
@@ -132,7 +149,7 @@
                 <!-- Signos vitales -->
                 <div class="card report-section" id="reporteSignos" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">❤️ Signos vitales</h3>
+                        <h3 class="card-title">Signos vitales</h3>
                     </div>
                     <div class="card-body" id="reporteSignosBody"></div>
                 </div>
@@ -140,7 +157,7 @@
                 <!-- Tareas -->
                 <div class="card report-section" id="reporteTareas" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">✅ Registro de tareas</h3>
+                        <h3 class="card-title">Registro de tareas</h3>
                     </div>
                     <div class="card-body" id="reporteTareasBody"></div>
                 </div>
@@ -148,7 +165,7 @@
                 <!-- Notas -->
                 <div class="card report-section" id="reporteNotas" style="display:none">
                     <div class="card-header">
-                        <h3 class="card-title">📝 Notas internas</h3>
+                        <h3 class="card-title">Notas internas</h3>
                     </div>
                     <div class="card-body" id="reporteNotasBody"></div>
                 </div>

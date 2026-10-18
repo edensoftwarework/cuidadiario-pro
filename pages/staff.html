@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
@@ -58,16 +58,16 @@
             <!-- Staff table -->
             <div class="card mb-20">
                 <div class="card-header">
-                    <span class="card-title">👥 Miembros del equipo</span>
+                    <span class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#users"></use></svg> Miembros del equipo</span>
                 </div>
                 <div class="table-wrapper">
-                    <table>
+                    <table class="staff-table" id="staffTable">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
                                 <th>Rol</th>
                                 <th>Estado</th>
-                                <th>Desde</th>
+                                <th>Estación</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -81,13 +81,13 @@
             <!-- Operadores institucionales P1-C -->
             <div class="card mb-20" id="operatorsCard">
                 <div class="card-header" id="operadores">
-                    <span class="card-title">🔐 Operadores de estación <span id="operatorsCount" class="badge badge-gray"></span></span>
-                    <button class="btn btn-primary btn-sm" onclick="openNuevoOperator()">+ Nuevo operador</button>
+                    <span class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#lock"></use></svg> Estación compartida <span id="operatorsCount" class="badge badge-gray"></span></span>
+                    <button class="btn btn-secondary btn-sm" onclick="openNuevoOperator()">Crear operador independiente</button>
                 </div>
                 <div style="padding:0 18px 12px;color:var(--text-secondary);font-size:.82rem">
-                    Estas identidades no tienen email ni acceso propio. Se utilizan exclusivamente con PIN en una estación compartida.
+                    El flujo recomendado es habilitar a una persona ya cargada en Staff. El operador independiente queda disponible sólo para casos excepcionales sin cuenta propia.
                 </div>
-                <div class="table-wrapper">
+                <div class="table-wrapper staff-table-wrapper">
                     <table>
                         <thead><tr><th>Nombre</th><th>Rol operativo</th><th>Estado</th><th>Credencial</th><th>Acciones</th></tr></thead>
                         <tbody id="operatorsTbody"><tr><td colspan="5" class="text-center text-muted" style="padding:20px"><div class="spinner spinner-dark"></div></td></tr></tbody>
@@ -165,17 +165,20 @@
         </div>
         <div class="modal-body">
             <form id="formOperator" autocomplete="off">
-                <div class="form-group">
-                    <label class="form-label">Nombre visible *</label>
-                    <input type="text" name="oNombre" class="form-control" minlength="2" maxlength="120" required autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Rol operativo *</label>
-                    <select name="oRol" class="form-control" required>
-                        <option value="cuidador_staff">Personal / Operativo</option>
-                        <option value="medico">Médico / Profesional</option>
-                        <option value="admin_institucion">Administrador</option>
-                    </select>
+                <div id="operatorStaffSummary" class="operator-staff-summary" style="display:none"></div>
+                <div id="operatorIdentityFields">
+                    <div class="form-group">
+                        <label class="form-label">Nombre visible *</label>
+                        <input type="text" name="oNombre" class="form-control" minlength="2" maxlength="120" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rol operativo *</label>
+                        <select name="oRol" class="form-control">
+                            <option value="cuidador_staff">Personal / Operativo</option>
+                            <option value="medico">Médico / Profesional</option>
+                            <option value="admin_institucion">Administrador</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">PIN de 6 dígitos</label>

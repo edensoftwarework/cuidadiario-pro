@@ -109,6 +109,9 @@
         btn.innerHTML = '<span class="spinner"></span> Ingresando...';
         const f = e.target;
         try {
+            // Evita navegar a un shell anterior mientras el service worker termina
+            // de activar la versión actual. Un fallo del SW no bloquea el acceso online.
+            await globalThis.B2B_SW_READY;
             const data = await API_B2B.login(f.email.value.trim(), f.password.value);
             const user = data.user;
 

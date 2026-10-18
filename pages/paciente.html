@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha del Paciente — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
-<body>
+<body class="resident-page">
 <div class="pro-layout">
 
     <!-- SIDEBAR -->
@@ -62,23 +62,37 @@
             <div class="paciente-header" id="pacienteHeader">
                 <div class="page-loader"><div class="spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff"></div></div>
             </div>
+            <div class="resident-alert-strip" id="residentAlertStrip" aria-live="polite"></div>
 
             <!-- Tabs -->
-            <div class="card" style="margin-top:20px">
-                <div style="padding:0 20px;border-bottom:2px solid var(--border-color)">
-                    <div class="tabs">
-                        <button class="tab-btn" data-tab="datos">👤 Datos</button>
-                        <button class="tab-btn" data-tab="medicamentos">💊 Medicamentos</button>
-                        <button class="tab-btn" data-tab="citas">📅 Citas</button>
-                        <button class="tab-btn" data-tab="tareas">✅ Tareas</button>
-                        <button class="tab-btn" data-tab="sintomas">🩺 Síntomas</button>
-                        <button class="tab-btn" data-tab="signos">❤️ Signos vitales</button>
-                        <button class="tab-btn" data-tab="contactos">📞 Contactos</button>
-                        <button class="tab-btn" data-tab="notas">📝 Notas</button>
-                        <button class="tab-btn" data-tab="documentos">&#x1F4C1; Documentos</button>
+            <div class="card resident-workspace">
+                <div class="resident-tabs-shell">
+                    <label class="resident-section-picker" for="residentSectionSelect">
+                        <span>Sección de la ficha</span>
+                        <select id="residentSectionSelect" class="form-control">
+                            <option value="timeline">Línea de tiempo</option><option value="datos">Perfil de cuidado</option><option value="medicamentos">Medicamentos</option>
+                            <option value="citas">Citas</option><option value="tareas">Tareas</option>
+                            <option value="sintomas">Síntomas</option><option value="signos">Signos vitales</option>
+                            <option value="contactos">Contactos</option><option value="notas">Notas</option>
+                            <option value="documentos">Documentos</option><option value="incidentes">Incidentes</option>
+                        </select>
+                    </label>
+                    <div class="tabs resident-tabs" aria-label="Secciones de la ficha">
+                        <button class="tab-btn" data-tab="timeline"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#history"></use></svg> Línea de tiempo</button>
+                        <button class="tab-btn" data-tab="datos"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#user"></use></svg> Perfil de cuidado</button>
+                        <button class="tab-btn" data-tab="medicamentos"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#medication"></use></svg> Medicamentos</button>
+                        <button class="tab-btn" data-tab="citas"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#calendar"></use></svg> Citas</button>
+                        <button class="tab-btn" data-tab="tareas"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#check"></use></svg> Tareas</button>
+                        <button class="tab-btn" data-tab="sintomas"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#symptom"></use></svg> Síntomas</button>
+                        <button class="tab-btn" data-tab="signos"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#heart"></use></svg> Signos vitales</button>
+                        <button class="tab-btn" data-tab="contactos"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#phone"></use></svg> Contactos</button>
+                        <button class="tab-btn" data-tab="notas"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#note"></use></svg> Notas</button>
+                        <button class="tab-btn" data-tab="documentos"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#folder"></use></svg> Documentos</button>
+                        <button class="tab-btn" data-tab="incidentes"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#incident"></use></svg> Incidentes</button>
                     </div>
                 </div>
-                <div style="padding:0 20px 20px">
+                <div class="resident-tab-panels">
+                    <div class="tab-content" id="tab-timeline"><div id="timelineContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
                     <div class="tab-content" id="tab-datos"><div id="datosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
                     <div class="tab-content" id="tab-medicamentos"><div id="medsContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div><div id="historialTomasContent"></div></div>
                     <div class="tab-content" id="tab-citas"><div id="citasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
@@ -88,6 +102,7 @@
                     <div class="tab-content" id="tab-contactos"><div id="contactosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
                     <div class="tab-content" id="tab-notas"><div id="notasContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
                     <div class="tab-content" id="tab-documentos"><div id="documentosContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
+                    <div class="tab-content" id="tab-incidentes"><div id="incidentesContent"><div class="page-loader"><div class="spinner spinner-dark"></div></div></div></div>
                 </div>
             </div>
         </div>
@@ -129,6 +144,13 @@
             <div class="form-group"><label class="form-label">Dosis</label><input type="text" name="mDosis" class="form-control" placeholder="Ej: 500mg"></div>
             <div class="form-group"><label class="form-label">Frecuencia</label><input type="text" name="mFrecuencia" class="form-control" placeholder="Ej: Cada 8hs"></div>
             <div class="form-group"><label class="form-label">Horarios custom</label><input type="text" name="mHorarios" class="form-control" placeholder="Ej: 8:00, 14:00, 20:00"></div>
+            <div class="form-group"><label class="form-label">Vía</label><input type="text" name="mVia" class="form-control" maxlength="80" placeholder="Ej: Oral"></div>
+            <div class="form-group"><label class="form-label">Prescriptor</label><input type="text" name="mPrescriptor" class="form-control" maxlength="240" placeholder="Profesional que indicó el esquema"></div>
+            <div class="form-group form-col-2"><label class="form-label">Indicación</label><textarea name="mIndicacion" class="form-control" rows="2" maxlength="4000" placeholder="Objetivo e indicaciones operativas"></textarea></div>
+            <div class="form-group"><label class="form-label">Vigente desde</label><input type="datetime-local" name="mVigenteDesde" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Vigente hasta</label><input type="datetime-local" name="mVigenteHasta" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Horarios programados</label><input type="text" name="mHorariosProgramados" class="form-control" placeholder="08:00, 14:00, 20:00"></div>
+            <div class="form-group"><label class="form-label">Motivo del cambio</label><input type="text" name="mMotivoCambio" class="form-control" maxlength="1000" placeholder="Obligatorio para comprender cambios"></div>
             <div class="form-group form-col-2"><label class="form-label">Instrucciones especiales</label><textarea name="mInstrucciones" class="form-control" rows="2"></textarea></div>
             <div id="stockFamiliarGroup" class="form-group">
                 <label class="form-label">Stock actual</label>
@@ -196,19 +218,22 @@
     </div>
 </div>
 
-<!-- Registrar toma -->
+<!-- Registrar administración u omisión -->
 <div class="modal-overlay" id="modalToma">
-    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">✅ Registrar toma</span><button class="modal-close" onclick="closeModal('modalToma')">✕</button></div>
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">Registrar medicación</span><button class="modal-close" onclick="closeModal('modalToma')">✕</button></div>
     <div class="modal-body">
         <div class="alert alert-info mb-16"><span class="alert-icon">💊</span><span id="tomaInfo"></span></div>
         <input type="hidden" id="tomaMedId">
         <form id="formToma">
+            <div class="form-group"><label class="form-label">Resultado</label><select name="tomaResultado" id="tomaResultado" class="form-control" onchange="toggleMedicationResultFields()"><option value="administrada">Administrada</option><option value="omitida">Omitida</option><option value="rechazada">Rechazada</option><option value="no_disponible">No disponible</option></select></div>
             <div class="form-group">
                 <label class="form-label">Cantidad a suministrar</label>
                 <input type="number" name="tomaCantidad" id="tomaCantidad" class="form-control" min="1" value="1" step="1">
             </div>
+            <div class="form-group" id="tomaMotivoGroup" style="display:none"><label class="form-label">Motivo *</label><textarea name="tomaMotivo" class="form-control" rows="2" maxlength="2000" placeholder="Explicá por qué no se administró"></textarea></div>
+            <div class="form-group"><label class="form-label">Programada para</label><input type="datetime-local" name="tomaProgramadaPara" class="form-control"></div>
             <div class="form-group"><label class="form-label">Notas opcionales</label><textarea name="tomaNotas" class="form-control" rows="2" placeholder="Ej: paciente rechazó dosis inicial, se repitió..."></textarea></div>
-            <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalToma')">Cancelar</button><button type="submit" class="btn btn-success">Confirmar toma ✅</button></div>
+            <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalToma')">Cancelar</button><button type="submit" class="btn btn-success">Registrar</button></div>
         </form>
     </div></div>
 </div>
@@ -267,7 +292,7 @@
 
 <!-- Síntoma -->
 <div class="modal-overlay" id="modalSintoma">
-    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="modalSintomaTitle">🩺 Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')">✕</button></div>
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="modalSintomaTitle">Registrar síntoma</span><button class="modal-close" onclick="closeModal('modalSintoma')" aria-label="Cerrar">×</button></div>
     <div class="modal-body"><form id="formSintoma">
         <div class="form-group"><label class="form-label">Descripción *</label><textarea name="sDesc" class="form-control" rows="3" required placeholder="Ej: Dolor de cabeza, fiebre 38.5°C..."></textarea></div>
         <div class="form-group"><label class="form-label">Intensidad (1-10)</label><select name="sIntensidad" class="form-control"><option value="">— Sin especificar —</option><option value="1">1 — Muy leve</option><option value="2">2 — Leve</option><option value="3">3 — Leve-moderada</option><option value="4">4 — Moderada</option><option value="5">5 — Moderada</option><option value="6">6 — Moderada-intensa</option><option value="7">7 — Intensa</option><option value="8">8 — Muy intensa</option><option value="9">9 — Severa</option><option value="10">10 — Muy severa</option></select><div class="form-hint">1 = muy leve · 10 = muy intensa</div></div>
@@ -277,18 +302,18 @@
 
 <!-- Signo vital -->
 <div class="modal-overlay" id="modalSigno">
-    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">❤️ Registrar signo vital</span><button class="modal-close" onclick="closeModal('modalSigno')">✕</button></div>
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">Registrar signo vital</span><button class="modal-close" onclick="closeModal('modalSigno')" aria-label="Cerrar">×</button></div>
     <div class="modal-body"><form id="formSigno">
         <div class="form-group"><label class="form-label">Tipo *</label>
             <select name="gTipo" id="gTipo" class="form-control" required onchange="onSignoTipoChange(this)">
                 <option value="">— Seleccionar —</option>
-                <option value="presion_arterial">🩸 Presión arterial</option>
-                <option value="frecuencia_cardiaca">❤️ Frecuencia cardíaca</option>
-                <option value="temperatura">🌡️ Temperatura</option>
-                <option value="saturacion_oxigeno">💨 Saturación de O₂</option>
-                <option value="glucosa">🩸 Glucosa</option>
-                <option value="peso">⚖️ Peso</option>
-                <option value="talla">📏 Talla</option>
+                <option value="presion_arterial">Presión arterial</option>
+                <option value="frecuencia_cardiaca">Frecuencia cardíaca</option>
+                <option value="temperatura">Temperatura</option>
+                <option value="saturacion_oxigeno">Saturación de O₂</option>
+                <option value="glucosa">Glucosa</option>
+                <option value="peso">Peso</option>
+                <option value="talla">Talla</option>
             </select>
         </div>
         <div class="form-grid">
@@ -313,9 +338,108 @@
             <div class="form-group"><label class="form-label">Relación</label><input type="text" name="cRelacion" class="form-control" placeholder="Hijo, hija, cónyuge..."></div>
             <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" name="cTel" class="form-control" placeholder="+54 11 1234-5678"></div>
             <div class="form-group"><label class="form-label">Email</label><input type="email" name="cEmail" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Prioridad</label><input type="number" name="cPrioridad" class="form-control" min="1" max="99" placeholder="1 = contactar primero"></div>
+            <div class="form-group form-col-2"><label class="form-label">Observaciones</label><textarea name="cObservaciones" class="form-control" rows="2" placeholder="Horario preferido, vínculo operativo u otra referencia útil"></textarea></div>
+            <div class="form-group form-col-2"><label class="form-label">Alcance / autorización operativa</label><textarea name="cAlcance" class="form-control" rows="2" placeholder="Información operativa registrada por la institución"></textarea><div class="form-hint">Este dato orienta al equipo; no determina por sí solo una autorización jurídica.</div></div>
         </div>
         <div class="form-group"><label class="form-check"><input type="checkbox" name="cPrincipal"><span>Contacto principal</span></label></div>
         <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalContacto')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar</button></div>
+    </form></div></div>
+</div>
+
+<!-- Evolución longitudinal -->
+<div class="modal-overlay" id="modalEvolucion">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalEvolucionTitle">Nueva evolución</span><button class="modal-close" onclick="closeModal('modalEvolucion')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body"><form id="formEvolucion">
+        <input type="hidden" name="eId"><input type="hidden" name="eVersion">
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Tipo *</label><select name="eTipo" class="form-control" required><option value="evaluacion">Evaluación</option><option value="seguimiento">Seguimiento</option><option value="observacion">Observación</option><option value="cambio_clinico">Cambio relevante</option></select></div>
+            <div class="form-group"><label class="form-label">Fecha y hora *</label><input type="datetime-local" name="eOcurridoAt" class="form-control" required></div>
+            <div class="form-group form-col-2"><label class="form-label">Título</label><input type="text" name="eTitulo" class="form-control" maxlength="200" placeholder="Resumen breve"></div>
+            <div class="form-group form-col-2"><label class="form-label">Registro *</label><textarea name="eContenido" class="form-control" rows="5" maxlength="8000" required></textarea><div class="form-hint">Registro operativo longitudinal; no redefine por sí solo una historia clínica formal.</div></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEvolucion')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar evolución</button></div>
+    </form></div></div>
+</div>
+
+<!-- Historial de esquema -->
+<div class="modal-overlay" id="modalMedicationHistory">
+    <div class="modal"><div class="modal-header"><span class="modal-title">Historial del esquema</span><button class="modal-close" onclick="closeModal('modalMedicationHistory')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body" id="medicationHistoryContent"></div></div>
+</div>
+
+<!-- Alerta manual del residente -->
+<div class="modal-overlay" id="modalAlerta">
+    <div class="modal modal-sm alert-editor-modal"><div class="modal-header"><span class="modal-title" id="modalAlertaTitle">Nueva alerta</span><button class="modal-close" onclick="closeModal('modalAlerta')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body"><form id="formAlerta">
+        <input type="hidden" name="aId">
+        <input type="hidden" name="aVersion">
+        <div class="form-group"><label class="form-label">Tipo *</label><select name="aTipo" class="form-control" required>
+            <option value="">— Seleccionar —</option><option value="medicacion">Medicación</option><option value="alergias">Alergias</option><option value="alimentacion_hidratacion">Alimentación e hidratación</option><option value="movilidad_caidas">Movilidad y caídas</option><option value="seguimiento_clinico">Seguimiento clínico</option><option value="cuidados_especiales">Cuidados especiales</option><option value="anticoagulacion">Anticoagulación (existente)</option><option value="diabetes">Diabetes (existente)</option><option value="personalizada">Personalizada</option><option value="otra">Otra</option>
+        </select></div>
+        <div class="form-group"><label class="form-label">Etiqueta visible *</label><input type="text" name="aEtiqueta" class="form-control" maxlength="160" required placeholder="Ej: Controlar ingesta de líquidos"></div>
+        <div class="form-group"><label class="form-label">Severidad</label><select name="aSeveridad" class="form-control"><option value="informativa">Informativa</option><option value="moderada" selected>Moderada</option><option value="alta">Alta</option></select></div>
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Vigente desde</label><input type="datetime-local" name="aDesde" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Vigente hasta</label><input type="datetime-local" name="aHasta" class="form-control"></div>
+        </div>
+        <label class="form-check"><input type="checkbox" name="aActiva" checked><span>Alerta activa</span></label>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalAlerta')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar alerta</button></div>
+    </form></div></div>
+</div>
+
+<!-- Incidente -->
+<div class="modal-overlay" id="modalIncidente">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalIncidenteTitle">Registrar incidente</span><button class="modal-close" onclick="closeModal('modalIncidente')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body"><form id="formIncidente">
+        <input type="hidden" name="iId"><input type="hidden" name="iVersion">
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Categoría *</label><select name="iCategoria" class="form-control" required>
+                <option value="">— Seleccionar —</option><option value="caida">Caída</option><option value="golpe_herida">Golpe / herida</option><option value="error_medicacion">Error de medicación</option><option value="omision_medicacion">Omisión de medicación</option><option value="episodio_conductual">Episodio conductual</option><option value="derivacion">Derivación</option><option value="otro">Otro</option>
+            </select></div>
+            <div class="form-group"><label class="form-label">Severidad *</label><select name="iSeveridad" class="form-control" required><option value="leve">Leve</option><option value="moderada" selected>Moderada</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></div>
+            <div class="form-group"><label class="form-label">Fecha y hora *</label><input type="datetime-local" name="iOcurridoAt" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Estado</label><select name="iEstado" class="form-control"><option value="abierto">Abierto</option><option value="en_seguimiento">En seguimiento</option><option value="cerrado">Cerrado</option></select></div>
+            <div class="form-group form-col-2"><label class="form-label" for="incidentDescription">Descripción *</label><textarea id="incidentDescription" name="iDescripcion" class="form-control" rows="3" minlength="3" maxlength="4000" aria-describedby="incidentDescriptionHint" required></textarea><small id="incidentDescriptionHint" class="form-hint">Ingresá al menos 3 caracteres.</small></div>
+            <div class="form-group form-col-2"><label class="form-label">Acción tomada</label><textarea name="iAccion" class="form-control" rows="2" maxlength="4000"></textarea></div>
+        </div>
+        <div class="form-section-soft">
+            <label class="form-check"><input type="checkbox" name="iNotificado" onchange="toggleIncidentNotificationFields(this.checked)"><span>Se notificó a un contacto</span></label>
+            <div id="incidentNotificationFields" class="form-grid" hidden>
+                <div class="form-group"><label class="form-label">Contacto notificado *</label><select name="iContacto" class="form-control"><option value="">— Seleccionar —</option></select></div>
+                <div class="form-group"><label class="form-label">Fecha y hora *</label><input type="datetime-local" name="iNotificadaAt" class="form-control"></div>
+                <div class="form-group form-col-2"><label class="form-label">Detalle de la notificación</label><textarea name="iNotificacionDetalle" class="form-control" rows="2"></textarea></div>
+            </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalIncidente')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar incidente</button></div>
+    </form></div></div>
+</div>
+
+<!-- Estado temporal -->
+<div class="modal-overlay" id="modalEstadoTemporal">
+    <div class="modal modal-sm"><div class="modal-header"><span class="modal-title">Actualizar estado temporal</span><button class="modal-close" onclick="closeModal('modalEstadoTemporal')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body"><form id="formEstadoTemporal">
+        <input type="hidden" name="eVersion">
+        <div class="form-group"><label class="form-label">Nuevo estado *</label><select name="eTipo" class="form-control" required><option value="presente">Presente / regreso</option><option value="internado">Internado</option><option value="salida_medica">Salida médica</option><option value="salida_familiar">Salida familiar</option><option value="otro">Otro</option></select></div>
+        <div class="form-group"><label class="form-label">Fecha y hora *</label><input type="datetime-local" name="eOcurridoAt" class="form-control" required></div>
+        <div class="form-group"><label class="form-label">Motivo / detalle</label><textarea name="eMotivo" class="form-control" rows="3" maxlength="2000"></textarea></div>
+        <div class="form-hint">Una salida o internación temporal no modifica el egreso del residente.</div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEstadoTemporal')">Cancelar</button><button type="submit" class="btn btn-primary">Registrar transición</button></div>
+    </form></div></div>
+</div>
+
+<!-- Documento con metadata -->
+<div class="modal-overlay" id="modalDocumento">
+    <div class="modal"><div class="modal-header"><span class="modal-title" id="modalDocumentoTitle">Adjuntar documento</span><button class="modal-close" onclick="closeModal('modalDocumento')" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body"><form id="formDocumento">
+        <input type="hidden" name="dId"><input type="hidden" name="dVersion">
+        <div class="form-group" id="documentFileGroup"><label class="form-label">Archivo *</label><input type="file" name="dArchivo" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" required><div class="form-hint">PDF, Word, Excel, imagen o TXT. Máximo 5 MB.</div></div>
+        <div class="form-grid">
+            <div class="form-group"><label class="form-label">Categoría</label><select name="dCategoria" class="form-control"><option value="">Sin categoría</option><option value="receta">Receta</option><option value="estudio_analisis">Estudio / análisis</option><option value="epicrisis">Epicrisis</option><option value="indicacion">Indicación</option><option value="dni">DNI</option><option value="cobertura">Cobertura</option><option value="otro">Otro</option></select></div>
+            <div class="form-group"><label class="form-label">Fecha del documento</label><input type="date" name="dFecha" class="form-control"></div>
+            <div class="form-group form-col-2"><label class="form-label">Descripción</label><textarea name="dDescripcion" class="form-control" rows="2" maxlength="2000"></textarea></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modalDocumento')">Cancelar</button><button type="submit" class="btn btn-primary">Subir documento</button></div>
     </form></div></div>
 </div>
 
@@ -352,6 +476,18 @@
         </div>
         <div class="form-group"><label class="form-label">⚠️ Alergias y contraindicaciones</label><textarea name="pAlergias" class="form-control alergias-input" rows="2" placeholder="Penicilina, aspirina, látex…"></textarea></div>
         <div class="form-group"><label class="form-label">Antecedentes clínicos</label><textarea name="pAntecedentes" class="form-control" rows="3" placeholder="HTA, DBT, EPOC, cirugías previas…"></textarea></div>
+        <fieldset class="care-profile-fieldset">
+            <legend>Perfil de cuidado</legend>
+            <p class="form-hint">Información operativa para organizar el cuidado cotidiano. No reemplaza documentación clínica oficial.</p>
+            <div class="form-group"><label class="form-label">Dieta y restricciones</label><textarea name="pDietaRestricciones" class="form-control" rows="2" maxlength="2000" placeholder="Ej: dieta hiposódica, líquidos espesados"></textarea></div>
+            <div class="form-grid">
+                <div class="form-group"><label class="form-label">Movilidad</label><select name="pMovilidad" class="form-control"><option value="">Sin especificar</option><option value="independiente">Independiente</option><option value="asistencia_parcial">Asistencia parcial</option><option value="asistencia_total">Asistencia total</option><option value="inmovil">Inmóvil</option></select></div>
+                <div class="form-group"><label class="form-label">Nivel de dependencia</label><select name="pNivelDependencia" class="form-control"><option value="">Sin especificar</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option><option value="total">Total</option></select></div>
+                <div class="form-group"><label class="form-label">Riesgo de caída</label><select name="pRiesgoCaida" class="form-control"><option value="">Sin especificar</option><option value="bajo">Bajo</option><option value="moderado">Moderado</option><option value="alto">Alto</option></select></div>
+                <div class="form-group"><label class="form-label">Continencia</label><select name="pContinencia" class="form-control"><option value="">Sin especificar</option><option value="continente">Continente</option><option value="asistencia">Requiere asistencia</option><option value="incontinencia_urinaria">Incontinencia urinaria</option><option value="incontinencia_fecal">Incontinencia fecal</option><option value="incontinencia_mixta">Incontinencia mixta</option></select></div>
+            </div>
+            <div class="form-group"><label class="form-label">Aspectos cognitivos</label><textarea name="pAspectosCognitivos" class="form-control" rows="2" maxlength="2000" placeholder="Orientación, memoria, comunicación y apoyos cotidianos"></textarea></div>
+        </fieldset>
         <div class="form-group"><label class="form-label">Notas de ingreso</label><textarea name="pNotas" class="form-control" rows="3"></textarea></div>
         <div class="modal-footer" style="padding:0;margin-top:10px"><button type="button" class="btn btn-secondary" onclick="closeModal('modalEditPaciente')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cambios</button></div>
     </form></div></div>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
@@ -54,13 +54,22 @@
         </div>
 
         <div class="page-content">
+            <nav class="settings-index" aria-label="Secciones de configuración">
+                <a href="#mi-cuenta">Mi cuenta</a>
+                <a href="#estacion-compartida">Estación compartida</a>
+                <a href="#institucion">Institución</a>
+                <a href="#operacion">Operación</a>
+                <a href="#permisos">Permisos</a>
+                <a href="#contratos">Documentación contractual</a>
+                <a href="#datos-continuidad">Datos y continuidad</a>
+            </nav>
             <div class="settings-grid">
 
                 <!-- ===== COLUMNA 1 ===== -->
                 <div class="settings-col">
 
                     <!-- Perfil personal -->
-                    <div class="card">
+                    <div class="card settings-anchor" id="mi-cuenta">
                         <div class="card-header">
                             <h3 class="card-title">👤 Mi perfil</h3>
                         </div>
@@ -75,7 +84,7 @@
                                     <input type="email" name="email" id="perfilEmail" class="form-control" placeholder="tu@email.com">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Rol</label>
+                                    <label class="form-label" for="perfilRol">Rol</label>
                                     <input type="text" id="perfilRol" class="form-control" disabled>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Guardar perfil</button>
@@ -101,7 +110,7 @@
                     </div>
 
                     <!-- Modo Estación Compartida (solo admin) -->
-                    <div class="card admin-only">
+                    <div class="card admin-only settings-anchor" id="estacion-compartida">
                         <div class="card-header">
                             <h3 class="card-title">🖥️ Modo Estación Compartida</h3>
                         </div>
@@ -110,18 +119,17 @@
                                 <label class="toggle-item">
                                     <div>
                                         <div class="toggle-title">Activar modo estación compartida</div>
-                                        <div class="toggle-desc">Una sola computadora o tablet para todo el equipo. Cada persona elige su nombre antes de registrar, sin cerrar ni abrir sesión.</div>
+                                        <div class="toggle-desc">Una sola computadora o tablet para el equipo. Cada persona habilitada desde Staff elige su identidad y confirma su PIN antes de registrar.</div>
                                     </div>
-                                    <label class="switch"><input type="checkbox" id="sharedModeToggle" onchange="toggleSharedMode(this.checked)"><span class="switch-slider"></span></label>
+                                    <label class="switch"><input type="checkbox" id="sharedModeToggle" aria-label="Activar modo estación compartida" onchange="toggleSharedMode(this.checked)"><span class="switch-slider"></span></label>
                                 </label>
                             </div>
                             <div id="sharedModeInfo" style="display:none;margin-top:16px;padding:12px 14px;background:var(--bg-page);border-radius:8px;border-left:3px solid var(--pro-primary)">
                                 <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">
-                                    <strong>✅ Modo activo</strong> — Aparece un botón en la barra superior de cada página que muestra el nombre de la persona que está registrando en ese momento.<br>
-                                    Cualquier miembro del equipo puede tocarlo y seleccionar su nombre. No hace falta contraseña.<br>
-                                    <span style="font-size:.78rem;opacity:.75">La selección se reinicia al cerrar el navegador. La sesión del administrador permanece activa en todo momento.</span>
+                                    <strong>Modo activo</strong> — La barra superior muestra quién está registrando. Para cambiar de persona se selecciona una identidad habilitada desde Staff y se ingresa su PIN.<br>
+                                    <span style="font-size:.78rem">Una identidad secundaria expira tras 60 minutos de inactividad o 8 horas como máximo. El titular puede continuar como sí mismo sin PIN.</span>
                                 </p>
-                                <button class="btn btn-primary btn-sm" onclick="openWorkerSwitcher()">👥 Seleccionar quién registra ahora</button>
+                                <button class="btn btn-primary btn-sm" onclick="openWorkerSwitcher()"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#users"></use></svg> Cambiar persona activa</button>
                             </div>
                         </div>
                     </div>
@@ -141,8 +149,24 @@
                         </div>
                     </div>
 
+                    <!-- Documentación contractual (solo admin) -->
+                    <div class="card admin-only settings-anchor" id="contratos">
+                        <div class="card-header">
+                            <h3 class="card-title">📄 Documentación institucional</h3>
+                        </div>
+                        <div class="card-body">
+                            <p id="contractStatusText" style="font-size:.88rem;color:var(--text-secondary);line-height:1.55;margin-bottom:12px">Consultando versión contractual…</p>
+                            <div id="contractDocumentLinks" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+                            <div id="contractAcceptancePanel" style="display:none">
+                                <p style="font-size:.86rem;line-height:1.5;margin-bottom:14px">Podés leer y aceptar los tres documentos sin salir de esta pantalla.</p>
+                                <button id="btnAcceptContract" type="button" class="btn btn-primary" onclick="openContractReview()">Revisar y aceptar documentación</button>
+                            </div>
+                            <button id="btnDownloadContractEvidence" type="button" class="btn btn-secondary btn-sm" style="display:none" onclick="descargarEvidenciaContractual(this)">Descargar constancia de aceptación</button>
+                        </div>
+                    </div>
+
                     <!-- Administración avanzada -->
-                    <div class="card admin-only">
+                    <div class="card admin-only settings-anchor" id="datos-continuidad">
                         <div class="card-header">
                             <h3 class="card-title">⚙️ Administración avanzada</h3>
                         </div>
@@ -180,7 +204,7 @@
                 <div class="settings-col">
 
                     <!-- Institución (solo admin) -->
-                    <div class="card admin-only">
+                    <div class="card admin-only settings-anchor" id="institucion">
                         <div class="card-header">
                             <h3 class="card-title">🏥 Datos de la institución</h3>
                         </div>
@@ -191,7 +215,7 @@
                                     <input type="text" name="nombre" id="instNombre" class="form-control" placeholder="Nombre oficial">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Tipo</label>
+                                    <label class="form-label" for="instTipo">Tipo</label>
                                     <select name="tipo" id="instTipo" class="form-control">
                                         <option value="geriatrico">Geriátrico / Residencia de adultos mayores</option>
                                         <option value="discapacidad">Centro de día / Hogar para personas con discapacidad</option>
@@ -289,7 +313,7 @@
                     </div>
 
                     <!-- Alertas en el dashboard -->
-                    <div class="card">
+                    <div class="card settings-anchor" id="operacion">
                         <div class="card-header">
                             <h3 class="card-title">Alertas en el dashboard</h3>
                         </div>
@@ -301,19 +325,19 @@
                             <div class="toggle-list">
                                 <label class="toggle-item">
                                     <div><div class="toggle-title">Síntomas recientes (últimas 24h)</div></div>
-                                    <label class="switch"><input type="checkbox" checked id="notifSintomas"><span class="switch-slider"></span></label>
+                                    <label class="switch"><input type="checkbox" checked id="notifSintomas" aria-label="Notificar nuevos síntomas"><span class="switch-slider"></span></label>
                                 </label>
                                 <label class="toggle-item">
                                     <div><div class="toggle-title">Notas urgentes</div></div>
-                                    <label class="switch"><input type="checkbox" checked id="notifNotas"><span class="switch-slider"></span></label>
+                                    <label class="switch"><input type="checkbox" checked id="notifNotas" aria-label="Notificar notas urgentes"><span class="switch-slider"></span></label>
                                 </label>
                                 <label class="toggle-item">
                                     <div><div class="toggle-title">Citas próximas (7 días)</div></div>
-                                    <label class="switch"><input type="checkbox" checked id="notifCitas"><span class="switch-slider"></span></label>
+                                    <label class="switch"><input type="checkbox" checked id="notifCitas" aria-label="Mostrar citas próximas"><span class="switch-slider"></span></label>
                                 </label>
                                 <label class="toggle-item">
                                     <div><div class="toggle-title">Medicamentos con stock bajo</div></div>
-                                    <label class="switch"><input type="checkbox" checked id="notifStock"><span class="switch-slider"></span></label>
+                                    <label class="switch"><input type="checkbox" checked id="notifStock" aria-label="Mostrar medicamentos con stock bajo"><span class="switch-slider"></span></label>
                                 </label>
                             </div>
                             <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="guardarNotifPrefs()">Guardar preferencias</button>
@@ -336,7 +360,7 @@
             </div><!-- /settings-grid -->
 
             <!-- Permisos del equipo — ancho completo (solo admin, no en modo estación compartida) -->
-            <div class="card admin-only" id="permisosCard" style="margin-top:20px">
+            <div class="card admin-only settings-anchor" id="permisos" style="margin-top:20px">
                 <div class="card-header">
                     <h3 class="card-title">🔐 Permisos del equipo</h3>
                 </div>
@@ -356,64 +380,64 @@
                             <div class="toggle-title">Ver todos los pacientes</div>
                             <div class="toggle-desc">Si está desactivado, el rol solo ve los pacientes que tiene asignados</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_ver_todos_pacientes" checked><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_todos_pacientes" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_ver_todos_pacientes" aria-label="Médico: ver todos los pacientes" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_todos_pacientes" aria-label="Personal: ver todos los pacientes" checked><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 2: crear nuevos pacientes -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Crear nuevos pacientes</div>
                             <div class="toggle-desc">Permite registrar nuevos ingresos en la institución</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_crear_paciente" checked><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_paciente" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_crear_paciente" aria-label="Médico: crear nuevos pacientes" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_paciente" aria-label="Personal: crear nuevos pacientes" checked><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 3: editar datos de pacientes -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Editar datos de pacientes</div>
                             <div class="toggle-desc">Permite modificar datos clínicos y personales del residente</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_editar_paciente" checked><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_editar_paciente" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_editar_paciente" aria-label="Médico: editar datos de pacientes" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_editar_paciente" aria-label="Personal: editar datos de pacientes" checked><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 4: dar de alta -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Dar de alta (egresar) pacientes</div>
                             <div class="toggle-desc">Permite registrar el egreso definitivo del residente</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_dar_alta" checked><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_dar_alta"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_dar_alta" aria-label="Médico: egresar pacientes" checked><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_dar_alta" aria-label="Personal: egresar pacientes"><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 5: gestionar catálogo -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Gestionar catálogo de insumos</div>
                             <div class="toggle-desc">Ver, crear, editar y reponer stock. Eliminar ítems sigue siendo solo para el administrador</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_gestionar_catalogo"><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_gestionar_catalogo"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_gestionar_catalogo" aria-label="Médico: gestionar catálogo de insumos"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_gestionar_catalogo" aria-label="Personal: gestionar catálogo de insumos"><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 6: ver sección de personal -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Ver la sección de personal</div>
                             <div class="toggle-desc">Ver el listado del equipo de trabajo (solo lectura, sin crear ni editar)</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_ver_staff"><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_staff"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_ver_staff" aria-label="Médico: ver la sección de personal"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_ver_staff" aria-label="Personal: ver la sección de personal"><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 7: agregar nuevo personal -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Agregar nuevo personal</div>
                             <div class="toggle-desc">Permite crear nuevos miembros del equipo (cuidadores, médicos, familiares). Desactivado por defecto</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_crear_staff"><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_staff"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_crear_staff" aria-label="Médico: agregar nuevo personal"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_crear_staff" aria-label="Personal: agregar nuevo personal"><span class="switch-slider"></span></label></div>
 
                         <!-- Fila 8: asignar residentes al personal -->
                         <div class="perm-row-label" style="padding:12px 14px;border-top:1px solid var(--border-color)">
                             <div class="toggle-title">Asignar residentes al personal</div>
                             <div class="toggle-desc">Permite vincular y desvincular residentes con miembros del equipo. Desactivado por defecto</div>
                         </div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_asignar_paciente"><span class="switch-slider"></span></label></div>
-                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_asignar_paciente"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_medico_asignar_paciente" aria-label="Médico: asignar residentes al personal"><span class="switch-slider"></span></label></div>
+                        <div class="perm-row-switch" style="border-top:1px solid var(--border-color);border-left:1px solid var(--border-color)"><label class="switch"><input type="checkbox" id="perm_cuidador_staff_asignar_paciente" aria-label="Personal: asignar residentes al personal"><span class="switch-slider"></span></label></div>
 
                     </div><!-- /permisos tabla -->
 
@@ -434,41 +458,41 @@
                         <!-- fila 1 -->
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color)">
                             <div><div class="toggle-title">💊 Medicamentos y tratamientos</div><div class="toggle-desc">Listado de medicamentos activos del residente</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_medicamentos" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_medicamentos" aria-label="Familiar: ver medicamentos y tratamientos" checked><span class="switch-slider"></span></label>
                         </label>
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color);border-left:1px solid var(--border-color)">
                             <div><div class="toggle-title">📅 Citas y turnos</div><div class="toggle-desc">Citas médicas programadas</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_citas" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_citas" aria-label="Familiar: ver citas y turnos" checked><span class="switch-slider"></span></label>
                         </label>
 
                         <!-- fila 2 -->
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color)">
                             <div><div class="toggle-title">✅ Tareas de cuidado</div><div class="toggle-desc">Tareas diarias y de rutina asignadas al residente</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_tareas" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_tareas" aria-label="Familiar: ver tareas de cuidado" checked><span class="switch-slider"></span></label>
                         </label>
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color);border-left:1px solid var(--border-color)">
                             <div><div class="toggle-title">🩺 Síntomas registrados</div><div class="toggle-desc">Historial de síntomas cargados por el equipo</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_sintomas" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_sintomas" aria-label="Familiar: ver síntomas registrados" checked><span class="switch-slider"></span></label>
                         </label>
 
                         <!-- fila 3 -->
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color)">
                             <div><div class="toggle-title">❤️ Signos vitales</div><div class="toggle-desc">Registros de tensión, temperatura, glucemia, etc.</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_signos" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_signos" aria-label="Familiar: ver signos vitales" checked><span class="switch-slider"></span></label>
                         </label>
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-bottom:1px solid var(--border-color);border-left:1px solid var(--border-color)">
                             <div><div class="toggle-title">📞 Contactos de emergencia</div><div class="toggle-desc">Contactos registrados en la ficha del residente</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_contactos" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_contactos" aria-label="Familiar: ver contactos de emergencia" checked><span class="switch-slider"></span></label>
                         </label>
 
                         <!-- fila 4 -->
                         <label class="toggle-item" style="padding:12px 14px;margin:0">
                             <div><div class="toggle-title">📝 Notas clínicas</div><div class="toggle-desc">Notas internas del equipo. Desactivado por defecto — suelen contener información sensible</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_notas"><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_notas" aria-label="Familiar: ver notas clínicas"><span class="switch-slider"></span></label>
                         </label>
                         <label class="toggle-item" style="padding:12px 14px;margin:0;border-left:1px solid var(--border-color)">
                             <div><div class="toggle-title">📁 Documentos clínicos</div><div class="toggle-desc">Archivos e informes subidos a la ficha del residente</div></div>
-                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_documentos" checked><span class="switch-slider"></span></label>
+                            <label class="switch"><input type="checkbox" id="perm_familiar_ver_documentos" aria-label="Familiar: ver documentos clínicos" checked><span class="switch-slider"></span></label>
                         </label>
 
                     </div><!-- /familiar toggles -->
@@ -511,6 +535,7 @@
 <script src="../js/api-b2b.js"></script>
 <script src="../js/maintenance-b2b-v2.js?v=20261003-neutral-pending"></script>
 <script src="../js/utils-b2b.js"></script>
+<script src="../js/contract-reader-b2b.js"></script>
 <script src="../js/configuracion.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {

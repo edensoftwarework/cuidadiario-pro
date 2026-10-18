@@ -41,6 +41,7 @@ async function initConfiguracion() {
         loadPermisos();
         await cargarEstadoPlan();
         await cargarEstadoBaja();
+        await cargarEstadoContractual();
         if (new URLSearchParams(window.location.search).get('autoplan')) {
             setTimeout(() => contactarDesarrolladorPlan(), 400);
         }
@@ -277,26 +278,120 @@ function loadSharedMode() {
     if (info)   info.style.display = enabled ? '' : 'none';
 }
 
-function toggleSharedMode(enabled) {
+async function toggleSharedMode(enabled) {
     const info = document.getElementById('sharedModeInfo');
-    if (enabled) {
-        localStorage.setItem('cd_shared_mode', '1');
-        if (info) info.style.display = '';
-        // Persistir en la DB para sincronización cross-device
-        API_B2B.updateInstitucion({ shared_mode: true }).catch(err => console.warn('[shared_mode] Error guardando en DB:', err.message));
-        // Si no hay nadie activo, abrir el selector enseguida
-        if (!sessionStorage.getItem('cd_active_worker')) {
-            setTimeout(() => openWorkerSwitcher(), 350);
+    const toggle = document.getElementById('sharedModeToggle');
+    if (toggle) toggle.disabled = true;
+    try {
+        await API_B2B.updateInstitucion({ shared_mode: enabled });
+        const principal = API_B2B.getPrincipalUser();
+        if (principal) API_B2B.setUser({ ...principal, shared_mode: enabled });
+        if (enabled) {
+            localStorage.setItem('cd_shared_mode', '1');
+            if (info) info.style.display = '';
+            API_B2B.initOperatorLifecycle();
+            initSharedStationUI();
+            if (!API_B2B.getOperatorContext()) setTimeout(() => openWorkerSwitcher(), 150);
+            showToast('Modo estación compartida activado', 'success');
+        } else {
+            localStorage.removeItem('cd_shared_mode');
+            API_B2B.clearOperatorContext('shared-mode-disabled', true);
+            if (info) info.style.display = 'none';
+            document.getElementById('workerChip')?.remove();
+            document.getElementById('sidebarWorkerWidget')?.remove();
+            showToast('Modo estación compartida desactivado', 'info');
         }
-        showToast('Modo estación compartida activado ✅', 'success');
-    } else {
-        localStorage.removeItem('cd_shared_mode');
-        sessionStorage.removeItem('cd_active_worker');
-        if (info) info.style.display = 'none';
-        document.getElementById('workerChip')?.remove();
-        // Persistir en la DB para sincronización cross-device
-        API_B2B.updateInstitucion({ shared_mode: false }).catch(err => console.warn('[shared_mode] Error guardando en DB:', err.message));
-        showToast('Modo estación compartida desactivado', 'info');
+    } catch (error) {
+        if (toggle) toggle.checked = !enabled;
+        showToast('No se pudo actualizar el modo de estación compartida: ' + error.message, 'error');
+    } finally {
+        if (toggle) toggle.disabled = false;
+    }
+}
+
+let _contractStatus = null;
+
+function contractPublicVersion(version) {
+    const date = String(version || '').match(/(20\d{2})-(\d{2})-(\d{2})/);
+    return date ? `${date[3]}/${date[2]}/${date[1]}` : 'actual';
+}
+
+async function cargarEstadoContractual() {
+    const statusText = document.getElementById('contractStatusText');
+    const links = document.getElementById('contractDocumentLinks');
+    const panel = document.getElementById('contractAcceptancePanel');
+    const exportButton = document.getElementById('btnDownloadContractEvidence');
+    if (!statusText || !links || !panel || !exportButton) return;
+    panel.style.display = 'none';
+    exportButton.style.display = 'none';
+    links.replaceChildren();
+    try {
+        _contractStatus = await API_B2B.getContractStatus();
+        const version = contractPublicVersion(_contractStatus.current_bundle.version);
+        const reviewButton = document.createElement('button');
+        reviewButton.type = 'button';
+        reviewButton.className = 'btn btn-secondary btn-sm';
+        reviewButton.textContent = 'Leer documentación';
+        reviewButton.addEventListener('click', openContractReview);
+        links.appendChild(reviewButton);
+        if (_contractStatus.accepted) {
+            const acceptedAt = new Date(_contractStatus.acceptance.accepted_at).toLocaleString('es-AR');
+            statusText.textContent = `Documentación aceptada. Versión documental ${version}, aceptada el ${acceptedAt}. La evidencia y los textos exactos pueden exportarse.`;
+            exportButton.style.display = '';
+            return;
+        }
+        if (_contractStatus.current_bundle.status !== 'active') {
+            statusText.textContent = `La versión documental ${version} está disponible para consulta.`;
+            return;
+        }
+        statusText.textContent = `La versión documental ${version} está pendiente de aceptación institucional.`;
+        panel.style.display = '';
+    } catch (error) {
+        _contractStatus = null;
+        statusText.textContent = error.message || 'No se pudo consultar la documentación contractual.';
+    }
+}
+
+async function openContractReview() {
+    if (!_contractStatus?.current_bundle) return;
+    await ContractReaderB2B.open(_contractStatus.current_bundle, {
+        canAccept: _contractStatus.can_accept === true && !_contractStatus.accepted,
+        onAccepted: async () => {
+            showToast('Aceptación institucional registrada', 'success');
+            await cargarEstadoContractual();
+        },
+    });
+}
+
+async function descargarEvidenciaContractual(button) {
+    if (!button || button.disabled) return;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Preparando…';
+    try {
+        const { blob, filename } = await API_B2B.download('/api/b2b/contracts/evidence/export', {
+            fallbackFilename: 'cuidadiario-constancia-aceptacion.pdf',
+            expectedContentType: 'application/pdf',
+            invalidFormatMessage: 'La constancia no pudo descargarse como PDF válido.',
+        });
+        const url = URL.createObjectURL(blob);
+        try {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename || 'cuidadiario-constancia-aceptacion.pdf';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } finally {
+            setTimeout(() => URL.revokeObjectURL(url), 0);
+        }
+        showToast('Constancia de aceptación descargada ✅', 'success');
+    } catch (error) {
+        showToast(error.message || 'No se pudo descargar la evidencia.', 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
     }
 }
 // ============================================
@@ -415,7 +510,11 @@ async function descargarExportInstitucional(button) {
     button.textContent = 'Generando...';
     showToast('Preparando exportación institucional completa...', 'info');
     try {
-        const { blob, filename, receipt } = await API_B2B.download('/api/b2b/institutional-export');
+        const { blob, filename, receipt } = await API_B2B.download('/api/b2b/institutional-export', {
+            fallbackFilename: 'cuidadiario-export-institucional.zip',
+            expectedContentType: 'application/zip',
+            invalidFormatMessage: 'La exportación institucional no pudo descargarse en formato ZIP.',
+        });
         const url = URL.createObjectURL(blob);
         try {
             const link = document.createElement('a');
@@ -426,7 +525,9 @@ async function descargarExportInstitucional(button) {
             link.click();
             link.remove();
         } finally {
-            setTimeout(() => URL.revokeObjectURL(url), 0);
+            // La descarga del blob es asíncrona en algunos navegadores. Revocarlo
+            // en el siguiente tick puede invalidar un archivo todavía en curso.
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
         }
         showToast('Exportación institucional descargada ✅', 'success');
         return { receipt };

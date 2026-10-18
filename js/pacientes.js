@@ -81,11 +81,14 @@ function renderPacientes(lista) {
         const isEgresado = !!p.fecha_egreso;
         const id = safeRecordId(p.id);
         const editBtn = !isEgresado && canDo('editar_paciente')
-            ? `<button class="btn btn-sm btn-secondary btn-icon" title="Editar paciente" onclick="openEditPaciente(${id}, event)">✏️</button>`
+            ? `<button class="btn btn-sm btn-secondary btn-icon" title="Editar residente" aria-label="Editar a ${escapeHtml(p.nombre)}" onclick="openEditPaciente(${id}, event)">${b2bIcon('edit')}</button>`
             : '';
+        const privatePhoto = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(p.foto_url || '')) ? p.foto_url : null;
         return `
         <div class="paciente-card${isEgresado ? ' egresado' : ''}" onclick="window.location.href='paciente.html?id=${id}'">
-            <div class="paciente-card-avatar">${isEgresado ? '🚪' : '👤'}</div>
+            <div class="paciente-card-avatar${privatePhoto ? ' has-photo' : ''}">
+                ${privatePhoto ? `<img src="${privatePhoto}" alt="Foto privada de ${escapeHtml(p.nombre)}" loading="lazy" decoding="async">` : b2bIcon(isEgresado ? 'status' : 'user')}
+            </div>
             <div class="paciente-card-body">
                 <div class="paciente-card-name">${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</div>
                 <div class="paciente-card-meta">
@@ -94,17 +97,24 @@ function renderPacientes(lista) {
                     ${isEgresado ? ' · Alta: ' + formatDate(p.fecha_egreso) : ''}
                 </div>
                 <div class="paciente-card-tags">
-                    ${isEgresado ? '<span class="badge badge-red">🚪 Egresado</span>' : ''}
+                    ${isEgresado ? `<span class="badge badge-red">${b2bIcon('status')} Egresado</span>` : ''}
                     ${p.diagnostico ? `<span class="badge badge-blue">${escapeHtml(p.diagnostico)}</span>` : ''}
                     ${!isEgresado && p.obra_social ? `<span class="badge badge-teal">${escapeHtml(p.obra_social)}</span>` : ''}
                 </div>
             </div>
-            <div class="d-flex align-center gap-4" onclick="event.stopPropagation()">
+            <div class="paciente-card-actions" onclick="event.stopPropagation()">
                 ${editBtn}
                 <span class="paciente-card-action" style="pointer-events:none">›</span>
             </div>
         </div>`;
     }).join('');
+
+    grid.querySelectorAll('.paciente-card-avatar.has-photo img').forEach(image => {
+        image.addEventListener('error', () => {
+            image.closest('.paciente-card-avatar').classList.remove('has-photo');
+            image.closest('.paciente-card-avatar').innerHTML = b2bIcon('user');
+        }, { once: true });
+    });
 
     _renderPagination(totalPages, lista.length);
 }

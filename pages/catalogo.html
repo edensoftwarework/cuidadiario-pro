@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo de insumos — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
@@ -68,12 +68,15 @@
             <!-- Selector de vista: institucional vs. por paciente -->
             <div class="card" style="margin-bottom:16px">
                 <div class="card-body" style="padding:14px 20px">
-                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                        <span style="font-size:.82rem;font-weight:600;color:var(--text-secondary)">Ver:</span>
-                        <button id="btnViewInstitucional" class="btn btn-primary btn-sm" onclick="switchView('institucional')">🏥 Insumos institucionales</button>
-                        <button id="btnViewPaciente" class="btn btn-secondary btn-sm" onclick="switchView('paciente')">👤 Insumos por residente</button>
-                        <div id="pacienteSelectWrap" style="display:none;flex:1;min-width:200px;max-width:320px">
-                            <select id="pacienteSelector" class="form-control" style="padding:6px 10px;font-size:.85rem" onchange="onPacienteSelectorChange()">
+                    <div class="catalog-view-toolbar">
+                        <span class="catalog-view-label">Alcance del inventario</span>
+                        <div class="catalog-view-switch" role="group" aria-label="Alcance del inventario">
+                            <button id="btnViewInstitucional" class="btn btn-primary btn-sm" aria-pressed="true" onclick="switchView('institucional')"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#building"></use></svg> Institución</button>
+                            <button id="btnViewPaciente" class="btn btn-secondary btn-sm" aria-pressed="false" onclick="switchView('paciente')"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#user"></use></svg> Por residente</button>
+                        </div>
+                        <div id="pacienteSelectWrap" class="catalog-resident-selector" style="display:none">
+                            <label class="sr-only" for="pacienteSelector">Residente</label>
+                            <select id="pacienteSelector" class="form-control" onchange="onPacienteSelectorChange()">
                                 <option value="">— Seleccioná un residente —</option>
                             </select>
                         </div>
@@ -84,7 +87,7 @@
             <!-- Catálogo principal -->
             <div id="catalogoMainCard" class="card">
                 <div class="card-header">
-                    <h3 class="card-title" id="catalogoCardTitle">📦 Inventario institucional</h3>
+                    <h3 class="card-title" id="catalogoCardTitle"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#box"></use></svg> Inventario institucional</h3>
                     <div class="d-flex gap-8 align-center" style="flex-wrap:wrap">
                         <input type="text" id="catalogoSearch" class="form-control" style="width:200px;padding:6px 10px;font-size:.85rem" placeholder="Buscar...">
                         <select id="catalogoCategoriaFilter" class="form-control" style="width:180px;padding:6px 10px;font-size:.85rem" title="Filtrar por categoría">

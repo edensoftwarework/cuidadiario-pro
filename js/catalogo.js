@@ -172,17 +172,17 @@ async function switchView(view) {
     const cardTitle = document.getElementById('catalogoCardTitle');
 
     if (view === 'institucional') {
-        if (btnInst) { btnInst.className = 'btn btn-primary btn-sm'; }
-        if (btnPac)  { btnPac.className  = 'btn btn-secondary btn-sm'; }
+        if (btnInst) { btnInst.className = 'btn btn-primary btn-sm'; btnInst.setAttribute('aria-pressed', 'true'); }
+        if (btnPac)  { btnPac.className  = 'btn btn-secondary btn-sm'; btnPac.setAttribute('aria-pressed', 'false'); }
         if (pacWrap) pacWrap.style.display = 'none';
-        if (cardTitle) cardTitle.textContent = '📦 Inventario institucional';
+        if (cardTitle) cardTitle.innerHTML = `${b2bIcon('box')} Inventario institucional`;
         _selectedPacienteId = null;
         await loadCatalogo();
     } else {
-        if (btnInst) { btnInst.className = 'btn btn-secondary btn-sm'; }
-        if (btnPac)  { btnPac.className  = 'btn btn-primary btn-sm'; }
+        if (btnInst) { btnInst.className = 'btn btn-secondary btn-sm'; btnInst.setAttribute('aria-pressed', 'false'); }
+        if (btnPac)  { btnPac.className  = 'btn btn-primary btn-sm'; btnPac.setAttribute('aria-pressed', 'true'); }
         if (pacWrap) pacWrap.style.display = '';
-        if (cardTitle) cardTitle.textContent = '👤 Insumos del residente';
+        if (cardTitle) cardTitle.innerHTML = `${b2bIcon('user')} Insumos del residente`;
         // Restore patient selection from DOM selector (may have been cleared when switching to institucional)
         const domSel = document.getElementById('pacienteSelector');
         if (!_selectedPacienteId && domSel?.value) {
@@ -190,7 +190,7 @@ async function switchView(view) {
         }
         if (_selectedPacienteId) {
             const pac = _pacientesList.find(p => p.id === _selectedPacienteId);
-            if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente'}`;
+            if (cardTitle) cardTitle.innerHTML = `${b2bIcon('user')} Insumos de ${escapeHtml(pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente')}`;
             await loadCatalogo();
         } else {
             document.getElementById('catalogoList').innerHTML =
@@ -207,10 +207,10 @@ async function onPacienteSelectorChange() {
     const cardTitle = document.getElementById('catalogoCardTitle');
     if (_selectedPacienteId) {
         const pac = _pacientesList.find(p => p.id === _selectedPacienteId);
-        if (cardTitle) cardTitle.textContent = `👤 Insumos de ${pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente'}`;
+        if (cardTitle) cardTitle.innerHTML = `${b2bIcon('user')} Insumos de ${escapeHtml(pac ? (pac.apellido + ' ' + pac.nombre).trim() : 'residente')}`;
         await loadCatalogo();
     } else {
-        if (cardTitle) cardTitle.textContent = '👤 Insumos del residente';
+        if (cardTitle) cardTitle.innerHTML = `${b2bIcon('user')} Insumos del residente`;
         document.getElementById('catalogoList').innerHTML =
             `<div class="empty-state"><div class="empty-icon">👤</div><h3>Seleccioná un residente</h3><p>Elegí un residente del selector de arriba para ver o agregar sus insumos específicos.</p></div>`;
         document.getElementById('stockBajoCard').style.display = 'none';
@@ -274,7 +274,7 @@ function renderCatalogo(lista) {
         box.className = 'empty-state';
         const icon = document.createElement('d' + 'iv');
         icon.className = 'empty-icon';
-        icon.textContent = '📦';
+        icon.innerHTML = b2bIcon(isPatientView ? 'user' : 'box');
         const h3 = document.createElement('h3');
         h3.textContent = title;
         const p = document.createElement('p');
@@ -312,28 +312,28 @@ function renderCatalogo(lista) {
                     const low = c.stock_actual <= (c.stock_minimo ?? 5);
                     const empty = c.stock_actual <= 0;
                     return `<tr style="border-bottom:1px solid var(--border-color)">
-                        <td style="padding:10px 8px">
+                        <td data-label="Ítem" style="padding:10px 8px">
                             <div style="font-weight:600">${escapeHtml(c.nombre)}</div>
                             ${c.principio_activo ? `<span class="text-muted" style="font-size:.82rem;display:block">${escapeHtml(c.principio_activo)}</span>` : ''}
                         </td>
-                        <td style="padding:10px 8px">
+                        <td data-label="Categoría" style="padding:10px 8px">
                             <span class="badge badge-teal" style="font-size:.75rem">${escapeHtml(labelCategoria(c.categoria))}</span>
                         </td>
-                        <td style="padding:10px 8px;color:var(--text-secondary)">${escapeHtml(c.presentacion || '—')}</td>
-                        ${!isPatientView ? `<td style="padding:10px 8px">
+                        <td data-label="Presentación" style="padding:10px 8px;color:var(--text-secondary)">${escapeHtml(c.presentacion || '—')}</td>
+                        ${!isPatientView ? `<td data-label="Residente" style="padding:10px 8px">
                             ${c.paciente_nombre ? `<span class="badge badge-purple" style="font-size:.75rem">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</span>` : '<span class="text-muted" style="font-size:.8rem">General</span>'}
                         </td>` : ''}
-                        <td style="padding:10px 8px;text-align:center;font-weight:700;font-size:1.1rem;color:${empty ? 'var(--pro-danger)' : low ? '#E65100' : 'var(--pro-success)'}">${safeFiniteNumber(c.stock_actual)}</td>
-                        <td style="padding:10px 8px;text-align:center;color:var(--text-secondary)">${safeFiniteNumber(c.stock_minimo, 5)}</td>
-                        <td style="padding:10px 8px;text-align:center">
+                        <td data-label="Stock actual" style="padding:10px 8px;text-align:center;font-weight:700;font-size:1.1rem;color:${empty ? 'var(--pro-danger)' : low ? '#E65100' : 'var(--pro-success)'}">${safeFiniteNumber(c.stock_actual)}</td>
+                        <td data-label="Mínimo" style="padding:10px 8px;text-align:center;color:var(--text-secondary)">${safeFiniteNumber(c.stock_minimo, 5)}</td>
+                        <td data-label="Estado" style="padding:10px 8px;text-align:center">
                             <span class="badge ${empty ? 'badge-red' : low ? 'badge-orange' : 'badge-green'}">
                                 ${empty ? '❌ Sin stock' : low ? '⚠️ Bajo' : '✅ OK'}
                             </span>
                         </td>
-                        <td style="padding:10px 8px;text-align:right">
+                        <td data-label="Acciones" style="padding:10px 8px;text-align:right">
                             <div class="d-flex gap-8 justify-end">
-                                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${safeRecordId(c.id)})" title="Editar">✏️</button>
-                                ${_catalogoIsAdmin ? `<button class="btn btn-sm btn-danger btn-icon" onclick="deleteCatalogoItem(${safeRecordId(c.id)})" title="Eliminar">🗑</button>` : ''}
+                                <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalCatalogoItem(${safeRecordId(c.id)})" title="Editar" aria-label="Editar ${escapeHtml(c.nombre)}">${b2bIcon('edit')}</button>
+                                ${_catalogoIsAdmin ? `<button class="btn btn-sm btn-link-danger btn-icon" onclick="deleteCatalogoItem(${safeRecordId(c.id)})" title="Eliminar" aria-label="Eliminar ${escapeHtml(c.nombre)}">${b2bIcon('trash')}</button>` : ''}
                             </div>
                         </td>
                     </tr>`;

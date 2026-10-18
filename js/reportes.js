@@ -21,6 +21,11 @@ async function initReportes() {
     const hace30Str = hace30.toISOString().split('T')[0];
     document.getElementById('reporteDesde').value = hace30Str;
     document.getElementById('reporteHasta').value = hoy;
+    document.getElementById('direccionHasta').value = hoy;
+    document.getElementById('direccionDesde').value = hace30Str;
+    document.getElementById('formDireccion').addEventListener('submit', event => { event.preventDefault(); loadDashboardDireccion(); });
+    if (canDo('ver_dashboard_direccion')) loadDashboardDireccion();
+    else document.getElementById('direccionDashboard').style.display = 'none';
 
     // Cargar pacientes para el select
     try {
@@ -51,6 +56,48 @@ async function initReportes() {
     } catch (e) {
         showToast('Error al cargar pacientes', 'error');
     }
+}
+
+async function loadDashboardDireccion() {
+    const loader=document.getElementById('direccionLoader');
+    const error=document.getElementById('direccionError');
+    const container=document.getElementById('direccionKpis');
+    loader.style.display='flex'; error.style.display='none'; container.setAttribute('aria-busy','true');
+    try {
+        const data=await API_B2B.getDashboardDireccion({
+            desde:document.getElementById('direccionDesde').value,
+            hasta:document.getElementById('direccionHasta').value,
+        });
+        renderDashboardDireccion(data);
+    } catch (err) {
+        error.textContent=err.message || 'No se pudieron calcular los indicadores.';
+        error.style.display='block';
+    } finally { loader.style.display='none'; container.removeAttribute('aria-busy'); }
+}
+
+function renderDashboardDireccion(data) {
+    const current=data.estado_actual || {}; const historical=data.historicos || {};
+    const cards=[
+        ['Ocupación actual',current.ocupacion?.valor,'residentes','Residentes activos que actualmente no tienen una fecha de egreso. No se muestra un porcentaje porque la capacidad total no está configurada.'],
+        ['Ingresos',historical.ingresos?.valor,'en el período','Residentes cuya fecha de ingreso está dentro del período seleccionado.'],
+        ['Egresos',historical.egresos?.valor,'en el período','Residentes cuya fecha de egreso está dentro del período seleccionado.'],
+        ['Caídas',historical.caidas?.valor,'en el período','Incidentes de caída registrados y no archivados dentro del período seleccionado.'],
+        ['Internaciones',historical.internaciones?.valor,'en el período','Internaciones cuyo inicio está dentro del período seleccionado.'],
+        ['Derivaciones',historical.derivaciones?.valor,'en el período','Incidentes de derivación registrados y no archivados dentro del período seleccionado.'],
+        ['Omisiones de medicación',historical.omisiones_medicacion?.valor,'en el período','Administraciones registradas expresamente como omitidas dentro del período. No se infieren omisiones por falta de registro.'],
+        ['Tareas vencidas hoy',current.tareas_vencidas?.valor,'estado actual','Tareas activas con horario anterior a la hora actual y sin finalización registrada hoy.'],
+        ['Stock crítico actual',current.stock_critico?.valor,'ítems actuales','Ítems cuyo stock actual alcanzó o bajó el mínimo configurado; en tratamientos individuales sin mínimo, menos de 10 unidades.'],
+    ];
+    document.getElementById('direccionKpis').innerHTML=cards.map(([label,value,unit,help])=>`<article class="direction-kpi"><span class="eyebrow">${escapeHtml(unit)}</span><h3>${escapeHtml(label)}</h3><div class="kpi-value">${value===null||value===undefined?'No disponible':safeFiniteNumber(value)}</div><p>${escapeHtml(help||'')}</p></article>`).join('');
+    document.getElementById('direccionActualizado').textContent=`Actualizado ${formatDateTime(data.actualizado_en)} · ${data.periodo?.timezone || ''}`;
+    const definitions=[
+        ['Período seleccionado','Incluye la fecha «Desde» y termina antes del día indicado en «Hasta».'],
+        ['Indicadores actuales','Ocupación, tareas vencidas y stock crítico muestran la situación al momento de actualizar, no un historial del período.'],
+        ['Ingresos y egresos','Se cuentan por la fecha de ingreso o egreso registrada para cada residente.'],
+        ['Incidentes','Caídas y derivaciones se cuentan por la fecha en que ocurrieron y excluyen registros archivados.'],
+        ['Omisiones de medicación','Sólo se cuentan administraciones registradas expresamente como omitidas.'],
+    ];
+    document.getElementById('direccionDefinitions').innerHTML=definitions.map(([label,value])=>`<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`).join('');
 }
 
 async function generarReporte(e) {
@@ -94,14 +141,20 @@ function renderReporte(data, checks) {
     const p = data.paciente || {};
     const nombre = `${p.nombre || ''}${p.apellido ? ' ' + p.apellido : ''}`;
     const edad = p.fecha_nacimiento ? ` · ${calcEdad(p.fecha_nacimiento)} años` : '';
+    const principal = API_B2B.getPrincipalUser?.() || API_B2B.getUser?.() || {};
+    const institucion = principal.institucion_nombre || 'Institución';
+    const generado = new Date();
+    const desdeLabel = data.periodo?.desde ? formatDate(data.periodo.desde) : 'Inicio disponible';
+    const hastaLabel = data.periodo?.hasta ? formatDate(data.periodo.hasta) : 'Actualidad';
     document.getElementById('reportePacienteHeader').innerHTML = `
         <div class="card-body report-patient-header">
             <div class="report-logo">
-                <div style="font-size:2rem">🏥</div>
                 <div>
-                    <div style="font-weight:700;font-size:.75rem;color:var(--text-secondary);letter-spacing:.05em">REPORTE DE PACIENTE</div>
-                    <div style="font-size:.8rem;color:var(--text-secondary)">CuidaDiario PRO · ${formatDate(new Date().toISOString())}</div>
+                    <div class="report-kicker">REPORTE OPERATIVO DEL RESIDENTE</div>
+                    <div class="report-institution">${escapeHtml(institucion)}</div>
+                    <div class="report-meta">Período: ${desdeLabel} a ${hastaLabel} · Generado: ${formatDateTime(generado.toISOString())}</div>
                 </div>
+                <div class="report-product">CuidaDiario PRO</div>
             </div>
             <div class="report-patient-info">
                 <div style="font-size:1.4rem;font-weight:700">${escapeHtml(nombre)}</div>
@@ -113,7 +166,8 @@ function renderReporte(data, checks) {
                     ${p.fecha_ingreso ? `<span class="badge badge-secondary">Ingreso: ${formatDate(p.fecha_ingreso)}</span>` : ''}
                 </div>
             </div>
-        </div>`;
+        </div>
+        <div class="report-disclaimer">Documento operativo generado desde CuidaDiario PRO. No se presenta como historia clínica oficial ni reemplaza la documentación que la institución determine como tal.</div>`;
 
     // Medicamentos
     const meds = data.medicamentos || [];
@@ -129,7 +183,7 @@ function renderReporte(data, checks) {
             const tomas = tomasPorMed[m.id] || [];
             return `<div class="report-item">
                 <div class="report-item-header">
-                    <strong>💊 ${escapeHtml(m.nombre)}</strong>
+                    <strong>${escapeHtml(m.nombre)}</strong>
                     ${m.dosis ? `<span class="badge badge-secondary">${escapeHtml(m.dosis)}</span>` : ''}
                     ${m.frecuencia ? `<span style="color:var(--text-secondary);font-size:.85rem">${escapeHtml(m.frecuencia)}</span>` : ''}
                 </div>
@@ -137,7 +191,7 @@ function renderReporte(data, checks) {
                 ${tomas.length ? `
                     <div style="margin-top:8px">
                         <div style="font-size:.8rem;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${tomas.length} toma(s) en el período:</div>
-                        <div class="tomas-list">${tomas.slice(0, 10).map(t => `<span class="toma-chip">✅ ${formatDateTime(t.fecha)} <span style="opacity:.7">— ${escapeHtml(t.administrador_nombre || '—')}</span></span>`).join('')}</div>
+                        <div class="tomas-list">${tomas.slice(0, 10).map(t => `<span class="toma-chip">${formatDateTime(t.fecha)} <span style="opacity:.7">— ${escapeHtml(t.administrador_nombre || 'No disponible')}</span></span>`).join('')}</div>
                     </div>` : '<div style="margin-top:4px;font-size:.82rem;color:var(--text-secondary)">Sin tomas registradas en el período</div>'}
             </div>`;
         }).join('') || '<p style="color:var(--text-secondary)">Sin medicamentos en el período.</p>';
@@ -169,7 +223,7 @@ function renderReporte(data, checks) {
                 <td>${formatDateTime(s.fecha)}</td>
                 <td>${escapeHtml(s.descripcion)}</td>
                 <td>${intensidadBadge(s.intensidad)}</td>
-                <td>${escapeHtml(s.registrador_nombre || '—')}</td>
+                <td>${escapeHtml(s.registrador_nombre || 'No disponible')}</td>
             </tr>`).join('')}
         </tbody></table>`;
         secSintomas.style.display = 'block';
@@ -182,10 +236,10 @@ function renderReporte(data, checks) {
         document.getElementById('reporteSignosBody').innerHTML = `<table class="table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Valor</th><th>Unidad</th><th>Registrado por</th></tr></thead><tbody>
             ${signos.map(g => { const ts = tipoSignoBadge(g.tipo); return `<tr>
                 <td>${formatDateTime(g.fecha)}</td>
-                <td><span class="badge ${ts.cls}">${ts.icon} ${escapeHtml(g.tipo ? g.tipo.replace(/_/g,' ') : '—')}</span></td>
+                <td><span class="badge ${ts.cls}">${escapeHtml(g.tipo ? g.tipo.replace(/_/g,' ') : '—')}</span></td>
                 <td><strong>${escapeHtml(String(g.valor))}</strong></td>
                 <td>${escapeHtml(g.unidad || '—')}</td>
-                <td>${escapeHtml(g.registrador_nombre || '—')}</td>
+                <td>${escapeHtml(g.registrador_nombre || 'No disponible')}</td>
             </tr>`; }).join('')}
         </tbody></table>`;
         secSignos.style.display = 'block';
@@ -205,11 +259,11 @@ function renderReporte(data, checks) {
         document.getElementById('reporteTareasBody').innerHTML = Object.values(tareasMap).map(t => `
             <div class="report-item">
                 <div class="report-item-header">
-                    <strong>✅ ${escapeHtml(t.titulo || 'Tarea')}</strong>
+                    <strong>${escapeHtml(t.titulo || 'Tarea')}</strong>
                     <span class="badge badge-success">${t.completados.length} vez${t.completados.length !== 1 ? 'es' : ''} completada</span>
                 </div>
                 <div style="margin-top:6px;font-size:.82rem;color:var(--text-secondary)">
-                    Última: ${formatDateTime(t.completados[0].fecha)} — por ${escapeHtml(t.completados[0].completador_nombre || '—')}
+                    Última: ${formatDateTime(t.completados[0].fecha)} — por ${escapeHtml(t.completados[0].completador_nombre || 'No disponible')}
                 </div>
             </div>`).join('');
         secTareas.style.display = 'block';
@@ -222,9 +276,9 @@ function renderReporte(data, checks) {
         document.getElementById('reporteNotasBody').innerHTML = notas.map(n => `
             <div class="report-item ${n.urgente ? 'report-item-urgent' : ''}">
                 <div class="report-item-header">
-                    ${n.urgente ? '<span class="badge badge-danger">🚨 URGENTE</span>' : ''}
+                    ${n.urgente ? '<span class="badge badge-danger">URGENTE</span>' : ''}
                     <strong>${escapeHtml(n.titulo || 'Sin título')}</strong>
-                    <span style="color:var(--text-secondary);font-size:.8rem">${formatDateTime(n.created_at)} · ${escapeHtml(n.autor_nombre || '—')}</span>
+                    <span style="color:var(--text-secondary);font-size:.8rem">${formatDateTime(n.created_at)} · ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
                 </div>
                 ${n.contenido ? `<div style="margin-top:6px;color:var(--text-primary)">${escapeHtml(n.contenido)}</div>` : ''}
             </div>`).join('') || '<p style="color:var(--text-secondary)">Sin notas en el período.</p>';

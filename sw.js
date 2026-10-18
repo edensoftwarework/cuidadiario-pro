@@ -7,9 +7,10 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-// Paquete P0-2/P0-3/P0-8/P1-B/P1-C/P1-D2/P1-D3: este cambio de script dispara un install que recarga STATIC_ASSETS
-// dentro del mismo cache, sin eliminar entradas estáticas ajenas/no-B2B.
-const CACHE_NAME = 'cuidadiario-pro-v6';
+// UX-integral-2026-10-11: una nueva generación evita mezclar el shell anterior
+// con scripts actuales durante la primera navegación posterior a una actualización.
+// La activación sigue eliminando sólo caches estáticas propias antiguas.
+const CACHE_NAME = 'cuidadiario-pro-v9';
 const CACHE_NAME_API = 'cuidadiario-pro-api-v6';
 
 const STATIC_ASSETS = [
@@ -34,6 +35,8 @@ const STATIC_ASSETS = [
     './css/styles-b2b.css',
     './js/api-b2b.js',
     './js/utils-b2b.js',
+    './js/contract-notice-b2b.js',
+    './js/contract-reader-b2b.js',
     './js/dashboard.js',
     './js/pacientes.js',
     './js/paciente.js',
@@ -82,18 +85,29 @@ async function purgeB2BApiResponsesFromCaches() {
     }));
 }
 
+async function retireOwnStaticEntriesFromOldCaches() {
+    const ownPaths = new Set(STATIC_ASSETS.map(asset => {
+        const normalized = asset.replace(/^\.\//, '');
+        return normalized ? `/${normalized}` : '/';
+    }));
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames
+        .filter(name => /^cuidadiario-pro-v\d+$/.test(name) && name !== CACHE_NAME)
+        .map(async name => {
+            const cache = await caches.open(name);
+            for (const request of await cache.keys()) {
+                if (ownPaths.has(new URL(request.url).pathname)) await cache.delete(request);
+            }
+            if ((await cache.keys()).length === 0) await caches.delete(name);
+        }));
+}
+
 // Activación — limpiar caches estáticas propias viejas y purgar únicamente
 // respuestas B2B de cualquier Cache Storage. Caches API/no-B2B y caches ajenas
 // se conservan para no alterar consumidores compartidos.
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(keys =>
-            Promise.all(
-                keys
-                    .filter(k => /^cuidadiario-pro-v\d+$/.test(k) && k !== CACHE_NAME)
-                    .map(k => caches.delete(k))
-            )
-        )
+        retireOwnStaticEntriesFromOldCaches()
         .then(() => purgeB2BApiResponsesFromCaches())
         .then(() => self.clients.claim())
     );
@@ -128,7 +142,8 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Assets estáticos → Cache-first
+    // Assets estáticos → Cache-first. Cada paquete que modifica el shell debe
+    // incrementar CACHE_NAME para que estos recursos formen una unidad coherente.
     if (url.pathname.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$/)) {
         event.respondWith(cacheFirst(request));
         return;
@@ -152,12 +167,12 @@ async function networkOnly(request) {
 }
 
 async function cacheFirst(request) {
-    const cached = await caches.match(request);
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
     if (cached) return cached;
     try {
         const response = await fetch(request);
         if (response.ok) {
-            const cache = await caches.open(CACHE_NAME);
             cache.put(request, response.clone());
         }
         return response;

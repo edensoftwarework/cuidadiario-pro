@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — CuidaDiario PRO</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="icon" href="../icons/cuidadiario-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="../manifest.json">
     <link rel="stylesheet" href="../css/styles-b2b.css">
 </head>
@@ -106,13 +106,21 @@
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon teal">👥</div>
+                        <div class="stat-icon teal"><svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#alert"></use></svg></div>
                         <div class="stat-info">
                             <div class="stat-value" id="statStaff">—</div>
-                            <div class="stat-label">Usuarios activos</div>
+                            <div class="stat-label">Requieren atención</div>
                             <div id="staffBreakdown" style="font-size:.72rem;color:var(--text-secondary,#6B7280);margin-top:2px">—</div>
                         </div>
                     </div>
+                </div>
+
+                <div class="card mt-20" id="cardRequiereAtencion">
+                    <div class="card-header">
+                        <span class="card-title">Requiere atención <span class="badge badge-orange" id="requiereAtencionCount">0</span></span>
+                        <span class="text-muted" style="font-size:.78rem">Hechos registrados y vencimientos calculables</span>
+                    </div>
+                    <div class="card-body" id="requiereAtencion" style="padding:0 20px"></div>
                 </div>
 
                 <!-- Grid -->
@@ -187,6 +195,8 @@
 <script src="../js/api-b2b.js"></script>
 <script src="../js/maintenance-b2b-v2.js?v=20261003-neutral-pending"></script>
 <script src="../js/utils-b2b.js"></script>
+<script src="../js/contract-reader-b2b.js"></script>
+<script src="../js/contract-notice-b2b.js"></script>
 <script src="../js/dashboard.js"></script>
 </body>
 </html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">CuidaDiario PRO</title>
+  <rect width="48" height="48" rx="11" fill="#1565c0"/>
+  <path d="M14 39V13h16v26M19 19h6m-6 6h6m-6 6h6m5 8V25h7v14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32.5 16.5h7m-3.5-3.5v7" fill="none" stroke="#66d9e8" stroke-width="3" stroke-linecap="round"/>
+</svg>

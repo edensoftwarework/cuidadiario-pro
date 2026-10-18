@@ -14,15 +14,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSidebar();
     populateSidebarUser();
     await loadDashboard();
+    globalThis.B2B_CONTRACT_NOTICE_READY = Promise.resolve(globalThis.ContractNoticeB2B?.init?.());
+    await globalThis.B2B_CONTRACT_NOTICE_READY;
 });
 
 async function loadDashboard() {
     const user = API_B2B.getUser();
     const titleEl = document.getElementById('topbarTitle');
     if (titleEl) {
-        const h = new Date().getHours();
-        const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
-        titleEl.textContent = `${saludo}, ${(user?.nombre || '').split(' ')[0]} 👋`;
+        titleEl.textContent = user?.institucion_nombre
+            ? `Resumen de ${user.institucion_nombre}`
+            : 'Resumen de la residencia';
     }
 
     showDashboardLoading(true);
@@ -30,12 +32,13 @@ async function loadDashboard() {
         // El backend ya filtra pacientes egresados en SQL — solo una llamada necesaria
         const data = await API_B2B.getDashboard();
 
-        renderResumen(data.resumen);
+        renderResumen(data.resumen, data.requiere_atencion || []);
         renderCitasProximas(data.citas_proximas);
         renderSintomasRecientes(data.sintomas_recientes);
         renderNotasUrgentes(data.notas_urgentes);
         renderCumpleanosHoy(data.cumpleanos_hoy);
         renderStockBajo(data.stock_bajo);
+        renderRequiereAtencion(data.requiere_atencion || []);
         _applyNotifPrefs();
         // Topbar: show +Paciente button only if the user can create patients
         const btnTopbar = document.getElementById('btnTopbarNuevoPaciente');
@@ -54,36 +57,33 @@ function showDashboardLoading(show) {
     if (content) content.style.display = show ? 'none' : 'block';
 }
 
-function renderResumen(resumen) {
+function renderResumen(resumen, requiereAtencion = []) {
     if (!resumen) return;
     setVal('statPacientes', resumen.pacientes_activos ?? 0);
     setVal('statTomasHoy', resumen.tomas_hoy ?? 0);
     setVal('statTareasHoy', resumen.tareas_completadas_hoy ?? 0);
-    // Staff breakdown by role
-    let totalStaff = 0;
-    const roleLabels = {
-        admin_institucion: ['Admin', 'Admins'],
-        cuidador_staff:    ['Personal', 'Personal'],
-        familiar:          ['Familiar', 'Familiares'],
-        medico:            ['M\u00e9dico', 'M\u00e9dicos']
-    };
-    const breakdown = [];
-    if (Array.isArray(resumen.staff)) {
-        resumen.staff.forEach(s => {
-            const n = parseInt(s.total);
-            totalStaff += n;
-            const labels = roleLabels[s.rol];
-            if (labels && n > 0) breakdown.push(`${n}\u00a0${n === 1 ? labels[0] : labels[1]}`);
-        });
-    }
-    setVal('statStaff', totalStaff);
+    // Señal operativa existente y tenant-scoped: cantidad de hechos/vencimientos
+    // que el mismo dashboard ya prioriza en “Requiere atención”.
+    setVal('statStaff', requiereAtencion.length);
     const bdEl = document.getElementById('staffBreakdown');
-    if (bdEl) bdEl.textContent = breakdown.join(' \u00b7 ') || '\u2014';
+    if (bdEl) bdEl.textContent = requiereAtencion.length ? 'Revisar la lista priorizada' : 'Sin pendientes detectados';
 }
 
 function setVal(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
+}
+
+const DASHBOARD_PATIENT_TABS = Object.freeze({
+    cita: 'citas', sintoma: 'sintomas', nota_urgente: 'notas', stock_bajo: 'medicamentos',
+    incidente_abierto: 'incidentes', omision_medicacion: 'medicamentos', medicacion_vencida: 'medicamentos',
+    tarea_vencida: 'tareas', estado_temporal: 'datos', cumpleanos: 'datos', ingreso: 'datos', egreso: 'datos',
+});
+
+function patientContextHref(patientId, type) {
+    const id = safeRecordId(patientId);
+    const tab = DASHBOARD_PATIENT_TABS[type];
+    return `paciente.html?id=${id}${tab ? `&tab=${tab}` : ''}`;
 }
 
 // Helper: abre el modal genérico "Ver todos" con el HTML pasado directamente
@@ -110,7 +110,7 @@ function renderCitasProximas(citas) {
                 <div class="item-subtitle">${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatDateTime(c.fecha)}</div>
                 ${c.medico ? `<div class="item-meta"><span class="badge badge-gray">🩺 ${escapeHtml(c.medico)}</span></div>` : ''}
             </div>
-            <a href="paciente.html?id=${safeRecordId(c.paciente_id)}" class="btn btn-sm btn-secondary">Ver</a>
+            <a href="${patientContextHref(c.paciente_id, 'cita')}" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(citas);
     container.innerHTML = buildItems(citas.slice(0, MAX))
@@ -137,10 +137,10 @@ function renderSintomasRecientes(sintomas) {
                 <div class="item-meta">
                     ${s.intensidad ? `<span class="badge badge-orange">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
                     <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
-                    <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || '—')}</span>
+                    <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || 'No disponible')}</span>
                 </div>
             </div>
-            <a href="paciente.html?id=${safeRecordId(s.paciente_id)}&tab=sintomas" class="btn btn-sm btn-secondary">Ver</a>
+            <a href="${patientContextHref(s.paciente_id, 'sintoma')}" class="btn btn-sm btn-secondary">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(sintomas);
     container.innerHTML = buildItems(sintomas.slice(0, MAX))
@@ -166,11 +166,11 @@ function renderNotasUrgentes(notas) {
                 <div class="item-title urgente-flag">🚨 ${escapeHtml(n.titulo || 'Sin título')}</div>
                 <div class="item-subtitle mt-8">${escapeHtml(n.contenido || '')}</div>
                 <div class="item-meta">
-                    <span class="badge badge-gray">por ${escapeHtml(n.autor_nombre || '—')}</span>
+                    <span class="badge badge-gray">por ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
                     <span class="badge badge-gray">${formatDateTime(n.created_at)}</span>
                 </div>
             </div>
-            <a href="paciente.html?id=${safeRecordId(n.paciente_id)}&tab=notas" class="btn btn-sm btn-danger">Ver</a>
+            <a href="${patientContextHref(n.paciente_id, 'nota_urgente')}" class="btn btn-sm btn-danger">Ver</a>
         </div>`).join('');
     const allHtml = buildItems(notas);
     container.innerHTML = buildItems(notas.slice(0, MAX))
@@ -194,7 +194,7 @@ function renderCumpleanosHoy(lista) {
                 <div class="item-title">${escapeHtml(p.nombre)} ${escapeHtml(p.apellido || '')}</div>
                 <div class="item-subtitle">${p.edad ? `Cumple ${safeFiniteNumber(p.edad)} años hoy 🎉` : 'Hoy es su cumpleaños 🎉'}</div>
             </div>
-            <a href="paciente.html?id=${safeRecordId(p.id)}" class="btn btn-sm btn-secondary">Ver ficha</a>
+            <a href="${patientContextHref(p.id, 'cumpleanos')}" class="btn btn-sm btn-secondary">Ver ficha</a>
         </div>`).join('');
     const allHtml = buildItems(lista);
     container.innerHTML = buildItems(lista.slice(0, MAX))
@@ -228,6 +228,7 @@ function renderStockBajo(lista) {
                 <div class="item-subtitle">${escapeHtml(m.dosis_horario || '')}</div>
             </div>
             <span class="badge badge-danger">Stock: ${safeFiniteNumber(m.stock)}${m.unidad ? ' ' + escapeHtml(m.unidad) : ''}</span>
+            ${m.paciente_id ? `<a href="${patientContextHref(m.paciente_id, 'stock_bajo')}" class="btn btn-sm btn-secondary">Ver</a>` : ''}
         </div>`;
     }).join('');
     const allHtml = buildItems(lista);
@@ -253,4 +254,63 @@ function _applyNotifPrefs() {
             if (el && pref in prefs) el.style.display = prefs[pref] ? '' : 'none';
         });
     } catch {}
+}
+
+function renderRequiereAtencion(items) {
+    const container = document.getElementById('requiereAtencion');
+    const count = document.getElementById('requiereAtencionCount');
+    if (!container) return;
+    if (count) count.textContent = String(items.length);
+    if (!items.length) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">✓</div><p>No hay acciones pendientes calculables en este momento.</p></div>';
+        return;
+    }
+    const typeLabels = Object.freeze({
+        medicacion_vencida: 'Medicación vencida', stock_critico: 'Stock crítico',
+        incidente_abierto: 'Incidentes abiertos', estado_temporal: 'Ausencias temporales',
+        omision_medicacion: 'Omisiones de medicación', tarea_vencida: 'Tareas vencidas',
+    });
+    const incidentLabels = Object.freeze({
+        caida:'caída', golpe_herida:'golpe / herida', error_medicacion:'error de medicación',
+        omision_medicacion:'omisión de medicación', episodio_conductual:'episodio conductual',
+        derivacion:'derivación', otro:'otro',
+    });
+    const sourceLabels = Object.freeze({ registrado:'Registrado', calculado:'Calculado', estado_actual:'Estado actual' });
+    const humanize = value => String(value || '').replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());
+    const displayTitle = item => {
+        if (item.tipo !== 'incidente_abierto') return item.titulo;
+        const raw = String(item.titulo || '').replace(/^Incidente:\s*/i, '');
+        return `Incidente: ${incidentLabels[raw] || humanize(raw).toLocaleLowerCase('es-AR')}`;
+    };
+    const renderItem = item => `<div class="attention-row priority-${escapeHtml(item.prioridad)}">
+        <div class="attention-priority">${escapeHtml(item.prioridad)}</div>
+        <div class="item-body"><div class="item-title">${escapeHtml(displayTitle(item))}</div>
+        <div class="item-subtitle">${escapeHtml(item.detalle || '')}</div>
+        <div class="item-meta">${item.paciente_nombre ? `<span class="badge badge-gray">${escapeHtml(item.paciente_nombre)}</span>` : '<span class="badge badge-blue">Institucional</span>'}<span class="badge badge-gray">${escapeHtml(sourceLabels[item.source] || humanize(item.source))}</span>${item.ocurrido_at ? `<span class="badge badge-gray">${formatDateTime(item.ocurrido_at)}</span>` : ''}</div></div>
+        ${item.paciente_id ? `<a class="btn btn-sm btn-secondary" href="${patientContextHref(item.paciente_id, item.tipo)}">Ver</a>` : ''}
+    </div>`;
+    const grouped = new Map();
+    items.forEach(item => {
+        const key = String(item.tipo || 'otro');
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(item);
+    });
+    container.innerHTML = [...grouped.entries()].map(([type, group], index) => {
+        const panelId = `attention-group-${index}`;
+        const label = typeLabels[type] || humanize(type);
+        return `<section class="attention-group">
+            <button type="button" class="attention-group-toggle" aria-expanded="false" aria-controls="${panelId}">
+                <span>${escapeHtml(label)}</span><span class="badge badge-orange">${group.length}</span><span class="attention-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="attention-group-items" id="${panelId}" hidden>${group.map(renderItem).join('')}</div>
+        </section>`;
+    }).join('');
+    container.querySelectorAll('.attention-group-toggle').forEach(button => {
+        button.addEventListener('click', () => {
+            const panel = document.getElementById(button.getAttribute('aria-controls'));
+            const expanded = button.getAttribute('aria-expanded') === 'true';
+            button.setAttribute('aria-expanded', String(!expanded));
+            if (panel) panel.hidden = expanded;
+        });
+    });
 }

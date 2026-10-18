@@ -5,8 +5,18 @@
  * Todas las comunicaciones con /api/b2b/* del backend
  */
 
+const B2B_PRODUCTION_API_URL = 'https://cuidadiario-backend-production.up.railway.app';
+function resolveB2BApiBaseUrl() {
+    try {
+        if (typeof window !== 'undefined' && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+            return window.location.origin;
+        }
+    } catch {}
+    return B2B_PRODUCTION_API_URL;
+}
+
 const API_B2B = {
-    BASE_URL: 'https://cuidadiario-backend-production.up.railway.app',
+    BASE_URL: resolveB2BApiBaseUrl(),
     TOKEN_KEY:     'cd_pro_token',
     USER_KEY:      'cd_pro_user',
     LAST_USER_KEY: 'cd_pro_last_user',   // legacy P0-2 cleanup target; no longer written or restored
@@ -21,6 +31,17 @@ const API_B2B = {
     getToken()  { return localStorage.getItem(this.TOKEN_KEY); },
     setToken(t) { localStorage.setItem(this.TOKEN_KEY, t); },
     removeToken() {
+        try { globalThis.ContractNoticeB2B?.clearSessionState?.(); } catch {}
+        // El cierre puede ocurrir desde páginas que no cargan contract-notice-b2b.js.
+        // La limpieza no puede depender de que ese módulo esté presente.
+        try {
+            const contractKeys = [];
+            for (let index = 0; index < sessionStorage.length; index += 1) {
+                const key = sessionStorage.key(index);
+                if (key?.startsWith('cd_contract_notice_seen:')) contractKeys.push(key);
+            }
+            contractKeys.forEach(key => sessionStorage.removeItem(key));
+        } catch {}
         this.clearOperatorContext('session-ended', true);
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
@@ -30,16 +51,9 @@ const API_B2B = {
     },
     getPrincipalUser() { const u = localStorage.getItem(this.USER_KEY); return u ? JSON.parse(u) : null; },
     getUser() {
-        const principal = this.getPrincipalUser();
-        const operator = this.getOperatorContext();
-        if (!principal || !operator || !principal.shared_mode) return principal;
-        return {
-            ...principal,
-            principal_nombre: principal.nombre,
-            nombre: operator.nombre,
-            rol: operator.rol,
-            operador_b2b_id: operator.id,
-        };
+        // La identidad de autorización siempre es el titular autenticado.
+        // La atribución humana se consulta por separado con getOperatorContext().
+        return this.getPrincipalUser();
     },
     setUser(u)  { localStorage.setItem(this.USER_KEY, JSON.stringify(u)); },
     getOperatorToken() { try { return sessionStorage.getItem(this.OPERATOR_TOKEN_KEY); } catch { return null; } },
@@ -158,6 +172,7 @@ const API_B2B = {
             }
             const apiErr = new Error(msg);
             if (code) apiErr.code = code;
+            apiErr.status = res.status;
             Object.assign(apiErr, extra);
             // Si el trial expiró, mostrar el overlay de bloqueo automáticamente
             if (code === 'TRIAL_EXPIRED' && typeof _showTrialExpiredOverlay === 'function') {
@@ -195,16 +210,20 @@ const API_B2B = {
     async get(path) {
         return this.handle(await this._fetch(`${this.BASE_URL}${path}`, { headers: this.headers() }));
     },
-    async download(path) {
+    async download(path, options = {}) {
         const response = await this._fetch(`${this.BASE_URL}${path}`, {
             headers: this.headers(),
             cache: 'no-store',
         });
         if (!response.ok) return this.handle(response);
+        const contentType = response.headers.get('Content-Type') || '';
+        if (options.expectedContentType && !contentType.toLowerCase().startsWith(String(options.expectedContentType).toLowerCase())) {
+            throw new Error(options.invalidFormatMessage || 'El servidor devolvió un archivo en un formato inesperado.');
+        }
         const disposition = response.headers.get('Content-Disposition') || '';
         const utf8Name = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
         const fallbackName = /filename="?([^";]+)"?/i.exec(disposition);
-        let filename = 'cuidadiario-export-institucional.zip';
+        let filename = options.fallbackFilename || 'cuidadiario-descarga';
         try {
             filename = decodeURIComponent(utf8Name?.[1] || fallbackName?.[1] || filename);
         } catch {}
@@ -273,6 +292,9 @@ const API_B2B = {
     async finalizeOffboarding(data, idempotencyKey) {
         return this.post('/api/b2b/offboarding/finalize', data, this.idempotencyOptions(idempotencyKey));
     },
+    async getContractStatus() { return this.get('/api/b2b/contracts/status'); },
+    async acceptContract(data) { return this.post('/api/b2b/contracts/accept', data); },
+    async getContractEvidence() { return this.get('/api/b2b/contracts/evidence'); },
     logout() {
         const operatorToken = this.getOperatorToken();
         if (operatorToken && this.getToken()) {
@@ -356,6 +378,7 @@ const API_B2B = {
     async getPaciente(id)         { return this.get(`/api/b2b/pacientes/${id}`); },
     async createPaciente(data)    { return this.post('/api/b2b/pacientes', data); },
     async updatePaciente(id, d)   { return this.patch(`/api/b2b/pacientes/${id}`, d); },
+    async updatePacientePhoto(id, fotoUrl) { return this.patch(`/api/b2b/pacientes/${id}/photo`, { foto_url: fotoUrl }); },
     async deletePaciente(id)      { return this.del(`/api/b2b/pacientes/${id}`); },
 
     // ============================================
@@ -378,6 +401,10 @@ const API_B2B = {
             this.idempotencyOptions(idempotencyKey));
     },
     async getHistorialMeds(paciente_id)   { return this.get(`/api/b2b/medicamentos/historial?paciente_id=${paciente_id}`); },
+    async getMedicationSchemes(id)        { return this.get(`/api/b2b/medicamentos/${id}/esquemas`); },
+    async registerMedicationEvent(id, data, idempotencyKey) {
+        return this.post(`/api/b2b/medicamentos/${id}/administraciones`, data, this.idempotencyOptions(idempotencyKey));
+    },
 
     // ============================================
     // CATÁLOGO DE INSUMOS (modelo híbrido)
@@ -461,6 +488,33 @@ const API_B2B = {
     async deleteContacto(id)        { return this.del(`/api/b2b/contactos/${id}`); },
 
     // ============================================
+    // NÚCLEO AMPLIADO DEL RESIDENTE (Los Aromos, paquete 1)
+    // ============================================
+    async getAlertas(pacienteId)                { return this.get(`/api/b2b/pacientes/${pacienteId}/alertas`); },
+    async createAlerta(pacienteId, data, key)    { return this.post(`/api/b2b/pacientes/${pacienteId}/alertas`, data, this.idempotencyOptions(key)); },
+    async updateAlerta(id, data)                 { return this.patch(`/api/b2b/alertas/${id}`, data); },
+    async deleteAlerta(id)                       { return this.del(`/api/b2b/alertas/${id}`); },
+    async getIncidentes(pacienteId, archivo = 'activos') {
+        const filter = ['activos', 'archivados', 'todos'].includes(archivo) ? archivo : 'activos';
+        return this.get(`/api/b2b/pacientes/${pacienteId}/incidentes?archivo=${encodeURIComponent(filter)}`);
+    },
+    async createIncidente(pacienteId, data, key) { return this.post(`/api/b2b/pacientes/${pacienteId}/incidentes`, data, this.idempotencyOptions(key)); },
+    async updateIncidente(id, data)              { return this.patch(`/api/b2b/incidentes/${id}`, data); },
+    async deleteIncidente(id)                    { return this.del(`/api/b2b/incidentes/${id}`); },
+    async getEstadosResidente(pacienteId)        { return this.get(`/api/b2b/pacientes/${pacienteId}/estados`); },
+    async transitionEstadoResidente(pacienteId, data, key) {
+        return this.post(`/api/b2b/pacientes/${pacienteId}/estados/transiciones`, data, this.idempotencyOptions(key));
+    },
+    async getTimeline(pacienteId, params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.get(`/api/b2b/pacientes/${pacienteId}/timeline${query ? `?${query}` : ''}`);
+    },
+    async getEvoluciones(pacienteId)             { return this.get(`/api/b2b/pacientes/${pacienteId}/evoluciones`); },
+    async createEvolucion(pacienteId, data, key) { return this.post(`/api/b2b/pacientes/${pacienteId}/evoluciones`, data, this.idempotencyOptions(key)); },
+    async updateEvolucion(id, data)               { return this.patch(`/api/b2b/evoluciones/${id}`, data); },
+    async deleteEvolucion(id)                     { return this.del(`/api/b2b/evoluciones/${id}`); },
+
+    // ============================================
     // NOTAS INTERNAS
     // ============================================
     async getNotas(paciente_id) { return this.get(`/api/b2b/notas?paciente_id=${paciente_id}`); },
@@ -472,6 +526,7 @@ const API_B2B = {
     // DASHBOARD & REPORTES
     // ============================================
     async getDashboard()                              { return this.get('/api/b2b/dashboard'); },
+    async getDashboardDireccion(params = {})          { const qs = new URLSearchParams(params).toString(); return this.get('/api/b2b/dashboard/direccion' + (qs ? '?' + qs : '')); },
     async getReporte(paciente_id, params = {})        {
         let url = `/api/b2b/reportes?paciente_id=${paciente_id}`;
         if (params.desde) url += `&desde=${encodeURIComponent(params.desde)}`;
@@ -508,6 +563,7 @@ const API_B2B = {
     async uploadDocumento(data, idempotencyKey) {
         return this.post('/api/b2b/documentos', data, this.idempotencyOptions(idempotencyKey));
     },
+    async updateDocumento(id, data) { return this.patch(`/api/b2b/documentos/${id}`, data); },
     async deleteDocumento(id)         { return this.del(`/api/b2b/documentos/${id}`); },
     // Descarga con auth header → blob → dispara descarga en el navegador
     async downloadDocumento(id, nombre_archivo) {
@@ -544,27 +600,34 @@ API_B2B.initOperatorLifecycle();
 // ============================================
 // SERVICE WORKER REGISTRATION
 // ============================================
+globalThis.B2B_SW_READY = Promise.resolve({ supported: false });
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // Detect path depth to find sw.js root
-        const isInSubdir = window.location.pathname.includes('/pages/');
-        const swPath = isInSubdir ? '../sw.js' : './sw.js';
-        const scope  = isInSubdir ? '../'      : './';
-        navigator.serviceWorker.register(swPath, { scope })
-            .then(reg => {
-                // Check for SW updates
-                reg.addEventListener('updatefound', () => {
-                    const newSW = reg.installing;
-                    if (newSW) {
-                        newSW.addEventListener('statechange', () => {
-                            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('[SW] Nueva versión disponible');
-                            }
-                        });
-                    }
+    // Registrar al evaluar el cliente API, no después de window.load. De este modo
+    // el login puede esperar una actualización ya detectada antes de navegar al shell.
+    const isInSubdir = window.location.pathname.includes('/pages/');
+    const swPath = isInSubdir ? '../sw.js' : './sw.js';
+    const scope  = isInSubdir ? '../'      : './';
+    globalThis.B2B_SW_READY = navigator.serviceWorker.register(swPath, { scope })
+        .then(async registration => {
+            try { await registration.update(); } catch {}
+            const installing = registration.installing || registration.waiting;
+            if (installing) {
+                await new Promise(resolve => {
+                    if (installing.state === 'activated') return resolve();
+                    const timeout = setTimeout(resolve, 8000);
+                    installing.addEventListener('statechange', () => {
+                        if (installing.state === 'activated' || installing.state === 'redundant') {
+                            clearTimeout(timeout);
+                            resolve();
+                        }
+                    });
                 });
-            })
-            .catch(err => console.warn('[SW] Registro fallido:', err));
-    });
+            }
+            return { supported: true, registration };
+        })
+        .catch(error => {
+            console.warn('[SW] Registro fallido:', error);
+            return { supported: true, error };
+        });
 }
 

@@ -3,6 +3,56 @@
  * by EDEN SoftWork
  */
 
+function b2bIcon(name, extraClass = '') {
+    const prefix = window.location.pathname.includes('/pages/') ? '../' : '';
+    return `<svg class="ui-icon ${escapeHtml(extraClass)}" aria-hidden="true"><use href="${prefix}icons/b2b-ui.svg#${escapeHtml(name)}"></use></svg>`;
+}
+
+function hydrateProfessionalIcons(root = document) {
+    const replacements = new Map([
+        ['👤','user'],['👥','users'],['📊','dashboard'],['📋','report'],['📅','calendar'],
+        ['💊','medication'],['✅','check'],['🚨','incident'],['⚠️','alert'],['⚠','alert'],
+        ['📦','box'],['🏥','building'],['✏️','edit'],['🗑','trash'],['🗑️','trash'],
+        ['🚪','logout'],['🔒','lock'],['🔑','lock'],['🕐','clock'],['📞','phone'],['✉️','mail'],
+        ['✉','mail'],['📄','file'],['🔍','search'],['🩺','activity'],['❤️','heart'],['❤','heart'],
+        ['👨‍👩‍👧','users'],['🌡️','activity'],['💨','activity'],['⚖️','activity'],['📏','activity'],
+        ['⚙️','settings'],['⚙','settings'],['❌','x'],['ℹ️','note'],['ℹ','note'],['🚫','incident'],
+        ['⭐','shield'],['🏆','shield'],['🔓','lock'],['🛎','status'],['🛎️','status'],['📁','folder'],
+        ['🏠','building'],['👨‍⚕️','activity'],['👩‍⚕️','activity'],['📈','report'],['📉','report'],['🖨','print'],
+    ]);
+    const selectors = '.logo-icon,.nav-icon,.stat-icon,.empty-icon,.item-icon,.card-title,.topbar-title,.btn,.badge,.staff-menu-action,.tab-btn,.filter-tab,.alert-icon,.toggle-title,.urgente-flag,.alerta-alergias';
+    const elements = [];
+    if (root.matches?.(selectors)) elements.push(root);
+    elements.push(...(root.querySelectorAll?.(selectors) || []));
+    elements.forEach(element => {
+        for (const node of [...element.childNodes]) {
+            if (node.nodeType !== Node.TEXT_NODE) continue;
+            const text = node.nodeValue || '';
+            const match = [...replacements.keys()].find(symbol => text.trimStart().startsWith(symbol));
+            if (!match) continue;
+            const leading = text.slice(0, text.indexOf(match));
+            const rest = text.slice(text.indexOf(match) + match.length);
+            const holder = document.createElement('span');
+            holder.className = 'ui-icon-holder';
+            holder.innerHTML = b2bIcon(replacements.get(match));
+            node.replaceWith(document.createTextNode(leading), holder, document.createTextNode(rest));
+        }
+    });
+    root.querySelectorAll?.('.btn-logout').forEach(button => {
+        button.innerHTML = `${b2bIcon('logout')}<span>Cerrar sesión</span>`;
+        button.setAttribute('aria-label', 'Cerrar sesión');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    hydrateProfessionalIcons(document);
+    if (typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) hydrateProfessionalIcons(node);
+    })));
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
 // ============================================
 // TOAST NOTIFICATIONS
 // ============================================
@@ -14,13 +64,13 @@ function showToast(msg, type = 'info', duration = 3500) {
         container.className = 'toast-container';
         document.body.appendChild(container);
     }
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const icons = { success: 'check', error: 'incident', warning: 'alert', info: 'note' };
     const toast = document.createElement('div');
     const safeType = Object.prototype.hasOwnProperty.call(icons, type) ? type : 'info';
     toast.className = `toast ${safeType}`;
     const icon = document.createElement('span');
     icon.className = 'toast-icon';
-    icon.textContent = icons[safeType];
+    icon.innerHTML = b2bIcon(icons[safeType]);
     const message = document.createElement('span');
     message.className = 'toast-msg';
     message.textContent = msg == null ? '' : String(msg);
@@ -32,24 +82,47 @@ function showToast(msg, type = 'info', duration = 3500) {
 // ============================================
 // MODAL HELPERS
 // ============================================
+const _modalReturnFocus = new WeakMap();
 function openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
+    _modalReturnFocus.set(m, document.activeElement);
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
     m.classList.add('active');
     setTimeout(() => {
-        const first = m.querySelector('input:not([type=hidden]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
-        if (first) first.focus();
+        const first = m.querySelector('[data-modal-initial-focus]') || m.querySelector('input:not([type=hidden]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+        if (first) first.focus({ preventScroll: true });
     }, 60);
 }
-function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
-function closeAllModals() { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); }
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.remove('active');
+    const prior = _modalReturnFocus.get(m);
+    if (prior && typeof prior.focus === 'function') prior.focus();
+    _modalReturnFocus.delete(m);
+}
+function closeAllModals() { document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id)); }
 
 // Close modal on overlay click
 document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
+    if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
 });
-// Close modal on Escape
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllModals(); });
+// Escape + foco contenido dentro del diálogo superior.
+document.addEventListener('keydown', (e) => {
+    const modal = [...document.querySelectorAll('.modal-overlay.active')].pop();
+    if (!modal) return;
+    if (e.key === 'Escape') { closeModal(modal.id); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = [...modal.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+        .filter(element => element.offsetParent !== null);
+    if (!focusable.length) { e.preventDefault(); return; }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 // ============================================
 // AUTH GUARD
@@ -79,6 +152,19 @@ function initSidebar() {
     const mainContent = document.getElementById('mainContent');
     const toggleBtn = document.getElementById('sidebarToggle');
     const mobileBtn = document.getElementById('mobileMenuBtn');
+    const navIcons = {
+        'dashboard.html':'dashboard','pacientes.html':'user','cuidador.html':'users','familiar.html':'user',
+        'staff.html':'users','reportes.html':'report','catalogo.html':'box','configuracion.html':'settings',
+    };
+    document.querySelectorAll('.sidebar-nav a[href] .nav-icon').forEach(icon => {
+        const href = icon.closest('a')?.getAttribute('href')?.split('?')[0];
+        if (navIcons[href]) icon.innerHTML = b2bIcon(navIcons[href]);
+    });
+    hydrateProfessionalIcons(document);
+    document.querySelectorAll('.modal-close').forEach(button => {
+        if (!button.hasAttribute('aria-label')) button.setAttribute('aria-label', 'Cerrar');
+        if (!button.getAttribute('type')) button.setAttribute('type', 'button');
+    });
 
     // Desktop toggle (collapse)
     if (toggleBtn) {
@@ -170,7 +256,7 @@ function populateSidebarUser() {
             miRes.id = 'navMisResidentes';
             miRes.href = 'cuidador.html';
             miRes.className = 'nav-item';
-            miRes.innerHTML = '<span class="nav-icon">🗂️</span><span class="nav-label">Mis residentes</span>';
+            miRes.innerHTML = `<span class="nav-icon">${b2bIcon('users')}</span><span class="nav-label">Mis residentes</span>`;
             if (window.location.pathname.endsWith('cuidador.html')) miRes.classList.add('active');
             pacientesLink.insertAdjacentElement('beforebegin', miRes);
         }
@@ -189,6 +275,10 @@ function populateSidebarUser() {
 // ============================================
 
 /** Inyecta la campana en el topbar y carga el conteo inicial de no leídas */
+function _notificationIcon(name) {
+    const prefix = window.location.pathname.includes('/pages/') ? '../' : '';
+    return `<svg class="ui-icon" aria-hidden="true"><use href="${prefix}icons/b2b-ui.svg#${name}"></use></svg>`;
+}
 function _initNotifBell() {
     const topbarActions = document.querySelector('.topbar-actions');
     if (!topbarActions || document.getElementById('notifBellBtn')) return;
@@ -201,20 +291,20 @@ function _initNotifBell() {
             '#notifBellBtn{position:relative;background:none;border:1.5px solid var(--border-color);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;color:var(--text-primary);transition:background .15s,border-color .15s;flex-shrink:0}',
             '#notifBellBtn:hover{background:var(--bg-page);border-color:var(--pro-primary)}',
             '#notifBellBtn.active{border-color:var(--pro-primary);background:#EEF2FF}',
-            '#notifBadge{position:absolute;top:-5px;right:-5px;background:#EF4444;color:#fff;border-radius:9999px;font-size:.62rem;font-weight:800;min-width:16px;height:16px;padding:0 4px;display:flex;align-items:center;justify-content:center;line-height:1;border:2px solid #fff}',
+            '#notifBadge{position:absolute;top:-5px;right:-5px;background:#B91C1C;color:#fff;border-radius:9999px;font-size:.62rem;font-weight:800;min-width:16px;height:16px;padding:0 4px;display:flex;align-items:center;justify-content:center;line-height:1;border:2px solid #fff}',
             '#notifPanel{position:fixed;top:60px;right:12px;width:340px;max-width:calc(100vw - 24px);background:#fff;border:1.5px solid var(--border-color);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.14);z-index:9000;display:none;flex-direction:column;max-height:70vh;overflow:hidden}',
             '#notifPanel.open{display:flex}',
             '#notifPanelHeader{padding:12px 16px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}',
             '#notifPanelHeader h4{margin:0;font-size:.92rem;font-weight:700}',
             '#notifPanelBody{overflow-y:auto;flex:1}',
-            '.notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .12s;text-decoration:none;color:inherit}',
+            '.notif-item{display:flex;align-items:flex-start;gap:10px;min-width:0;max-width:100%;overflow:hidden;padding:12px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background .12s;text-decoration:none;color:inherit}',
             '.notif-item:hover{background:var(--bg-page)}',
             '.notif-item.unread{background:#F5F7FF}',
             '.notif-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}',
             '.notif-body{flex:1;min-width:0}',
-            '.notif-title{font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '.notif-desc{font-size:.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}',
-            '.notif-ts{font-size:.68rem;color:var(--text-secondary);opacity:.75;margin-top:2px;display:block}',
+            '.notif-title{display:block;font-size:.84rem;font-weight:700;line-height:1.35;overflow-wrap:anywhere}',
+            '.notif-desc{display:block;font-size:.77rem;color:var(--text-secondary);line-height:1.42;overflow-wrap:anywhere;margin-top:4px}',
+            '.notif-ts{font-size:.69rem;color:var(--text-secondary);opacity:.8;margin-top:6px;display:block}',
             '.notif-empty{padding:24px 16px;text-align:center;font-size:.84rem;color:var(--text-secondary)}',
         ].join('');
         document.head.appendChild(s);
@@ -224,7 +314,10 @@ function _initNotifBell() {
     const bell = document.createElement('button');
     bell.id = 'notifBellBtn';
     bell.title = 'Notificaciones';
-    bell.innerHTML = '🔔<span id="notifBadge" style="display:none"></span>';
+    bell.setAttribute('aria-label', 'Abrir notificaciones');
+    bell.setAttribute('aria-controls', 'notifPanel');
+    bell.setAttribute('aria-expanded', 'false');
+    bell.innerHTML = `${_notificationIcon('alert')}<span id="notifBadge" style="display:none"></span>`;
     bell.addEventListener('click', _toggleNotifPanel);
     topbarActions.insertBefore(bell, topbarActions.firstChild);
 
@@ -232,10 +325,12 @@ function _initNotifBell() {
     if (!document.getElementById('notifPanel')) {
         const panel = document.createElement('div');
         panel.id = 'notifPanel';
+        panel.setAttribute('role', 'region');
+        panel.setAttribute('aria-label', 'Notificaciones');
         panel.innerHTML = `
             <div id="notifPanelHeader">
-                <h4>🔔 Notificaciones</h4>
-                <button style="background:none;border:none;cursor:pointer;font-size:1rem;color:var(--text-secondary)" onclick="_closeNotifPanel()">✕</button>
+                <h4>${_notificationIcon('alert')} Notificaciones</h4>
+                <button aria-label="Cerrar notificaciones" style="background:none;border:none;cursor:pointer;font-size:1rem;color:var(--text-secondary)" onclick="_closeNotifPanel()">${_notificationIcon('x')}</button>
             </div>
             <div id="notifPanelBody"><div class="notif-empty">Cargando…</div></div>`;
         document.body.appendChild(panel);
@@ -262,6 +357,8 @@ async function _loadNotifCount() {
             const count = data.unread || 0;
             badge.textContent = count > 99 ? '99+' : count;
             badge.style.display = count > 0 ? 'flex' : 'none';
+            const bell = document.getElementById('notifBellBtn');
+            if (bell) bell.setAttribute('aria-label', count > 0 ? `Abrir notificaciones: ${count} novedades sin revisar` : 'Abrir notificaciones: sin novedades');
         }
     } catch { /* sin conexión — ignorar */ }
     // Refrescar conteo cada 2 minutos
@@ -279,6 +376,7 @@ async function _toggleNotifPanel() {
     } else {
         panel.classList.add('open');
         bell?.classList.add('active');
+        bell?.setAttribute('aria-expanded', 'true');
         await _renderNotifPanel();
         // Marcar como vistas (actualiza notif_last_seen_at en el servidor)
         try { await API_B2B.marcarNotifVistas(); } catch {}
@@ -293,6 +391,7 @@ function _closeNotifPanel() {
     const bell  = document.getElementById('notifBellBtn');
     panel?.classList.remove('open');
     bell?.classList.remove('active');
+    bell?.setAttribute('aria-expanded', 'false');
 }
 
 /** Formatea un timestamp como tiempo relativo corto: "hace 5 min", "hace 2h", "ayer", etc. */
@@ -322,7 +421,7 @@ async function _renderNotifPanel() {
     try {
         const { items } = await API_B2B.getNotificaciones();
         if (!items || items.length === 0) {
-            body.innerHTML = '<div class="notif-empty">✅ Todo al día, sin alertas pendientes.</div>';
+            body.innerHTML = '<div class="notif-empty">Todo al día, sin novedades pendientes.</div>';
             return;
         }
         // Detect current path depth for relative links
@@ -336,7 +435,8 @@ async function _renderNotifPanel() {
 
             const icon = document.createElement('span');
             icon.className = 'notif-icon';
-            icon.textContent = n.icono == null ? '' : String(n.icono);
+            const iconByType = { cita:'calendar', nota_urgente:'note', sintoma:'activity', stock_bajo:'box', cumpleanos:'user', ingreso:'plus', egreso:'status' };
+            icon.innerHTML = _notificationIcon(iconByType[n.tipo] || 'alert');
 
             const content = document.createElement('span');
             content.className = 'notif-body';
@@ -352,7 +452,7 @@ async function _renderNotifPanel() {
             if (tsStr) {
                 const ts = document.createElement('span');
                 ts.className = 'notif-ts';
-                ts.textContent = `🕐 ${tsStr}`;
+                ts.textContent = tsStr;
                 content.appendChild(ts);
             }
             link.append(icon, content);
@@ -512,16 +612,17 @@ function formatDate(isoString, options) {
 function formatDateTime(isoString) {
     if (!isoString) return '—';
     try {
-        // El backend tiene SET TIME ZONE 'America/Argentina/Buenos_Aires', por lo que
-        // todos los TIMESTAMP (created_at, fecha) almacenan hora local de Argentina.
-        // node-postgres los serializa con sufijo Z (fake-UTC), así que al quitarlo
-        // JS los parsea como hora local del navegador → muestra la hora correcta.
-        // También se eliminan offsets ±HH:MM por si viene algún TIMESTAMPTZ.
-        const s = String(isoString).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
-        const date = new Date(s);
+        // La API serializa fechas como instantes ISO. Conservar Z/offset evita una
+        // segunda interpretación local y deja que el navegador aplique su zona una vez.
+        const date = new Date(isoString);
         if (Number.isNaN(date.getTime())) return '—';
         return date.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
     } catch { return '—'; }
+}
+function toApiDateTime(localDateTime) {
+    if (localDateTime === null || localDateTime === undefined || localDateTime === '') return null;
+    const date = localDateTime instanceof Date ? localDateTime : new Date(localDateTime);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 function calcEdad(fechaNacimiento) {
     if (!fechaNacimiento) return null;
@@ -650,10 +751,17 @@ const _PERM_DEFAULTS = {
     eliminar_paciente:   { medico: false, cuidador_staff: false },
     gestionar_catalogo:  { medico: false, cuidador_staff: false },
     ver_staff:           { medico: false, cuidador_staff: false },
+    editar_perfil_cuidado:    { medico: true, cuidador_staff: false },
+    gestionar_alertas:        { medico: true, cuidador_staff: false },
+    gestionar_incidentes:     { medico: true, cuidador_staff: true  },
+    gestionar_estado_temporal:{ medico: true, cuidador_staff: true  },
+    registrar_evolucion:      { medico: true, cuidador_staff: true  },
+    gestionar_prescripcion:   { medico: true, cuidador_staff: false },
+    registrar_administracion: { medico: true, cuidador_staff: true  },
+    ver_dashboard_direccion:   { medico: false, cuidador_staff: false },
 };
 
-function canDo(action) {
-    const user = API_B2B.getUser();
+function _canIdentityDo(user, action) {
     if (!user) return false;
     if (user.rol === 'admin_institucion') return true;
     if (user.rol === 'familiar') return false;
@@ -672,6 +780,20 @@ function canDo(action) {
     return _PERM_DEFAULTS[action]?.[user.rol] ?? false;
 }
 
+const _OPERATOR_COMPETENCE_ACTIONS = new Set(['gestionar_prescripcion']);
+
+function canDo(action) {
+    const user = API_B2B.getUser();
+    if (!_canIdentityDo(user, action)) return false;
+    if (!_OPERATOR_COMPETENCE_ACTIONS.has(action)) return true;
+    const operator = API_B2B.getOperatorContext?.();
+    if (!operator) return true;
+    return _canIdentityDo({
+        ...user,
+        rol: operator.rol,
+    }, action);
+}
+
 // Defaults para secciones visibles por el familiar en la ficha del paciente
 const _FAMILIAR_SECTION_DEFAULTS = {
     medicamentos: true,
@@ -682,6 +804,10 @@ const _FAMILIAR_SECTION_DEFAULTS = {
     contactos:    true,
     notas:        false,
     documentos:   true,
+    alertas:       true,
+    incidentes:    false,
+    estados:       true,
+    evoluciones:   false,
 };
 
 // Retorna true si el familiar puede ver la sección dada según los permisos de la institución.
@@ -745,17 +871,21 @@ function _workersKey() {
 function _actualizarWorkerChip() {
     const operator = API_B2B.getOperatorContext();
     const principal = API_B2B.getPrincipalUser();
-    const nombre = operator?.nombre || principal?.nombre || principal?.email || 'Usuario';
+    const principalNombre = principal?.nombre || principal?.email || 'Usuario';
+    const nombre = operator?.nombre || principalNombre;
     const roleLabels = { admin_institucion: 'Administrador', cuidador_staff: 'Personal', medico: 'Médico / Profesional' };
     const effectiveRole = operator?.rol || principal?.rol;
     const role = roleLabels[effectiveRole] || effectiveRole || '';
+    const principalRole = roleLabels[principal?.rol] || principal?.rol || '';
     const inicial = escapeHtml(nombre.charAt(0).toUpperCase());
     const nombreHtml = escapeHtml(nombre);
     const roleHtml = escapeHtml(role);
+    const principalHtml = escapeHtml(principalNombre);
+    const principalRoleHtml = escapeHtml(principalRole);
 
     const chip = document.getElementById('workerChip');
     if (chip) {
-        chip.innerHTML = `<span class="operator-chip-avatar">${inicial}</span><span class="operator-chip-text"><strong>${nombreHtml}</strong><small>${roleHtml}</small></span>`;
+        chip.innerHTML = `<span class="operator-chip-avatar">${inicial}</span><span class="operator-chip-text"><strong>${operator ? `Registra: ${nombreHtml}` : nombreHtml}</strong><small>${operator ? `Sesión: ${principalHtml}` : roleHtml}</small></span>`;
         chip.title = operator
             ? `Registrando como ${nombre}. Tocá para cambiar o volver a tu identidad.`
             : `Registrando como ${nombre}. Tocá para cambiar de persona.`;
@@ -767,9 +897,10 @@ function _actualizarWorkerChip() {
         widget.innerHTML = `
             <div class="sidebar-worker-av">${inicial}</div>
             <div class="sidebar-worker-info">
-                <div class="sidebar-worker-label">Operando como</div>
+                <div class="sidebar-worker-label">${operator ? 'Registrando acciones' : 'Sesión y registro'}</div>
                 <div class="sidebar-worker-name">${nombreHtml}</div>
-                <div class="sidebar-worker-role">${roleHtml}</div>
+                <div class="sidebar-worker-role">${operator ? `Operador: ${roleHtml}` : roleHtml}</div>
+                ${operator ? `<div class="sidebar-worker-session">Sesión: ${principalHtml} · ${principalRoleHtml}</div>` : ''}
             </div>
             <span class="sidebar-worker-change">cambiar</span>`;
     }
@@ -777,7 +908,11 @@ function _actualizarWorkerChip() {
 
 function initSharedStationUI() {
     const principal = API_B2B.getPrincipalUser();
-    if (!principal?.shared_mode) return;
+    // La preferencia local es el respaldo de UI para sesiones abiertas antes de
+    // activar el modo en otro momento/dispositivo. El backend sigue siendo la
+    // autoridad y valida cada contexto de operador.
+    const sharedModeEnabled = !!principal?.shared_mode || localStorage.getItem('cd_shared_mode') === '1';
+    if (!principal || !sharedModeEnabled) return;
     try {
         sessionStorage.removeItem('cd_active_worker');
         localStorage.removeItem(_workersKey());
@@ -793,14 +928,15 @@ function initSharedStationUI() {
             '.worker-btn-av{width:30px;height:30px;border-radius:50%;background:var(--pro-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}',
             '.operator-chip-avatar{width:22px;height:22px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}',
             '.operator-chip-text{display:flex;flex-direction:column;line-height:1.05;text-align:left;overflow:hidden}.operator-chip-text strong{font-size:.75rem;overflow:hidden;text-overflow:ellipsis}.operator-chip-text small{font-size:.62rem;color:var(--text-secondary);margin-top:2px}',
-            '.sidebar-worker{padding:8px 14px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s;border-radius:0 0 12px 12px}',
-            '.sidebar-worker:hover{background:var(--bg-page)}',
+            '.sidebar-worker{margin:8px;padding:10px;border:1px solid rgba(125,211,252,.42);background:#132B55;color:#fff;display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .15s,border-color .15s;border-radius:9px}',
+            '.sidebar-worker:hover{background:#173566;border-color:#7DD3FC}',
             '.sidebar-worker-av{width:28px;height:28px;border-radius:50%;background:var(--pro-primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
             '.sidebar-worker-info{flex:1;min-width:0}',
-            '.sidebar-worker-label{font-size:.68rem;color:var(--text-secondary);line-height:1}',
+            '.sidebar-worker-label{font-size:.68rem;color:#BFD8F7;line-height:1}',
             '.sidebar-worker-name{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '.sidebar-worker-role{font-size:.65rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '.sidebar-worker-change{font-size:.68rem;color:var(--pro-primary);flex-shrink:0}',
+            '.sidebar-worker-role{font-size:.65rem;color:#C8D9ED;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.sidebar-worker-session{font-size:.64rem;color:#9FC3E8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.sidebar-worker-change{font-size:.68rem;color:#7DD3FC;font-weight:700;flex-shrink:0}',
             '.collapsed .sidebar-worker-info,.collapsed .sidebar-worker-change{display:none}',
             '.operator-required-modal{z-index:12000}',
         ].join('');
@@ -872,8 +1008,8 @@ async function openWorkerSwitcher(required = false) {
     modal.innerHTML = `
         <div class="modal modal-sm">
             <div class="modal-header">
-                <span class="modal-title">👤 Cambiar quién registra</span>
-                <button class="modal-close" id="workerModalClose">✕</button>
+                <span class="modal-title">${b2bIcon('users')} Cambiar quién registra</span>
+                <button class="modal-close" id="workerModalClose" aria-label="Cerrar">×</button>
             </div>
             <div class="modal-body">
                 <p class="text-muted" style="font-size:.82rem;margin-bottom:12px">
@@ -883,7 +1019,8 @@ async function openWorkerSwitcher(required = false) {
                 ${operators.length ? '' : '<p class="text-muted" style="font-size:.82rem;margin-bottom:12px">No hay otras personas habilitadas. Podés continuar normalmente con tu identidad.</p>'}
                 <form id="operatorPinForm" style="display:none">
                     <input type="hidden" id="selectedOperatorId">
-                    <div class="form-group"><label class="form-label">PIN de 6 dígitos</label><input id="operatorPin" class="form-control" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required></div>
+                    <div class="form-group"><label class="form-label">PIN de 6 dígitos</label><input id="operatorPin" class="form-control" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" aria-describedby="operatorPinError" required></div>
+                    <div id="operatorPinError" class="alert alert-danger" role="alert" aria-live="assertive" hidden style="margin-bottom:12px"></div>
                     <button class="btn btn-primary" type="submit" style="width:100%">Comenzar turno</button>
                 </form>
                 <div style="border-top:1px solid var(--border-color);margin-top:14px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap">
@@ -908,12 +1045,18 @@ async function openWorkerSwitcher(required = false) {
             modal.querySelector('#selectedOperatorId').value = btn.dataset.operatorId;
             modal.querySelector('#operatorPinForm').style.display = '';
             modal.querySelector('#operatorPin').value = '';
+            const error = modal.querySelector('#operatorPinError');
+            error.textContent = '';
+            error.hidden = true;
             modal.querySelector('#operatorPin').focus();
         });
     });
     modal.querySelector('#operatorPinForm').addEventListener('submit', async event => {
         event.preventDefault();
         const submit = event.target.querySelector('[type=submit]');
+        const error = modal.querySelector('#operatorPinError');
+        error.textContent = '';
+        error.hidden = true;
         submit.disabled = true;
         try {
             const operator = await API_B2B.activateOperator(Number(modal.querySelector('#selectedOperatorId').value), modal.querySelector('#operatorPin').value);
@@ -921,7 +1064,9 @@ async function openWorkerSwitcher(required = false) {
             closeModal('workerSwitcherModal');
             window.location.reload();
         } catch (error) {
-            showToast(error.message, 'error');
+            const feedback = modal.querySelector('#operatorPinError');
+            feedback.textContent = error.message || 'No se pudo validar el PIN.';
+            feedback.hidden = false;
             modal.querySelector('#operatorPin').value = '';
             modal.querySelector('#operatorPin').focus();
         } finally { submit.disabled = false; }
@@ -949,7 +1094,7 @@ function _agregarNuevoWorker() { /* legacy retirado por P1-C */ }
             b = document.createElement('div');
             b.id = '_offlineBanner';
             b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#374151;color:#fff;padding:10px 16px;text-align:center;font-size:.84rem;z-index:9999;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 -2px 8px rgba(0,0,0,.3)';
-            b.textContent = '\uD83D\uDCF5 Sin conexi\u00f3n \u2014 Las consultas y los cambios B2B requieren conexi\u00f3n. Ninguna operaci\u00f3n se guardar\u00e1 para enviarla despu\u00e9s.';
+            b.textContent = '\uD83D\uDCF5 Sin conexi\u00f3n \u2014 No se pueden consultar ni registrar cambios hasta recuperar la conexi\u00f3n. Ninguna operaci\u00f3n se guardar\u00e1 para enviarla despu\u00e9s.';
             document.body.appendChild(b);
         }
         b.style.display = 'flex';

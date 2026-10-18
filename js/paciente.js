@@ -11,6 +11,38 @@ let _stockModelo = 'institucional'; // kept for backward compat but always treat
 let _catalogo = [];                 // institutional catalog items
 let _catalogoPaciente = [];         // patient-specific catalog items
 let _isEgresado = false;            // true when patient has a discharge date
+let _alertas = [];
+let _incidentes = [];
+let _incidentArchiveFilter = 'activos';
+let _estadosResidente = { actual: { tipo: 'presente', presente: true, version: null }, historial: [] };
+let _timelineItems = [];
+let _timelineCursor = null;
+let _evoluciones = [];
+let _timelineDirty = true;
+let _timelineLoadRevision = 0;
+let _alertLoadRevision = 0;
+
+const LA1_LABELS = {
+    movilidad: { independiente: 'Independiente', asistencia_parcial: 'Asistencia parcial', asistencia_total: 'Asistencia total', inmovil: 'Inmóvil' },
+    dependencia: { baja: 'Baja', media: 'Media', alta: 'Alta', total: 'Total' },
+    caida: { bajo: 'Bajo', moderado: 'Moderado', alto: 'Alto' },
+    continencia: { continente: 'Continente', asistencia: 'Requiere asistencia', incontinencia_urinaria: 'Incontinencia urinaria', incontinencia_fecal: 'Incontinencia fecal', incontinencia_mixta: 'Incontinencia mixta' },
+    estado: { presente: 'Presente', internado: 'Internado', salida_medica: 'Salida médica', salida_familiar: 'Salida familiar', otro: 'Otro' },
+    incidente: { caida: 'Caída', golpe_herida: 'Golpe / herida', error_medicacion: 'Error de medicación', omision_medicacion: 'Omisión de medicación', episodio_conductual: 'Episodio conductual', derivacion: 'Derivación', otro: 'Otro' },
+    documento: { receta: 'Receta', estudio_analisis: 'Estudio / análisis', epicrisis: 'Epicrisis', indicacion: 'Indicación', dni: 'DNI', cobertura: 'Cobertura', otro: 'Otro' },
+};
+
+function uiIcon(name) {
+    return `<svg class="ui-icon" aria-hidden="true"><use href="../icons/b2b-ui.svg#${escapeHtml(name)}"></use></svg>`;
+}
+
+function toLocalDateTime(value = new Date()) {
+    if (value === null || value === undefined || value === '') return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
@@ -24,13 +56,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // M8: Actualizar institucion_permisos desde el servidor (pueden haber cambiado sin que el usuario haya vuelto a iniciar sesión)
     if (user?.rol !== 'admin_institucion') {
-        API_B2B.get('/api/b2b/auth/me').then(fresh => {
+        try {
+            const fresh = await API_B2B.get('/api/b2b/auth/me');
             if (fresh?.institucion_permisos) {
                 const stored = API_B2B.getUser() || {};
                 stored.institucion_permisos = fresh.institucion_permisos;
                 API_B2B.setUser(stored);
             }
-        }).catch(() => {});
+        } catch {}
     }
 
     initSidebar();
@@ -53,20 +86,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (topbarLink) { topbarLink.href = 'cuidador.html'; topbarLink.textContent = '← Mis pacientes'; }
     }
 
-    initTabs(params.get('tab'));
-    initForms();
-
     // Familiar: ocultar tabs según permisos de la institución
     if (_isReadOnly) {
         // tabs que pueden ser restringidos por el admin (canFamiliarSee definido en utils-b2b.js)
-        const restrictableTabs = ['medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos'];
+        const restrictableTabs = ['timeline','medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos','incidentes'];
         restrictableTabs.forEach(tabName => {
-            if (!canFamiliarSee(tabName)) {
+            if (!canFamiliarSee(tabName === 'timeline' ? 'evoluciones' : tabName)) {
                 const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
                 if (tabBtn) tabBtn.style.display = 'none';
             }
         });
     }
+
+    initForms();
 
     // Load catalogs (familiar: solo catálogo del paciente; otros: ambos)
     try {
@@ -81,6 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { /* silently continue */ }
 
     await loadPaciente();
+    // Resolver el destino de URL sólo con identidad, permisos y ficha ya inicializados.
+    initTabs(params.get('tab'));
     await loadAllData();
 });
 
@@ -95,11 +129,22 @@ function initTabs(defaultTab) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('tab-' + target)?.classList.add('active');
+            const picker = document.getElementById('residentSectionSelect');
+            if (picker) picker.value = target;
+            if (target === 'timeline' && _timelineDirty) loadTimeline(true);
         });
     });
-    const allowedTabs = ['datos','medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos'];
-    const tab = allowedTabs.includes(defaultTab) ? defaultTab : 'datos';
-    document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.click();
+    const picker = document.getElementById('residentSectionSelect');
+    if (picker) picker.addEventListener('change', () => activateResidentTab(picker.value));
+    const allowedTabs = ['timeline','datos','medicamentos','citas','tareas','sintomas','signos','contactos','notas','documentos','incidentes'];
+    const requested = allowedTabs.includes(defaultTab) ? defaultTab : 'timeline';
+    const requestedButton = document.querySelector(`.tab-btn[data-tab="${requested}"]`);
+    const fallbackButton = document.querySelector('.tab-btn[data-tab="datos"]')
+        || [...document.querySelectorAll('.tab-btn')].find(button => button.style.display !== 'none' && !button.disabled);
+    const target = requestedButton && requestedButton.style.display !== 'none' && !requestedButton.disabled
+        ? requestedButton
+        : fallbackButton;
+    target?.click();
 }
 
 // ============================================
@@ -131,28 +176,31 @@ async function loadPaciente() {
 
 function renderPacienteHeader(p) {
     const edad = calcEdad(p.fecha_nacimiento);
+    const privatePhoto = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(String(p.foto_url || '')) ? p.foto_url : null;
     document.title = `${p.apellido || ''} ${p.nombre} — CuidaDiario PRO`;
     const el = document.getElementById('pacienteHeader');
     if (!el) return;
     el.innerHTML = `
         <div class="d-flex align-center gap-12 flex-wrap">
-            <div class="paciente-avatar-lg">👤</div>
+            <div class="resident-photo-shell">
+                ${privatePhoto ? `<img class="resident-photo" src="${escapeHtml(privatePhoto)}" alt="Fotografía de ${escapeHtml(p.nombre)}">` : `<div class="paciente-avatar-lg">${uiIcon('user')}</div>`}
+                ${canDo('editar_paciente') && !p.fecha_egreso ? `<button class="resident-photo-action" type="button" onclick="seleccionarFotoResidente()">${privatePhoto ? 'Cambiar foto' : 'Agregar foto'}</button>${privatePhoto ? '<button class="resident-photo-remove" type="button" onclick="quitarFotoResidente()">Quitar</button>' : ''}` : ''}
+            </div>
             <div class="paciente-info-header" style="flex:1">
                 <h1>${escapeHtml(p.apellido || '')} ${escapeHtml(p.nombre)}</h1>
                 <div class="paciente-meta">
-                    ${edad !== null ? `<span class="paciente-meta-item">🎂 ${edad} años</span>` : ''}
-                    ${p.fecha_nacimiento ? `<span class="paciente-meta-item">📅 ${formatDate(p.fecha_nacimiento)}</span>` : ''}
-                    ${p.habitacion ? `<span class="paciente-meta-item">🛏️ Hab. ${escapeHtml(p.habitacion)}</span>` : ''}
+                    ${edad !== null ? `<span class="paciente-meta-item">${uiIcon('calendar')} ${edad} años</span>` : ''}
+                    ${p.fecha_nacimiento ? `<span class="paciente-meta-item">${formatDate(p.fecha_nacimiento)}</span>` : ''}
+                    ${p.habitacion ? `<span class="paciente-meta-item">Hab. ${escapeHtml(p.habitacion)}</span>` : ''}
                     ${p.dni ? `<span class="paciente-meta-item"><span style="font-size:.72rem;font-weight:800;opacity:.75">DNI</span> ${escapeHtml(p.dni)}</span>` : ''}
-                    ${p.obra_social ? `<span class="paciente-meta-item">🏥 ${escapeHtml(p.obra_social)}</span>` : ''}
-                    ${p.fecha_ingreso ? `<span class="paciente-meta-item">📋 Ingreso: ${formatDate(p.fecha_ingreso)}</span>` : ''}
+                    ${p.obra_social ? `<span class="paciente-meta-item">${escapeHtml(p.obra_social)}</span>` : ''}
+                    ${p.fecha_ingreso ? `<span class="paciente-meta-item">Ingreso: ${formatDate(p.fecha_ingreso)}</span>` : ''}
                 </div>
-                ${p.diagnostico ? `<div class="paciente-meta"><span class="paciente-meta-item">🩺 ${escapeHtml(p.diagnostico)}</span></div>` : ''}
-                ${p.alergias ? `<div class="paciente-meta"><span class="paciente-meta-item badge-danger" style="background:#fde8e8;color:#c0392b;padding:3px 8px;border-radius:4px;font-weight:600">⚠️ Alergias: ${escapeHtml(p.alergias)}</span></div>` : ''}
+                ${p.diagnostico ? `<div class="paciente-meta"><span class="paciente-meta-item">${escapeHtml(p.diagnostico)}</span></div>` : ''}
             </div>
             <div class="d-flex gap-8 align-center flex-wrap">
-                ${p.fecha_egreso ? `<span class="badge badge-red" style="font-size:.8rem;padding:6px 12px">🚪 Alta: ${formatDate(p.fecha_egreso)} — ${escapeHtml(p.motivo_egreso || '')}</span>` : ''}
-                ${canDo('dar_alta') && !p.fecha_egreso ? `<button class="btn btn-sm" style="background:#fff;color:#E65100;font-weight:700;border:none;box-shadow:0 2px 8px rgba(0,0,0,.2)" onclick="openModalEgreso()">🛎 Dar de alta</button>` : ''}
+                ${p.fecha_egreso ? `<span class="badge badge-red" style="font-size:.8rem;padding:6px 12px">Alta: ${formatDate(p.fecha_egreso)} — ${escapeHtml(p.motivo_egreso || '')}</span>` : ''}
+                ${canDo('dar_alta') && !p.fecha_egreso ? `<button class="btn btn-sm btn-secondary" onclick="openModalEgreso()">Registrar egreso</button>` : ''}
             </div>
         </div>`;
 }
@@ -160,13 +208,16 @@ function renderPacienteHeader(p) {
 function renderDatosTab(p) {
     const el = document.getElementById('datosContent');
     if (!el) return;
+    const actual = _estadosResidente.actual || { tipo: 'presente', presente: true };
+    const canCare = canDo('editar_perfil_cuidado') && !_isEgresado;
+    const canState = canDo('gestionar_estado_temporal') && !_isEgresado;
     el.innerHTML = `
-        <div class="grid-2">
-            <div class="card">
-                <div class="card-header"><span class="card-title">👤 Datos Personales</span>
-                    ${canDo('editar_paciente') && !_isEgresado ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">✏️ Editar</button>` : ''}
+        <div class="care-overview-grid">
+            <section class="profile-section">
+                <div class="profile-section-heading"><div><span class="eyebrow">Identificación</span><h2>Datos del residente</h2></div>
+                    ${canDo('editar_paciente') && !_isEgresado ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">Editar ficha</button>` : ''}
                 </div>
-                <div class="card-body">
+                <div class="profile-key-values">
                     ${row('Nombre completo', `${p.apellido || ''} ${p.nombre}`)}
                     ${row('Fecha de nacimiento', formatDate(p.fecha_nacimiento))}
                     ${row('DNI', p.dni)}
@@ -179,19 +230,97 @@ function renderDatosTab(p) {
                     ${p.fecha_egreso ? row('Fecha de egreso', formatDate(p.fecha_egreso)) : ''}
                     ${p.motivo_egreso ? row('Motivo de egreso', p.motivo_egreso) : ''}
                 </div>
-            </div>
-            <div class="card">
-                <div class="card-header"><span class="card-title">👨‍👩‍👧 Contacto Familiar</span></div>
-                <div class="card-body">
-                    ${row('Nombre', p.contacto_familiar_nombre)}
-                    ${row('Teléfono', p.contacto_familiar_tel || '—', safeContactHref('tel', p.contacto_familiar_tel))}
+            </section>
+            <section class="profile-section care-profile-card">
+                <div class="profile-section-heading"><div><span class="eyebrow">Operativo</span><h2>Perfil de cuidado</h2></div>
+                    ${canCare ? `<button class="btn btn-sm btn-secondary" onclick="openEditPaciente()">Actualizar</button>` : ''}
                 </div>
-            </div>
+                <div class="care-facts">
+                    <div><span>Movilidad</span><strong>${escapeHtml(LA1_LABELS.movilidad[p.movilidad] || 'Sin especificar')}</strong></div>
+                    <div><span>Dependencia</span><strong>${escapeHtml(LA1_LABELS.dependencia[p.nivel_dependencia] || 'Sin especificar')}</strong></div>
+                    <div><span>Riesgo de caída</span><strong>${escapeHtml(LA1_LABELS.caida[p.riesgo_caida] || 'Sin especificar')}</strong></div>
+                    <div><span>Continencia</span><strong>${escapeHtml(LA1_LABELS.continencia[p.continencia] || 'Sin especificar')}</strong></div>
+                </div>
+                <div class="profile-note"><span>Dieta y restricciones</span><p>${escapeHtml(p.dieta_restricciones || 'Sin información registrada')}</p></div>
+                <div class="profile-note"><span>Aspectos cognitivos</span><p>${escapeHtml(p.aspectos_cognitivos || 'Sin información registrada')}</p></div>
+                <p class="scope-note">Información operativa para organizar el cuidado. No reemplaza documentación clínica oficial.</p>
+            </section>
         </div>
-        ${p.notas_ingreso ? `<div class="card mt-16"><div class="card-header"><span class="card-title">📋 Notas de ingreso</span></div><div class="card-body">${escapeHtml(p.notas_ingreso)}</div></div>` : ''}
-        ${p.alergias ? `<div class="card mt-16" style="border-left:4px solid var(--pro-danger)"><div class="card-header"><span class="card-title" style="color:var(--pro-danger)">⚠️ Alergias y contraindicaciones</span></div><div class="card-body fw-bold text-danger">${escapeHtml(p.alergias)}</div></div>` : ''}
-        ${p.antecedentes ? `<div class="card mt-16"><div class="card-header"><span class="card-title">🏥 Antecedentes clínicos</span></div><div class="card-body">${escapeHtml(p.antecedentes)}</div></div>` : ''}
+        <section class="profile-section mt-16" id="temporaryStatePanel">
+            <div class="profile-section-heading"><div><span class="eyebrow">Situación actual</span><h2>Estado del residente</h2></div>
+                ${canState ? `<button class="btn btn-sm btn-primary" onclick="openEstadoTemporal()">Registrar cambio</button>` : ''}
+            </div>
+            <div class="temporary-state-current ${actual.tipo === 'presente' ? 'is-present' : 'is-away'}">
+                ${uiIcon(actual.tipo === 'presente' ? 'check' : 'activity')}
+                <div><strong>${escapeHtml(LA1_LABELS.estado[actual.tipo] || actual.tipo || 'Presente')}</strong>
+                <span>${actual.iniciado_at ? `Desde ${formatDateTime(actual.iniciado_at)}` : 'Sin ausencia temporal vigente'}</span></div>
+            </div>
+            <div id="temporaryStateHistory"></div>
+        </section>
+        <div class="care-overview-grid mt-16">
+            <section class="profile-section"><div class="profile-section-heading"><div><span class="eyebrow">Referencia</span><h2>Contacto familiar</h2></div></div>
+                ${row('Nombre', p.contacto_familiar_nombre)}
+                ${row('Teléfono', p.contacto_familiar_tel || '—', safeContactHref('tel', p.contacto_familiar_tel))}
+            </section>
+            <section class="profile-section"><div class="profile-section-heading"><div><span class="eyebrow">Antecedentes</span><h2>Información complementaria</h2></div></div>
+                ${p.antecedentes ? `<div class="profile-note"><span>Antecedentes clínicos</span><p>${escapeHtml(p.antecedentes)}</p></div>` : '<p class="text-muted">Sin antecedentes registrados.</p>'}
+                ${p.notas_ingreso ? `<div class="profile-note"><span>Notas de ingreso</span><p>${escapeHtml(p.notas_ingreso)}</p></div>` : ''}
+            </section>
+        </div>
     `;
+    renderEstadoHistory();
+}
+
+function seleccionarFotoResidente() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/jpeg,image/png,image/webp';
+    input.addEventListener('change', async () => {
+        const file = input.files?.[0]; if (!file) return;
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+            showToast('Elegí una imagen JPEG, PNG o WebP de hasta 10 MB.', 'warning'); return;
+        }
+        const reader = new FileReader();
+        reader.onload = async () => { try { showToast('Procesando fotografía…', 'info'); await API_B2B.updatePacientePhoto(_pacienteId, reader.result); showToast('Fotografía actualizada', 'success'); await loadPaciente(); } catch (error) { showToast(error.message || 'No se pudo procesar la fotografía', 'error'); } };
+        reader.readAsDataURL(file);
+    });
+    input.click();
+}
+
+async function quitarFotoResidente() {
+    if (!confirm('¿Quitar la fotografía de este residente?')) return;
+    try { await API_B2B.updatePacientePhoto(_pacienteId, null); showToast('Fotografía quitada', 'success'); await loadPaciente(); }
+    catch (error) { showToast(error.message || 'No se pudo quitar la fotografía', 'error'); }
+}
+
+function activateResidentTab(tab) {
+    const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (button) button.click();
+    const picker = document.getElementById('residentSectionSelect');
+    if (picker) picker.value = tab;
+}
+
+const DERIVED_ALERT_SOURCE_FIELDS = Object.freeze({
+    alergia: 'pAlergias',
+    riesgo_caida: 'pRiesgoCaida',
+    dieta_especial: 'pDietaRestricciones',
+});
+
+function editDerivedAlertSource(type) {
+    const fieldName = DERIVED_ALERT_SOURCE_FIELDS[type];
+    if (!fieldName || !canDo('editar_perfil_cuidado') || _isEgresado) return;
+    activateResidentTab('datos');
+    openEditPaciente();
+    window.setTimeout(() => {
+        const field = document.forms.formEditPaciente?.elements?.[fieldName]
+            || document.querySelector(`[name="${fieldName}"]`);
+        if (!field) return;
+        field.focus({ preventScroll: true });
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field.classList.add('source-field-highlight');
+        window.setTimeout(() => field.classList.remove('source-field-highlight'), 1800);
+    // openModal enfoca su primer control a los 60 ms; ejecutar después para que
+    // el campo fuente sea el foco final y no sólo un scroll fugaz.
+    }, 100);
 }
 
 function row(label, val, href = null) {
@@ -202,6 +331,268 @@ function row(label, val, href = null) {
         <span class="text-muted" style="font-size:.82rem">${escapeHtml(label)}</span>
         <span class="fw-bold" style="font-size:.88rem;text-align:right">${renderedValue}</span>
     </div>`;
+}
+
+// ============================================
+// NÚCLEO AMPLIADO DEL RESIDENTE — PAQUETE 1
+// ============================================
+async function loadAlertas() {
+    const revision = ++_alertLoadRevision;
+    const patientId = Number(_pacienteId);
+    try {
+        const alertas = await API_B2B.getAlertas(patientId);
+        if (revision !== _alertLoadRevision || patientId !== Number(_pacienteId)) return;
+        _alertas = alertas;
+        renderAlertas();
+    } catch (error) {
+        if (revision !== _alertLoadRevision || patientId !== Number(_pacienteId)) return;
+        const strip = document.getElementById('residentAlertStrip');
+        if (strip) strip.innerHTML = '<span class="alert-chip severity-informativa">Alertas no disponibles</span>';
+    }
+}
+
+function renderAlertas() {
+    const strip = document.getElementById('residentAlertStrip');
+    if (!strip) return;
+    const canManage = canDo('gestionar_alertas') && !_isEgresado;
+    const visible = (_alertas || []).filter(a => a.activa !== false);
+    const inactiveManual = (_alertas || []).filter(a => !a.derivada && a.activa === false);
+    strip.classList.toggle('has-alerts', visible.length > 0 || canManage);
+    const chips = visible.map(a => `<span class="resident-alert-chip severity-${escapeHtml(a.severidad || 'informativa')} ${a.derivada ? 'is-derived' : 'is-manual'}">
+        ${uiIcon(a.tipo === 'riesgo_caida' ? 'activity' : 'alert')}<span>${escapeHtml(a.etiqueta)}</span>
+        ${a.derivada ? `<span class="alert-source">Perfil de cuidado</span>${canDo('editar_perfil_cuidado') && DERIVED_ALERT_SOURCE_FIELDS[a.tipo] ? `<button type="button" data-alert-type="${escapeHtml(a.tipo)}" onclick="editDerivedAlertSource(this.dataset.alertType)">Modificar origen</button>` : ''}` : '<span class="alert-source">Manual</span>'}
+        ${!a.derivada && canManage ? `<button type="button" aria-label="Editar alerta" onclick="openAlerta(${safeRecordId(a.id)})">Editar</button>` : ''}
+    </span>`).join('');
+    const inactive = canManage && inactiveManual.length ? `<details class="resident-inactive-alerts">
+        <summary>Alertas inactivas (${inactiveManual.length})</summary>
+        <div>${inactiveManual.map(a => `<span>${escapeHtml(a.etiqueta)} <button type="button" aria-label="Editar alerta inactiva ${escapeHtml(a.etiqueta)}" onclick="openAlerta(${safeRecordId(a.id)})">Editar / activar</button></span>`).join('')}</div>
+    </details>` : '';
+    strip.innerHTML = `<div class="resident-alert-list">${chips || '<span class="alert-empty">Sin alertas activas</span>'}${inactive}</div>
+        ${canManage ? `<button class="btn btn-sm btn-secondary alert-add" onclick="openAlerta()">+ Alerta</button>` : ''}`;
+}
+
+function openAlerta(id = null) {
+    const f = document.getElementById('formAlerta');
+    if (!f) return;
+    f.reset();
+    f.aId.value = id || '';
+    f.aVersion.value = '';
+    f.aActiva.checked = true;
+    f.aSeveridad.value = 'moderada';
+    document.getElementById('modalAlertaTitle').textContent = id ? 'Editar alerta' : 'Nueva alerta';
+    if (id) {
+        const item = _alertas.find(a => safeRecordId(a.id) === safeRecordId(id) && !a.derivada);
+        if (!item) return;
+        f.aVersion.value = item.version;
+        f.aTipo.value = item.tipo;
+        f.aEtiqueta.value = item.etiqueta || '';
+        f.aSeveridad.value = item.severidad || 'moderada';
+        f.aDesde.value = toLocalDateTime(item.vigente_desde);
+        f.aHasta.value = toLocalDateTime(item.vigente_hasta);
+        f.aActiva.checked = item.activa !== false;
+    }
+    openModal('modalAlerta');
+}
+
+async function handleSaveAlerta(event) {
+    event.preventDefault();
+    const f = event.target;
+    if (f.aDesde.value && f.aHasta.value && new Date(f.aHasta.value).getTime() < new Date(f.aDesde.value).getTime()) {
+        showToast('La vigencia hasta no puede ser anterior a la vigencia desde', 'error');
+        f.aHasta.focus();
+        return;
+    }
+    const submit = f.querySelector('[type=submit]');
+    submit.disabled = true;
+    const id = safeRecordId(f.aId.value);
+    const data = {
+        tipo: f.aTipo.value,
+        etiqueta: f.aEtiqueta.value.trim(),
+        severidad: f.aSeveridad.value,
+        vigente_desde: toApiDateTime(f.aDesde.value),
+        vigente_hasta: toApiDateTime(f.aHasta.value),
+        activa: f.aActiva.checked,
+    };
+    if (id) data.expected_version = Number(f.aVersion.value);
+    try {
+        if (id) await API_B2B.updateAlerta(id, data);
+        else await API_B2B.createAlerta(_pacienteId, data);
+        closeModal('modalAlerta');
+        showToast('Alerta guardada', 'success');
+        await loadAlertas();
+    } catch (error) {
+        if (!handleOfflineWrite(error, { modal: 'modalAlerta', form: f })) showToast(error.message || 'No se pudo guardar la alerta', 'error');
+    } finally { submit.disabled = false; }
+}
+
+async function loadEstadosResidente() {
+    try {
+        _estadosResidente = await API_B2B.getEstadosResidente(_pacienteId);
+        if (_paciente) renderDatosTab(_paciente);
+    } catch (error) {
+        _estadosResidente = { actual: { tipo: 'presente', presente: true, version: null }, historial: [] };
+        if (_paciente) renderDatosTab(_paciente);
+    }
+}
+
+function renderEstadoHistory() {
+    const el = document.getElementById('temporaryStateHistory');
+    if (!el) return;
+    const rows = (_estadosResidente.historial || []).slice(0, 6).map(state => `<div class="state-history-row">
+        <strong>${escapeHtml(LA1_LABELS.estado[state.tipo] || state.tipo)}</strong>
+        <span>${formatDateTime(state.iniciado_at)}${state.finalizado_at ? ` → ${formatDateTime(state.finalizado_at)}` : ' · vigente'}</span>
+        ${state.motivo ? `<small>${escapeHtml(state.motivo)}</small>` : ''}
+    </div>`).join('');
+    el.innerHTML = rows ? `<details class="state-history"><summary>Ver historial reciente</summary>${rows}</details>` : '';
+}
+
+function openEstadoTemporal() {
+    const f = document.getElementById('formEstadoTemporal');
+    if (!f) return;
+    f.reset();
+    f.eVersion.value = _estadosResidente.actual?.version || '';
+    f.eOcurridoAt.value = toLocalDateTime();
+    f.eTipo.value = _estadosResidente.actual?.tipo === 'presente' ? 'salida_medica' : 'presente';
+    openModal('modalEstadoTemporal');
+}
+
+async function handleSaveEstadoTemporal(event) {
+    event.preventDefault();
+    const f = event.target;
+    const submit = f.querySelector('[type=submit]');
+    submit.disabled = true;
+    const data = { tipo: f.eTipo.value, ocurrido_at: toApiDateTime(f.eOcurridoAt.value), motivo: f.eMotivo.value.trim() };
+    if (f.eVersion.value) data.expected_version = Number(f.eVersion.value);
+    try {
+        await API_B2B.transitionEstadoResidente(_pacienteId, data);
+        closeModal('modalEstadoTemporal');
+        showToast('Estado actualizado', 'success');
+        await Promise.all([loadEstadosResidente(), invalidateTimelineAfterMutation()]);
+    } catch (error) {
+        if (!handleOfflineWrite(error, { modal: 'modalEstadoTemporal', form: f })) showToast(error.message || 'No se pudo actualizar el estado', 'error');
+    } finally { submit.disabled = false; }
+}
+
+async function loadIncidentes() {
+    const el = document.getElementById('incidentesContent');
+    if (!el) return;
+    try {
+        _incidentes = await API_B2B.getIncidentes(_pacienteId, _incidentArchiveFilter);
+        renderIncidentes();
+    } catch (error) {
+        el.innerHTML = '<div class="empty-state"><h3>No se pudieron cargar los incidentes</h3></div>';
+    }
+}
+
+function renderIncidentes() {
+    const el = document.getElementById('incidentesContent');
+    if (!el) return;
+    const canManage = canDo('gestionar_incidentes') && !_isEgresado;
+    const toolbar = `<div class="section-toolbar"><div><span class="eyebrow">Seguimiento operativo</span><h2>Incidentes</h2></div>
+        ${canManage ? '<button class="btn btn-primary btn-sm" onclick="openIncidente()">Registrar incidente</button>' : ''}</div>`;
+    const filters = `<div class="filter-tabs incident-filter-tabs" role="group" aria-label="Filtrar incidentes">
+        ${[['activos','Activos'],['archivados','Archivados'],['todos','Todos']].map(([value,label]) => `<button type="button" class="filter-tab${_incidentArchiveFilter === value ? ' active' : ''}" aria-pressed="${_incidentArchiveFilter === value}" onclick="setIncidentArchiveFilter('${value}')">${label}</button>`).join('')}
+    </div>`;
+    if (!_incidentes.length) {
+        const emptyTitle = _incidentArchiveFilter === 'archivados' ? 'Sin incidentes archivados' : _incidentArchiveFilter === 'activos' ? 'Sin incidentes activos' : 'Sin incidentes registrados';
+        el.innerHTML = toolbar + filters + `<div class="empty-state"><h3>${emptyTitle}</h3><p class="text-muted">Los incidentes archivados se conservan con autoría e historial de cambios.</p></div>`;
+        return;
+    }
+    el.innerHTML = toolbar + filters + `<div class="incident-list">${_incidentes.map(item => `<article class="incident-card severity-${escapeHtml(item.severidad)}${item.deleted_at ? ' is-archived' : ''}">
+        <div class="incident-heading"><div><span class="badge badge-gray">${escapeHtml(LA1_LABELS.incidente[item.categoria] || item.categoria)}</span><span class="badge badge-gray">${escapeHtml(item.estado.replace('_', ' '))}</span>${item.deleted_at ? '<span class="badge badge-archived">Archivado</span>' : ''}</div><time>${formatDateTime(item.ocurrido_at)}</time></div>
+        <h3>${escapeHtml(item.descripcion)}</h3>
+        ${item.accion_tomada ? `<p><strong>Acción:</strong> ${escapeHtml(item.accion_tomada)}</p>` : ''}
+        <div class="incident-meta">Registró ${escapeHtml(item.actor_nombre || '—')}${item.notificacion_realizada ? ` · Contacto notificado${item.contacto_notificado_nombre ? `: ${escapeHtml(item.contacto_notificado_nombre)}` : ''}` : ''}</div>
+        ${item.deleted_at ? `<div class="incident-archive-meta">Archivado el ${formatDateTime(item.archivado_at || item.deleted_at)}${item.archivado_por_nombre ? ` por ${escapeHtml(item.archivado_por_nombre)}` : ''}${item.deletion_reason ? ` · ${escapeHtml(item.deletion_reason)}` : ''}</div>` : ''}
+        ${canManage && !item.deleted_at ? `<div class="item-actions"><button class="btn btn-sm btn-secondary" onclick="openIncidente(${safeRecordId(item.id)})">Editar</button><button class="btn btn-sm btn-danger" onclick="deleteIncidente(${safeRecordId(item.id)})">Archivar</button></div>` : ''}
+    </article>`).join('')}</div>`;
+}
+
+async function setIncidentArchiveFilter(filter) {
+    if (!['activos', 'archivados', 'todos'].includes(filter) || filter === _incidentArchiveFilter) return;
+    _incidentArchiveFilter = filter;
+    await loadIncidentes();
+}
+
+function toggleIncidentNotificationFields(show) {
+    const fields = document.getElementById('incidentNotificationFields');
+    const form = document.getElementById('formIncidente');
+    if (!fields || !form) return;
+    fields.hidden = !show;
+    fields.setAttribute('aria-hidden', String(!show));
+    form.iContacto.required = show;
+    form.iNotificadaAt.required = show;
+    if (show && !form.iNotificadaAt.value) form.iNotificadaAt.value = toLocalDateTime();
+    if (!show) {
+        form.iContacto.value = '';
+        form.iNotificadaAt.value = '';
+        form.iNotificacionDetalle.value = '';
+    }
+}
+
+function openIncidente(id = null) {
+    const f = document.getElementById('formIncidente');
+    if (!f) return;
+    f.reset();
+    f.iId.value = id || '';
+    f.iVersion.value = '';
+    f.iOcurridoAt.value = toLocalDateTime();
+    f.iSeveridad.value = 'moderada';
+    f.iEstado.value = 'abierto';
+    f.iContacto.innerHTML = '<option value="">— Seleccionar —</option>' + _contactos.map(c => `<option value="${safeRecordId(c.id)}">${escapeHtml(c.nombre)}</option>`).join('');
+    document.getElementById('modalIncidenteTitle').textContent = id ? 'Editar incidente' : 'Registrar incidente';
+    if (id) {
+        const item = _incidentes.find(i => safeRecordId(i.id) === safeRecordId(id));
+        if (!item) return;
+        f.iVersion.value = item.version;
+        f.iCategoria.value = item.categoria;
+        f.iSeveridad.value = item.severidad;
+        f.iOcurridoAt.value = toLocalDateTime(item.ocurrido_at);
+        f.iEstado.value = item.estado;
+        f.iDescripcion.value = item.descripcion || '';
+        f.iAccion.value = item.accion_tomada || '';
+        f.iNotificado.checked = !!item.notificacion_realizada;
+        f.iContacto.value = item.contacto_notificado_id || '';
+        f.iNotificadaAt.value = toLocalDateTime(item.notificada_at);
+        f.iNotificacionDetalle.value = item.notificacion_detalle || '';
+    }
+    toggleIncidentNotificationFields(f.iNotificado.checked);
+    openModal('modalIncidente');
+}
+
+async function handleSaveIncidente(event) {
+    event.preventDefault();
+    const f = event.target;
+    const submit = f.querySelector('[type=submit]');
+    submit.disabled = true;
+    const id = safeRecordId(f.iId.value);
+    const data = { categoria: f.iCategoria.value, severidad: f.iSeveridad.value, ocurrido_at: toApiDateTime(f.iOcurridoAt.value),
+        estado: f.iEstado.value, descripcion: f.iDescripcion.value.trim(), accion_tomada: f.iAccion.value.trim(),
+        notificacion_realizada: f.iNotificado.checked, contacto_notificado_id: f.iNotificado.checked ? (f.iContacto.value || null) : null,
+        notificada_at: f.iNotificado.checked ? toApiDateTime(f.iNotificadaAt.value) : null,
+        notificacion_detalle: f.iNotificado.checked ? f.iNotificacionDetalle.value.trim() : '' };
+    if (id) data.expected_version = Number(f.iVersion.value);
+    try {
+        if (id) await API_B2B.updateIncidente(id, data);
+        else await API_B2B.createIncidente(_pacienteId, data);
+        closeModal('modalIncidente');
+        showToast('Incidente guardado', 'success');
+        await Promise.all([loadIncidentes(), invalidateTimelineAfterMutation()]);
+    } catch (error) {
+        if (!handleOfflineWrite(error, { modal: 'modalIncidente', form: f })) showToast(error.message || 'No se pudo guardar el incidente', 'error');
+    } finally { submit.disabled = false; }
+}
+
+function deleteIncidente(id) {
+    const item = _incidentes.find(i => safeRecordId(i.id) === safeRecordId(id));
+    if (!item) return;
+    confirmDialog('¿Archivar este incidente? Podrás consultarlo en Ficha del paciente > Incidentes > Archivados.', async () => {
+        try {
+            await API_B2B.deleteIncidente(id, item.version);
+            showToast('Incidente archivado', 'success');
+            await Promise.all([loadIncidentes(), invalidateTimelineAfterMutation()]);
+        } catch (error) { showToast(error.message || 'No se pudo archivar', 'error'); }
+    }, 'Archivar');
 }
 
 // ============================================
@@ -216,6 +607,8 @@ function _canLoad(section) {
 
 async function loadAllData() {
     await Promise.all([
+        _canLoad('alertas')      ? loadAlertas()      : Promise.resolve(),
+        _canLoad('estados')      ? loadEstadosResidente() : Promise.resolve(),
         _canLoad('medicamentos') ? loadMedicamentos() : Promise.resolve(),
         _canLoad('citas')        ? loadCitas()        : Promise.resolve(),
         _canLoad('tareas')       ? loadTareas()       : Promise.resolve(),
@@ -224,7 +617,147 @@ async function loadAllData() {
         _canLoad('contactos')    ? loadContactos()    : Promise.resolve(),
         _canLoad('notas')        ? loadNotas()        : Promise.resolve(),
         _canLoad('documentos')   ? loadDocumentos()   : Promise.resolve(),
+        _canLoad('incidentes')   ? loadIncidentes()   : Promise.resolve(),
+        _canLoad('evoluciones')  ? loadTimeline(true) : Promise.resolve(),
     ]);
+}
+
+// ============================================
+// LÍNEA DE TIEMPO Y EVOLUCIONES — PAQUETE 2
+// ============================================
+const TIMELINE_GROUPS = Object.freeze({
+    evolucion: ['evaluacion','seguimiento','observacion','cambio_clinico'],
+    medicacion: ['medicacion_administrada','medicacion_omitida','medicacion_rechazada','medicacion_no_disponible','cambio_esquema'],
+    observaciones: ['sintoma','signo_vital','nota'],
+    operacion: ['incidente','cita','estado_temporal','regreso','documento','tarea_completada'],
+});
+
+const TIMELINE_LABELS = Object.freeze({
+    evaluacion:'Evaluación', seguimiento:'Seguimiento', observacion:'Observación', cambio_clinico:'Cambio relevante',
+    sintoma:'Síntoma', signo_vital:'Signo vital', nota:'Nota', incidente:'Incidente', cita:'Cita',
+    medicacion_administrada:'Administración', medicacion_omitida:'Omisión', medicacion_rechazada:'Rechazo',
+    medicacion_no_disponible:'No disponible', cambio_esquema:'Cambio de esquema', estado_temporal:'Estado temporal', regreso:'Regreso',
+    documento:'Documento', tarea_completada:'Tarea completada',
+});
+
+async function loadTimeline(reset = false) {
+    const el = document.getElementById('timelineContent');
+    if (!el) return;
+    if (!reset && _timelineDirty) reset = true;
+    const revision = ++_timelineLoadRevision;
+    const patientId = Number(_pacienteId);
+    try {
+        const params = { limit: 25 };
+        if (!reset && _timelineCursor) params.cursor = _timelineCursor;
+        const [page, evolutions] = await Promise.all([
+            API_B2B.getTimeline(patientId, params),
+            reset ? API_B2B.getEvoluciones(patientId) : Promise.resolve(_evoluciones),
+        ]);
+        if (revision !== _timelineLoadRevision || patientId !== Number(_pacienteId)) return;
+        _timelineItems = reset ? page.items : [..._timelineItems, ...page.items];
+        _timelineCursor = page.next_cursor;
+        _evoluciones = evolutions;
+        _timelineDirty = false;
+        renderTimeline();
+    } catch (error) {
+        if (revision !== _timelineLoadRevision || patientId !== Number(_pacienteId)) return;
+        el.innerHTML = `<div class="empty-state"><h3>No se pudo cargar la línea de tiempo</h3><p class="text-muted">${escapeHtml(error.message || 'Intentá nuevamente.')}</p></div>`;
+    }
+}
+
+function timelineIsVisible() {
+    return document.getElementById('tab-timeline')?.classList.contains('active') === true;
+}
+
+async function invalidateTimelineAfterMutation() {
+    _timelineDirty = true;
+    if (timelineIsVisible()) await loadTimeline(true);
+}
+
+function timelineSourceTab(source) {
+    return ({ sintoma:'sintomas',signo:'signos',nota:'notas',incidente:'incidentes',cita:'citas',administracion:'medicamentos',esquema:'medicamentos',estado:'datos',estado_regreso:'datos',documento:'documentos',tarea:'tareas' })[source] || null;
+}
+
+function renderTimeline() {
+    const el = document.getElementById('timelineContent');
+    if (!el) return;
+    const selected = document.getElementById('timelineFilter')?.value || 'todos';
+    const allowed = selected === 'todos' ? null : TIMELINE_GROUPS[selected];
+    const items = allowed ? _timelineItems.filter(item => allowed.includes(item.tipo)) : _timelineItems;
+    const canWrite = canDo('registrar_evolucion') && !_isEgresado;
+    const toolbar = `<div class="timeline-toolbar">
+        <div><span class="eyebrow">Historia operativa</span><h2>Línea de tiempo</h2><p>Eventos existentes y evoluciones, sin duplicar sus fuentes.</p></div>
+        <div class="timeline-controls"><label for="timelineFilter">Mostrar</label><select id="timelineFilter" class="form-control" onchange="renderTimeline()"><option value="todos"${selected==='todos'?' selected':''}>Todo</option><option value="evolucion"${selected==='evolucion'?' selected':''}>Evoluciones</option><option value="medicacion"${selected==='medicacion'?' selected':''}>Medicación</option><option value="observaciones"${selected==='observaciones'?' selected':''}>Síntomas, signos y notas</option><option value="operacion"${selected==='operacion'?' selected':''}>Operación</option></select>${canWrite ? '<button class="btn btn-primary btn-sm" onclick="openEvolucion()">Nueva evolución</button>' : ''}</div>
+    </div>`;
+    if (!items.length) {
+        el.innerHTML = toolbar + '<div class="empty-state"><h3>Sin eventos para este filtro</h3><p class="text-muted">Los nuevos registros aparecerán en orden cronológico.</p></div>';
+        return;
+    }
+    const rows = items.map(item => {
+        const sourceTab = timelineSourceTab(item.source);
+        const evolutionId = item.source === 'evolucion' ? Number(item.source_id) : null;
+        return `<article class="timeline-event timeline-${escapeHtml(item.tipo)}">
+            <div class="timeline-marker" aria-hidden="true"></div>
+            <div class="timeline-card">
+                <div class="timeline-heading"><div><span class="metadata-tag">${escapeHtml(TIMELINE_LABELS[item.tipo] || item.tipo)}</span><time>${formatDateTime(item.ocurrido_at)}</time></div><span class="timeline-actor">${escapeHtml(item.actor_nombre || 'No disponible')}</span></div>
+                <h3>${escapeHtml(item.titulo || 'Evento')}</h3>${item.detalle ? `<p>${escapeHtml(item.detalle)}</p>` : ''}
+                <div class="item-actions">${sourceTab ? `<button class="btn btn-secondary btn-sm" data-source-tab="${escapeHtml(sourceTab)}" onclick="activateResidentTab(this.dataset.sourceTab)">Ver origen</button>` : ''}${evolutionId && canWrite ? `<button class="btn btn-secondary btn-sm" onclick="openEvolucion(${safeRecordId(evolutionId)})">Editar</button>` : ''}</div>
+            </div>
+        </article>`;
+    }).join('');
+    el.innerHTML = toolbar + `<div class="timeline-list">${rows}</div>${_timelineCursor ? '<div class="timeline-more"><button class="btn btn-secondary" onclick="loadTimeline(false)">Cargar anteriores</button></div>' : ''}`;
+}
+
+function openEvolucion(id = null) {
+    const form = document.getElementById('formEvolucion');
+    if (!form) return;
+    form.reset();
+    form.eId.value = id || '';
+    form.eVersion.value = '';
+    form.eOcurridoAt.value = toLocalDateTime();
+    document.getElementById('modalEvolucionTitle').textContent = id ? 'Editar evolución' : 'Nueva evolución';
+    if (id) {
+        const item = _evoluciones.find(row => safeRecordId(row.id) === safeRecordId(id));
+        if (!item) return;
+        form.eVersion.value = item.version;
+        form.eTipo.value = item.tipo;
+        form.eOcurridoAt.value = toLocalDateTime(item.ocurrido_at);
+        form.eTitulo.value = item.titulo || '';
+        form.eContenido.value = item.contenido || '';
+    }
+    openModal('modalEvolucion');
+}
+
+async function handleSaveEvolucion(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submit = form.querySelector('[type=submit]');
+    submit.disabled = true;
+    const id = safeRecordId(form.eId.value);
+    const data = { tipo:form.eTipo.value, ocurrido_at:toApiDateTime(form.eOcurridoAt.value), titulo:form.eTitulo.value.trim(), contenido:form.eContenido.value.trim() };
+    if (id) data.expected_version = Number(form.eVersion.value);
+    try {
+        if (id) await API_B2B.updateEvolucion(id, data);
+        else await API_B2B.createEvolucion(_pacienteId, data);
+        closeModal('modalEvolucion');
+        showToast('Evolución guardada', 'success');
+        await invalidateTimelineAfterMutation();
+    } catch (error) {
+        if (error.code === 'VERSION_CONFLICT') {
+            showToast('Otra persona modificó esta evolución. Cerrá y volvé a abrirla para editar la versión actual.', 'error');
+        } else if (!handleOfflineWrite(error, { modal:'modalEvolucion', form })) {
+            showToast(error.message || 'No se pudo guardar la evolución', 'error');
+        }
+    } finally { submit.disabled = false; }
+}
+
+function deleteEvolucion(id) {
+    const item = _evoluciones.find(row => safeRecordId(row.id) === safeRecordId(id));
+    if (!item) return;
+    confirmDialog('¿Archivar esta evolución? Se preservará su trazabilidad.', async () => {
+        try { await API_B2B.deleteEvolucion(id, item.version); await invalidateTimelineAfterMutation(); }
+        catch (error) { showToast(error.message || 'No se pudo archivar', 'error'); }
+    }, 'Archivar');
 }
 
 // ============================================
@@ -251,10 +784,7 @@ function renderDocumentos(lista) {
     const toolbar = canUpload ? `
         <div class="d-flex justify-between align-center mb-16">
             <span class="text-muted">${lista.length} documento${lista.length !== 1 ? 's' : ''}</span>
-            <label class="btn btn-primary btn-sm" style="cursor:pointer">
-                📂 Subir archivo
-                <input type="file" id="inputDocumento" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png" style="display:none" onchange="handleDocumentoUpload(this)">
-            </label>
+            <button class="btn btn-primary btn-sm" onclick="openDocumento()">Adjuntar documento</button>
         </div>` : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} documento${lista.length !== 1 ? 's' : ''}</span></div>`;
 
     if (lista.length === 0) {
@@ -272,10 +802,15 @@ function renderDocumentos(lista) {
             <div class="item-body">
                 <div class="item-title">${escapeHtml(d.nombre_archivo)}</div>
                 <div class="item-subtitle">${size} · Subido por ${escapeHtml(d.subido_nombre || '—')} · ${formatDate(d.created_at)}</div>
+                <div class="item-meta">
+                    ${d.categoria ? `<span class="badge badge-blue">${escapeHtml(LA1_LABELS.documento[d.categoria] || d.categoria)}</span>` : ''}
+                    ${d.fecha_documento ? `<span class="badge badge-gray">Fecha: ${formatDate(d.fecha_documento)}</span>` : ''}
+                </div>
+                ${d.descripcion ? `<div class="item-subtitle mt-8">${escapeHtml(d.descripcion)}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0">
                 <button class="btn btn-sm btn-secondary" onclick="descargarDocumento(${safeRecordId(d.id)})">&#x2B07;&#xFE0F; Descargar</button>
-                ${canDel ? `<button class="btn btn-sm btn-danger" onclick="eliminarDocumento(${safeRecordId(d.id)})">&#x1F5D1;</button>` : ''}
+                ${canDel ? `<button class="btn btn-sm btn-secondary" onclick="openDocumento(${safeRecordId(d.id)})">Editar datos</button><button class="btn btn-sm btn-danger" onclick="eliminarDocumento(${safeRecordId(d.id)})">Archivar</button>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -307,12 +842,38 @@ function _formatBytes(bytes) {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-async function handleDocumentoUpload(input) {
-    const file = input.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+function openDocumento(id = null) {
+    const f = document.getElementById('formDocumento');
+    if (!f) return;
+    f.reset();
+    f.dId.value = id || '';
+    f.dVersion.value = '';
+    const editing = !!id;
+    f.dArchivo.required = !editing;
+    document.getElementById('documentFileGroup').hidden = editing;
+    document.getElementById('modalDocumentoTitle').textContent = editing ? 'Editar datos del documento' : 'Adjuntar documento';
+    if (editing) {
+        const item = _documentos.find(d => safeRecordId(d.id) === safeRecordId(id));
+        if (!item) return;
+        f.dVersion.value = item.version;
+        f.dCategoria.value = item.categoria || '';
+        f.dFecha.value = item.fecha_documento ? item.fecha_documento.slice(0, 10) : '';
+        f.dDescripcion.value = item.descripcion || '';
+    }
+    openModal('modalDocumento');
+}
+
+async function handleDocumentoUpload(event) {
+    event.preventDefault();
+    const form = event.target;
+    const id = safeRecordId(form.dId.value);
+    const file = form.dArchivo.files?.[0];
+    if (!id && !file) return;
+    const submit = form.querySelector('[type=submit]');
+    submit.disabled = true;
+    if (file && file.size > 5 * 1024 * 1024) {
         showToast('El archivo supera el límite de 5 MB', 'error');
-        input.value = '';
+        submit.disabled = false;
         return;
     }
     const allowedTypes = [
@@ -324,28 +885,26 @@ async function handleDocumentoUpload(input) {
         'text/plain',
         'image/jpeg', 'image/png', 'image/gif', 'image/webp'
     ];
-    if (!allowedTypes.includes(file.type)) {
+    if (file && !allowedTypes.includes(file.type)) {
         showToast('Formato no permitido. Usá PDF, Word, Excel, imagen o TXT.', 'warning');
-        input.value = '';
+        submit.disabled = false;
         return;
     }
-    const btn = input.closest('label');
-    if (btn) btn.textContent = 'Subiendo...';
     try {
-        const b64 = await _fileToBase64(file);
-        await API_B2B.uploadDocumento({
-            paciente_id: _pacienteId,
-            nombre_archivo: file.name,
-            tipo_mime: file.type,
-            datos: b64,
-        });
-        showToast('Documento subido ✅', 'success');
-        await loadDocumentos();
+        const metadata = { categoria: form.dCategoria.value || null, fecha_documento: form.dFecha.value || null, descripcion: form.dDescripcion.value.trim() };
+        if (id) {
+            await API_B2B.updateDocumento(id, { ...metadata, expected_version: Number(form.dVersion.value) });
+            showToast('Datos del documento actualizados', 'success');
+        } else {
+            const b64 = await _fileToBase64(file);
+            await API_B2B.uploadDocumento({ paciente_id: _pacienteId, nombre_archivo: file.name, tipo_mime: file.type, datos: b64, ...metadata });
+            showToast('Documento subido', 'success');
+        }
+        closeModal('modalDocumento');
+        await Promise.all([loadDocumentos(), invalidateTimelineAfterMutation()]);
     } catch (err) {
         showToast(err.message || 'Error al subir el documento', 'error');
-        await loadDocumentos(); // re-render toolbar
-    }
-    input.value = '';
+    } finally { submit.disabled = false; }
 }
 
 function _fileToBase64(file) {
@@ -362,15 +921,15 @@ function _fileToBase64(file) {
 }
 
 async function eliminarDocumento(id) {
-    confirmDialog('¿Eliminar este documento? Esta acción no se puede deshacer.', async () => {
+    confirmDialog('¿Archivar este documento? Se conservará el registro y la trazabilidad.', async () => {
         try {
             await API_B2B.deleteDocumento(id);
-            showToast('Documento eliminado', 'success');
-            await loadDocumentos();
+            showToast('Documento archivado', 'success');
+            await Promise.all([loadDocumentos(), invalidateTimelineAfterMutation()]);
         } catch (err) {
             showToast(err.message || 'Error al eliminar', 'error');
         }
-    });
+    }, 'Archivar');
 }
 
 // ============================================
@@ -403,7 +962,7 @@ function renderHistorialTomas(lista) {
     const el = document.getElementById('historialTomasContent');
     if (!el) return;
     const header = `<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;border-top:2px solid var(--border-color);margin-top:16px">
-        <span style="font-weight:700;font-size:.88rem;color:var(--text-primary)">🕐 Últimas tomas registradas</span>
+        <span style="font-weight:700;font-size:.88rem;color:var(--text-primary)">Administraciones y omisiones recientes</span>
     </div>`;
     if (!lista || lista.length === 0) {
         el.innerHTML = header + `<p style="font-size:.82rem;color:var(--text-secondary);padding:4px 0 12px">Sin tomas registradas aún para este paciente.</p>`;
@@ -411,11 +970,11 @@ function renderHistorialTomas(lista) {
     }
     const rows = lista.slice(0, 15).map(t => `
         <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-color)">
-            <span style="flex-shrink:0;margin-top:1px;font-size:.95rem">✅</span>
+            <span class="medication-result-dot is-${escapeHtml(t.resultado || 'administrada')}" aria-hidden="true"></span>
             <div style="flex:1;min-width:0">
-                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')}${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${safeFiniteNumber(t.cantidad) > 1 ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${safeFiniteNumber(t.cantidad)}</span>` : ''}</div>
+                <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')} <span class="badge ${t.resultado === 'administrada' || !t.resultado ? 'badge-green' : 'badge-orange'}">${escapeHtml((t.resultado || 'administrada').replace('_',' '))}</span>${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${safeFiniteNumber(t.cantidad) > 1 ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${safeFiniteNumber(t.cantidad)}</span>` : ''}</div>
                 <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
-                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
+                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.motivo_omision ? ` · Motivo: ${escapeHtml(t.motivo_omision)}` : ''}${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
                 </div>
             </div>
         </div>`).join('');
@@ -439,11 +998,13 @@ function _pluralUnidad(u) {
 function renderMedicamentos(lista) {
     const el = document.getElementById('medsContent');
     if (!el) return;
-    const toolbar = (_isReadOnly || _isEgresado) ? '' : `
+    const canManage = canDo('gestionar_prescripcion') && !_isEgresado;
+    const canAdminister = canDo('registrar_administracion') && !_isEgresado;
+    const toolbar = canManage ? `
         <div class="d-flex justify-between align-center mb-16">
             <span class="text-muted">${lista.length} medicamento${lista.length !== 1 ? 's' : ''}</span>
-            <button class="btn btn-primary btn-sm" onclick="openModalMed()">+ Agregar</button>
-        </div>`;
+            <button class="btn btn-primary btn-sm" onclick="openModalMed()">+ Nueva prescripción</button>
+        </div>` : '';
     if (lista.length === 0) {
         el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">💊</div><h3>Sin medicamentos</h3></div>`;
         return;
@@ -453,7 +1014,9 @@ function renderMedicamentos(lista) {
             <div class="item-icon badge-purple">💊</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(m.nombre)} ${m.dosis ? `— ${escapeHtml(m.dosis)}` : ''}</div>
-                <div class="item-subtitle">${m.frecuencia ? escapeHtml(m.frecuencia) : ''} ${m.horarios_custom ? '· ' + escapeHtml(m.horarios_custom) : ''}</div>
+                <div class="item-subtitle">${m.frecuencia ? escapeHtml(m.frecuencia) : ''} ${m.horarios_custom ? '· ' + escapeHtml(Array.isArray(m.horarios_custom) ? m.horarios_custom.join(', ') : m.horarios_custom) : ''}</div>
+                <div class="metadata-line">${m.via ? `<span class="metadata-tag">Vía: ${escapeHtml(m.via)}</span>` : ''}${m.prescriptor ? `<span class="metadata-tag">Prescriptor: ${escapeHtml(m.prescriptor)}</span>` : ''}<span class="metadata-tag">Esquema v${safeFiniteNumber(m.esquema_version,1)}</span>${m.vigente_desde ? `<span>Desde ${formatDateTime(m.vigente_desde)}</span>` : ''}${m.vigente_hasta ? `<span>Hasta ${formatDateTime(m.vigente_hasta)}</span>` : ''}</div>
+                ${m.indicacion ? `<div class="item-subtitle mt-8"><strong>Indicación:</strong> ${escapeHtml(m.indicacion)}</div>` : ''}
                 ${m.instrucciones ? `<div class="item-subtitle mt-8">${escapeHtml(m.instrucciones)}</div>` : ''}
                 <div class="item-meta">
                     ${ !_isReadOnly ? (
@@ -464,9 +1027,10 @@ function renderMedicamentos(lista) {
                 </div>
             </div>
             <div class="item-actions">
-                ${!_isReadOnly && !_isEgresado ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${safeRecordId(m.id)})">✅ Toma</button>` : ''}
-                ${!_isReadOnly ? `<button class="btn btn-sm btn-secondary btn-icon" onclick="openModalMed(${safeRecordId(m.id)})">✏️</button>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteMed(${safeRecordId(m.id)})">🗑</button>` : ''}
+                ${canAdminister ? `<button class="btn btn-sm btn-success" onclick="registrarToma(${safeRecordId(m.id)},'administrada')">Administrar</button><button class="btn btn-sm btn-secondary" onclick="registrarToma(${safeRecordId(m.id)},'omitida')">Omitir</button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="openMedicationHistory(${safeRecordId(m.id)})">Historial</button>
+                ${canManage ? `<button class="btn btn-sm btn-secondary btn-icon" aria-label="Editar prescripción" onclick="openModalMed(${safeRecordId(m.id)})">${uiIcon('edit')}</button>
+                <button class="btn btn-sm btn-danger btn-icon medication-retire-action" title="Retirar prescripción" aria-label="Retirar prescripción" onclick="deleteMed(${safeRecordId(m.id)})">${uiIcon('trash')}</button>` : ''}
             </div>
         </div>`).join('')}</div>`;
 }
@@ -518,8 +1082,14 @@ function openModalMed(id) {
             f.mNombre.value = m.nombre || '';
             f.mDosis.value = m.dosis || '';
             f.mFrecuencia.value = m.frecuencia || '';
-            f.mHorarios.value = m.horarios_custom || '';
+            f.mHorarios.value = Array.isArray(m.horarios_custom) ? m.horarios_custom.join(', ') : (m.horarios_custom || '');
             f.mInstrucciones.value = m.instrucciones || '';
+            f.mVia.value = m.via || '';
+            f.mPrescriptor.value = m.prescriptor || '';
+            f.mIndicacion.value = m.indicacion || '';
+            f.mVigenteDesde.value = m.vigente_desde ? toLocalDateTime(m.vigente_desde) : '';
+            f.mVigenteHasta.value = m.vigente_hasta ? toLocalDateTime(m.vigente_hasta) : '';
+            f.mHorariosProgramados.value = Array.isArray(m.horarios_programados) ? m.horarios_programados.join(', ') : '';
             f.mStock.value = m.stock ?? '';
             if (m.catalogo_id) {
                 // Pre-select in whichever list contains this id
@@ -607,7 +1177,17 @@ async function handleSaveMed(e) {
     const instSel = document.getElementById('mCatalogoInstSelect');
     const pacSel  = document.getElementById('mCatalogoPacSelect');
     const catId   = (instSel?.value ? parseInt(instSel.value) : null) || (pacSel?.value ? parseInt(pacSel.value) : null) || null;
-    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: f.mHorarios.value.trim(), instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catId };
+    const horariosCustom = f.mHorarios.value.split(',').map(value => value.trim()).filter(Boolean);
+    const horariosProgramados = f.mHorariosProgramados.value.split(',').map(value => value.trim()).filter(Boolean);
+    const data = { paciente_id: _pacienteId, nombre: f.mNombre.value.trim(), dosis: f.mDosis.value.trim(), frecuencia: f.mFrecuencia.value.trim(), horarios_custom: horariosCustom.length ? horariosCustom : null, instrucciones: f.mInstrucciones.value.trim(), stock: f.mStock.value !== '' ? parseInt(f.mStock.value) : null, catalogo_id: catId,
+        via:f.mVia.value.trim(), prescriptor:f.mPrescriptor.value.trim(), indicacion:f.mIndicacion.value.trim(),
+        vigente_desde:toApiDateTime(f.mVigenteDesde.value), vigente_hasta:toApiDateTime(f.mVigenteHasta.value),
+        horarios_programados:horariosProgramados.length ? horariosProgramados : null, motivo_cambio:f.mMotivoCambio.value.trim() };
+    if (_editingMedId) {
+        const current = _meds.find(med => Number(med.id) === Number(_editingMedId));
+        if (current?.version) data.expected_version = Number(current.version);
+    }
+    if (_editingMedId && !data.motivo_cambio) { showToast('Indicá el motivo del cambio de esquema', 'warning'); btn.disabled = false; return; }
     try {
         if (_editingMedId) { await API_B2B.updateMedicamento(_editingMedId, data); showToast('Medicamento actualizado', 'success'); }
         else {
@@ -619,7 +1199,7 @@ async function handleSaveMed(e) {
             }
         }
         closeModal('modalMed');
-        await loadMedicamentos();
+        await Promise.all([loadMedicamentos(), invalidateTimelineAfterMutation()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalMed', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
@@ -697,11 +1277,11 @@ async function handleCrearInsumoRapido(e) {
     }
 }
 
-function registrarToma(id) {
+function registrarToma(id, resultado = 'administrada') {
     // Block toma if stock is depleted
     const med = _meds.find(m => safeRecordId(m.id) === safeRecordId(id));
     const nombre = med?.nombre || 'medicamento';
-    if (med) {
+    if (med && resultado === 'administrada') {
         if (med.catalogo_id) {
             // Stock managed by catalog (institutional or patient-specific)
             if ((med.catalogo_stock ?? 0) <= 0) {
@@ -713,10 +1293,12 @@ function registrarToma(id) {
             return;
         }
     }
-    document.getElementById('tomaInfo').textContent = `Registrar toma de: ${nombre}`;
+    document.getElementById('tomaInfo').textContent = `Registrar resultado para: ${nombre}`;
     document.getElementById('tomaMedId').value = id;
     document.getElementById('formToma').reset();
     document.getElementById('tomaMedId').value = id;
+    document.getElementById('tomaResultado').value = resultado;
+    toggleMedicationResultFields();
     // Pre-set cantidad to 1 and cap max at available stock for UX
     const _cantInput = document.getElementById('tomaCantidad');
     if (_cantInput) {
@@ -727,24 +1309,49 @@ function registrarToma(id) {
     openModal('modalToma');
 }
 
+function toggleMedicationResultFields() {
+    const result = document.getElementById('tomaResultado')?.value || 'administrada';
+    const omitted = result !== 'administrada';
+    const reasonGroup = document.getElementById('tomaMotivoGroup');
+    const quantity = document.getElementById('tomaCantidad')?.closest('.form-group');
+    if (reasonGroup) reasonGroup.style.display = omitted ? '' : 'none';
+    if (quantity) quantity.style.display = omitted ? 'none' : '';
+}
+
 async function handleSaveToma(e) {
     e.preventDefault();
     const f = e.target;
     const btn = f.querySelector('[type=submit]');
     btn.disabled = true;
     const id = parseInt(document.getElementById('tomaMedId').value);
+    const resultado = f.tomaResultado.value;
     const cantidad = Math.max(1, parseInt(f.tomaCantidad?.value) || 1);
+    const motivo = f.tomaMotivo.value.trim();
+    if (resultado !== 'administrada' && motivo.length < 3) { showToast('Indicá el motivo de la no administración', 'warning'); btn.disabled = false; return; }
     try {
-        await API_B2B.registrarToma(id, f.tomaNotas.value.trim(), cantidad);
-        showToast(`Toma registrada ✅${cantidad > 1 ? ` (${cantidad} unidades)` : ''}`, 'success');
+        await API_B2B.registerMedicationEvent(id, { resultado, motivo_omision:motivo || null, notas:f.tomaNotas.value.trim(), cantidad, programada_para:toApiDateTime(f.tomaProgramadaPara.value) });
+        showToast(resultado === 'administrada' ? `Administración registrada${cantidad > 1 ? ` (${cantidad} unidades)` : ''}` : 'No administración registrada', 'success');
         closeModal('modalToma');
-        await loadMedicamentos(); // refresh stock display
+        await Promise.all([loadMedicamentos(), invalidateTimelineAfterMutation()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalToma', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
+async function openMedicationHistory(id) {
+    const content = document.getElementById('medicationHistoryContent');
+    if (!content) return;
+    content.innerHTML = '<div class="page-loader"><div class="spinner spinner-dark"></div></div>';
+    openModal('modalMedicationHistory');
+    try {
+        const data = await API_B2B.getMedicationSchemes(id);
+        const current = data.vigente;
+        const rows = data.historial.map(item => `<article class="scheme-history-row"><div><strong>Versión ${safeFiniteNumber(item.esquema_version)}</strong><time>${formatDateTime(item.registrado_at)}</time></div><p>${escapeHtml(item.motivo || 'Sin motivo registrado')}</p><small>${escapeHtml(item.actor_nombre || 'No disponible')}</small></article>`).join('');
+        content.innerHTML = `<section class="current-scheme"><span class="eyebrow">Esquema vigente</span><h3>${escapeHtml(current.nombre)} ${escapeHtml(current.dosis || '')}</h3><p>${escapeHtml(current.indicacion || current.instrucciones || 'Sin indicación ampliada')}</p></section><section><h3>Versiones conservadas</h3>${rows || '<p class="text-muted">Este esquema legado todavía no registra cambios históricos.</p>'}</section>`;
+    } catch (error) { content.innerHTML = `<p class="text-muted">${escapeHtml(error.message || 'No se pudo cargar el historial')}</p>`; }
+}
+
 async function deleteMed(id) {
-    confirmDialog('¿Eliminar este medicamento?', async () => {
-        try { await API_B2B.deleteMedicamento(id); showToast('Eliminado', 'success'); await loadMedicamentos(); }
+    confirmDialog('¿Retirar esta prescripción? Se conservarán su historial, administraciones y auditoría.', async () => {
+        try { await API_B2B.deleteMedicamento(id); showToast('Prescripción retirada', 'success'); await Promise.all([loadMedicamentos(), invalidateTimelineAfterMutation()]); }
         catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); }
     });
 }
@@ -916,16 +1523,16 @@ function openModalReutilizarCita(id) {
 async function handleSaveCita(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const data = { paciente_id: _pacienteId, titulo: f.cTitulo.value.trim(), fecha: f.cFecha.value, especialidad: f.cEspecialidad.value.trim(), medico: f.cMedico.value.trim(), lugar: f.cLugar.value.trim(), descripcion: f.cDescripcion.value.trim(), estado: f.cEstado.value };
+    const data = { paciente_id: _pacienteId, titulo: f.cTitulo.value.trim(), fecha: toApiDateTime(f.cFecha.value), especialidad: f.cEspecialidad.value.trim(), medico: f.cMedico.value.trim(), lugar: f.cLugar.value.trim(), descripcion: f.cDescripcion.value.trim(), estado: f.cEstado.value };
     try {
         if (_editingCitaId) { await API_B2B.updateCita(_editingCitaId, data); showToast('Cita actualizada', 'success'); }
         else { await API_B2B.createCita(data); showToast('Cita creada', 'success'); }
-        closeModal('modalCita'); await loadCitas();
+        closeModal('modalCita'); await Promise.all([loadCitas(), invalidateTimelineAfterMutation()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalCita', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteCita(id) {
-    confirmDialog('¿Eliminar esta cita?', async () => { try { await API_B2B.deleteCita(id); showToast('Eliminada', 'success'); await loadCitas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta cita?', async () => { try { await API_B2B.deleteCita(id); showToast('Eliminada', 'success'); await Promise.all([loadCitas(), invalidateTimelineAfterMutation()]); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1020,7 +1627,7 @@ async function handleSaveTarea(e) {
     try {
         if (_editingTareaId) { await API_B2B.updateTarea(_editingTareaId, data); showToast('Tarea actualizada', 'success'); }
         else { await API_B2B.createTarea(data); showToast('Tarea creada', 'success'); }
-        closeModal('modalTarea'); await loadTareas();
+        closeModal('modalTarea'); await Promise.all([loadTareas(), invalidateTimelineAfterMutation()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalTarea', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
@@ -1041,12 +1648,12 @@ async function handleCompletarTarea(e) {
         await API_B2B.completarTarea(id, f.tareaNotas.value.trim());
         showToast('Tarea completada ✅', 'success');
         closeModal('modalCompletarTarea');
-        loadTareas(); // refresh list + historial (non-blocking)
+        Promise.all([loadTareas(), invalidateTimelineAfterMutation()]); // refresh list + timeline (non-blocking)
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalCompletarTarea', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteTarea(id) {
-    confirmDialog('¿Eliminar esta tarea?', async () => { try { await API_B2B.deleteTarea(id); showToast('Eliminada', 'success'); await loadTareas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta tarea?', async () => { try { await API_B2B.deleteTarea(id); showToast('Eliminada', 'success'); await Promise.all([loadTareas(), invalidateTimelineAfterMutation()]); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1065,16 +1672,16 @@ function renderSintomas(lista) {
     const el = document.getElementById('sintomasContent');
     if (!el) return;
     const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} síntoma${lista.length !== 1 ? 's' : ''} registrados</span><button class="btn btn-primary btn-sm" onclick="openModalSintoma()">+ Registrar</button></div>`;
-    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">🩺</div><h3>Sin s\u00edntomas registrados</h3></div>`; return; }
+    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">${uiIcon('activity')}</div><h3>Sin s\u00edntomas registrados</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(s => `
         <div class="item-row">
-            <div class="item-icon badge-orange">🩺</div>
+            <div class="item-icon badge-orange">${uiIcon('activity')}</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
                     ${s.intensidad !== null ? `<span class="badge ${safeFiniteNumber(s.intensidad) >= 7 ? 'badge-red' : safeFiniteNumber(s.intensidad) >= 4 ? 'badge-orange' : 'badge-teal'}">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
                     <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
-                    <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || '—')}</span>
+                    <span class="badge badge-gray">Registrado por: ${escapeHtml(s.registrador_nombre || 'No disponible')}</span>
                 </div>
             </div>
             ${!_isReadOnly ? `<div class="item-actions">
@@ -1105,13 +1712,13 @@ async function handleSaveSintoma(e) {
     try {
         if (_editingSintomaId) { await API_B2B.updateSintoma(_editingSintomaId, data); showToast('S\u00edntoma actualizado', 'success'); }
         else { await API_B2B.createSintoma(data); showToast('S\u00edntoma registrado', 'success'); }
-        closeModal('modalSintoma'); f.reset(); await loadSintomas();
+        closeModal('modalSintoma'); f.reset(); await Promise.all([loadSintomas(), invalidateTimelineAfterMutation()]);
     }
     catch (err) { if (!handleOfflineWrite(err, { modal: 'modalSintoma', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteSintoma(id) {
-    confirmDialog('¿Eliminar este síntoma?', async () => { try { await API_B2B.deleteSintoma(id); showToast('Eliminado', 'success'); await loadSintomas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar este síntoma?', async () => { try { await API_B2B.deleteSintoma(id); showToast('Eliminado', 'success'); await Promise.all([loadSintomas(), invalidateTimelineAfterMutation()]); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1127,13 +1734,13 @@ async function loadSignos() {
 }
 
 const SIGNOS_TIPOS = [
-    { id: 'presion_arterial',    label: 'Presión arterial',  unidad: 'mmHg',  icon: '🩸', placeholder: 'Ej: 120/80',   referencia: 'Normal: 90/60 – 120/80 mmHg' },
-    { id: 'frecuencia_cardiaca', label: 'Frec. cardíaca',    unidad: 'lpm',   icon: '❤️', placeholder: 'Ej: 75',       referencia: 'Normal: 60–100 lpm' },
-    { id: 'temperatura',         label: 'Temperatura',       unidad: '°C',    icon: '🌡️', placeholder: 'Ej: 36.8',     referencia: 'Normal: 36.1–37.2 °C' },
-    { id: 'saturacion_oxigeno',  label: 'Saturación O₂',     unidad: '%',     icon: '💨', placeholder: 'Ej: 98',       referencia: 'Normal: ≥95%' },
-    { id: 'glucosa',             label: 'Glucosa',           unidad: 'mg/dL', icon: '🩸', placeholder: 'Ej: 95',       referencia: 'Normal (ayunas): 70–100 mg/dL' },
-    { id: 'peso',                label: 'Peso',              unidad: 'kg',    icon: '⚖️', placeholder: 'Ej: 70.5',     referencia: null },
-    { id: 'talla',               label: 'Talla',             unidad: 'cm',    icon: '📏', placeholder: 'Ej: 170',      referencia: null },
+    { id: 'presion_arterial',    label: 'Presión arterial',  unidad: 'mmHg',  icon: 'activity', placeholder: 'Ej: 120/80',   referencia: 'Normal: 90/60 – 120/80 mmHg' },
+    { id: 'frecuencia_cardiaca', label: 'Frec. cardíaca',    unidad: 'lpm',   icon: 'heart', placeholder: 'Ej: 75',       referencia: 'Normal: 60–100 lpm' },
+    { id: 'temperatura',         label: 'Temperatura',       unidad: '°C',    icon: 'activity', placeholder: 'Ej: 36.8',     referencia: 'Normal: 36.1–37.2 °C' },
+    { id: 'saturacion_oxigeno',  label: 'Saturación O₂',     unidad: '%',     icon: 'activity', placeholder: 'Ej: 98',       referencia: 'Normal: ≥95%' },
+    { id: 'glucosa',             label: 'Glucosa',           unidad: 'mg/dL', icon: 'activity', placeholder: 'Ej: 95',       referencia: 'Normal (ayunas): 70–100 mg/dL' },
+    { id: 'peso',                label: 'Peso',              unidad: 'kg',    icon: 'activity', placeholder: 'Ej: 70.5',     referencia: null },
+    { id: 'talla',               label: 'Talla',             unidad: 'cm',    icon: 'activity', placeholder: 'Ej: 170',      referencia: null },
 ];
 
 function renderSignos(lista) {
@@ -1148,27 +1755,27 @@ function renderSignos(lista) {
     const signosCards = SIGNOS_TIPOS.filter(t => ultimoPorTipo[t.id]).map(t => {
         const s = ultimoPorTipo[t.id];
         return `<div class="vital-card">
-            <div class="vital-type">${t.icon} ${t.label}</div>
+            <div class="vital-type">${uiIcon(t.icon)} ${t.label}</div>
             <div class="vital-value">${escapeHtml(s.valor)}</div>
             <div class="vital-unit">${t.unidad}</div>
             <div class="vital-date">${formatDate(s.fecha)}</div>
-            <div class="vital-who">${escapeHtml(s.registrador_nombre || '')}</div>
+            <div class="vital-who">Registrado por: ${escapeHtml(s.registrador_nombre || 'No disponible')}</div>
         </div>`;
     }).join('');
 
     const historial = lista.slice(0, 20).map(s => {
         const tipo = SIGNOS_TIPOS.find(t => t.id === s.tipo);
         return `<tr>
-            <td>${tipo?.icon || ''} ${escapeHtml(tipo?.label || s.tipo)}</td>
+            <td>${tipo ? uiIcon(tipo.icon) : ''} ${escapeHtml(tipo?.label || s.tipo)}</td>
             <td class="fw-bold">${escapeHtml(s.valor)} <span class="text-muted">${tipo?.unidad || ''}</span></td>
             <td class="text-muted">${formatDateTime(s.fecha)}</td>
-            <td class="text-muted">${escapeHtml(s.registrador_nombre || '—')}</td>
+            <td class="text-muted">${escapeHtml(s.registrador_nombre || 'No disponible')}</td>
             ${!_isReadOnly ? `<td><button class="btn btn-danger btn-icon btn-sm" onclick="deleteSigno(${safeRecordId(s.id)})">🗑</button></td>` : '<td></td>'}
         </tr>`;
     }).join('');
 
     el.innerHTML = toolbar + (signosCards ? `<div class="vitals-row mb-20">${signosCards}</div>` : '') +
-        `<div class="card"><div class="card-header"><span class="card-title">📊 Historial de signos vitales</span></div>
+        `<div class="card"><div class="card-header"><span class="card-title">${uiIcon('activity')} Historial de signos vitales</span></div>
         <div class="table-wrapper"><table><thead><tr><th>Tipo</th><th>Valor</th><th>Fecha</th><th>Registrado por</th><th></th></tr></thead>
         <tbody>${historial || `<tr><td colspan="5" class="text-center text-muted" style="padding:20px">Sin registros</td></tr>`}</tbody></table></div></div>`;
 }
@@ -1179,12 +1786,12 @@ async function handleSaveSigno(e) {
     const tipo = f.gTipo.value;
     const tipoData = SIGNOS_TIPOS.find(t => t.id === tipo);
     const data = { paciente_id: _pacienteId, tipo, valor: f.gValor.value.trim(), unidad: tipoData?.unidad || f.gUnidad.value.trim(), notas: f.gNotas.value.trim() };
-    try { await API_B2B.createSigno(data); showToast('Signo vital registrado', 'success'); closeModal('modalSigno'); f.reset(); await loadSignos(); }
+    try { await API_B2B.createSigno(data); showToast('Signo vital registrado', 'success'); closeModal('modalSigno'); f.reset(); await Promise.all([loadSignos(), invalidateTimelineAfterMutation()]); }
     catch (err) { if (!handleOfflineWrite(err, { modal: 'modalSigno', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteSigno(id) {
-    confirmDialog('¿Eliminar este registro?', async () => { try { await API_B2B.deleteSigno(id); showToast('Eliminado', 'success'); await loadSignos(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar este registro?', async () => { try { await API_B2B.deleteSigno(id); showToast('Eliminado', 'success'); await Promise.all([loadSignos(), invalidateTimelineAfterMutation()]); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // Auto-fill unidad + placeholder + referencia al seleccionar tipo
@@ -1197,7 +1804,7 @@ function onSignoTipoChange(select) {
     if (unidadInput) unidadInput.value      = tipo.unidad;
     if (valorInput)  valorInput.placeholder  = tipo.placeholder || '';
     if (refHint) {
-        refHint.textContent  = tipo.referencia ? '📊 Ref: ' + tipo.referencia : '';
+        refHint.textContent  = tipo.referencia ? 'Referencia orientativa: ' + tipo.referencia : '';
         refHint.style.display = tipo.referencia ? 'block' : 'none';
     }
 }
@@ -1229,9 +1836,12 @@ function renderContactos(lista) {
                 <div class="item-title">${escapeHtml(c.nombre)} ${c.es_principal ? '<span class="badge badge-green">Principal</span>' : ''}</div>
                 ${c.relacion ? `<div class="item-subtitle">${escapeHtml(c.relacion)}</div>` : ''}
                 <div class="item-meta">
+                    ${c.prioridad ? `<span class="badge badge-orange">Prioridad ${safeFiniteNumber(c.prioridad)}</span>` : ''}
                     ${c.telefono ? telHref ? `<a href="${escapeHtml(telHref)}" class="badge badge-blue">📞 ${escapeHtml(c.telefono)}</a>` : `<span class="badge badge-blue">📞 ${escapeHtml(c.telefono)}</span>` : ''}
                     ${c.email ? emailHref ? `<a href="${escapeHtml(emailHref)}" class="badge badge-gray">✉️ ${escapeHtml(c.email)}</a>` : `<span class="badge badge-gray">✉️ ${escapeHtml(c.email)}</span>` : ''}
                 </div>
+                ${c.observaciones ? `<div class="item-subtitle mt-8">${escapeHtml(c.observaciones)}</div>` : ''}
+                ${c.alcance_autorizacion ? `<div class="contact-scope"><strong>Alcance operativo:</strong> ${escapeHtml(c.alcance_autorizacion)}</div>` : ''}
             </div>
             ${!_isReadOnly ? `<div class="item-actions">
                 <button class="btn btn-sm btn-secondary btn-icon" onclick="openModalContacto(${safeRecordId(c.id)})">✏️</button>
@@ -1249,7 +1859,7 @@ function openModalContacto(id) {
     f.reset();
     if (id) {
         const c = _contactos.find(x => x.id === id);
-        if (c) { f.cNombre.value = c.nombre || ''; f.cRelacion.value = c.relacion || ''; f.cTel.value = c.telefono || ''; f.cEmail.value = c.email || ''; f.cPrincipal.checked = !!c.es_principal; }
+        if (c) { f.cNombre.value = c.nombre || ''; f.cRelacion.value = c.relacion || ''; f.cTel.value = c.telefono || ''; f.cEmail.value = c.email || ''; f.cPrioridad.value = c.prioridad || ''; f.cObservaciones.value = c.observaciones || ''; f.cAlcance.value = c.alcance_autorizacion || ''; f.cPrincipal.checked = !!c.es_principal; }
     }
     openModal('modalContacto');
 }
@@ -1257,7 +1867,7 @@ function openModalContacto(id) {
 async function handleSaveContacto(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    const data = { paciente_id: _pacienteId, nombre: f.cNombre.value.trim(), relacion: f.cRelacion.value.trim(), telefono: f.cTel.value.trim(), email: f.cEmail.value.trim(), es_principal: f.cPrincipal.checked };
+    const data = { paciente_id: _pacienteId, nombre: f.cNombre.value.trim(), relacion: f.cRelacion.value.trim(), telefono: f.cTel.value.trim(), email: f.cEmail.value.trim(), prioridad: f.cPrioridad.value ? Number(f.cPrioridad.value) : null, observaciones: f.cObservaciones.value.trim(), alcance_autorizacion: f.cAlcance.value.trim(), es_principal: f.cPrincipal.checked };
     try {
         if (_editingContactoId) { await API_B2B.updateContacto(_editingContactoId, data); showToast('Contacto actualizado', 'success'); }
         else { await API_B2B.createContacto(data); showToast('Contacto agregado', 'success'); }
@@ -1285,15 +1895,15 @@ function renderNotas(lista) {
     const el = document.getElementById('notasContent');
     if (!el) return;
     const toolbar = (_isReadOnly || _isEgresado) ? '' : `<div class="d-flex justify-between align-center mb-16"><span class="text-muted">${lista.length} nota${lista.length !== 1 ? 's' : ''}</span><button class="btn btn-primary btn-sm" onclick="openModalNota()">+ Agregar nota</button></div>`;
-    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">📝</div><h3>Sin notas internas</h3></div>`; return; }
+    if (lista.length === 0) { el.innerHTML = toolbar + `<div class="empty-state"><div class="empty-icon">${uiIcon('note')}</div><h3>Sin notas internas</h3></div>`; return; }
     el.innerHTML = toolbar + `<div class="item-list">${lista.map(n => `
         <div class="item-row" ${n.urgente ? 'style="border-left:3px solid var(--pro-danger)"' : ''}>
-            <div class="item-icon ${n.urgente ? 'badge-red' : 'badge-gray'}">${n.urgente ? '🚨' : '📝'}</div>
+            <div class="item-icon ${n.urgente ? 'badge-red' : 'badge-gray'}">${uiIcon(n.urgente ? 'alert' : 'note')}</div>
             <div class="item-body">
-                <div class="item-title">${n.urgente ? '<span class="urgente-flag">🚨 URGENTE</span> ' : ''}${escapeHtml(n.titulo || 'Sin título')}</div>
+                <div class="item-title">${n.urgente ? '<span class="urgente-flag">URGENTE</span> ' : ''}${escapeHtml(n.titulo || 'Sin título')}</div>
                 ${n.contenido ? `<div class="item-subtitle mt-8">${escapeHtml(n.contenido)}</div>` : ''}
                 <div class="item-meta">
-                    <span class="badge badge-gray">por ${escapeHtml(n.autor_nombre || '—')}</span>
+                    <span class="badge badge-gray">Registrado por: ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
                     <span class="badge badge-gray">${formatDateTime(n.created_at)}</span>
                 </div>
             </div>
@@ -1324,12 +1934,12 @@ async function handleSaveNota(e) {
     try {
         if (_editingNotaId) { await API_B2B.updateNota(_editingNotaId, data); showToast('Nota actualizada', 'success'); }
         else { await API_B2B.createNota(data); showToast('Nota guardada', 'success'); }
-        closeModal('modalNota'); await loadNotas();
+        closeModal('modalNota'); await Promise.all([loadNotas(), invalidateTimelineAfterMutation()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalNota', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
 async function deleteNota(id) {
-    confirmDialog('¿Eliminar esta nota?', async () => { try { await API_B2B.deleteNota(id); showToast('Eliminada', 'success'); await loadNotas(); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
+    confirmDialog('¿Eliminar esta nota?', async () => { try { await API_B2B.deleteNota(id); showToast('Eliminada', 'success'); await Promise.all([loadNotas(), invalidateTimelineAfterMutation()]); } catch (err) { if (!handleOfflineWrite(err)) showToast('Error: ' + err.message, 'error'); } });
 }
 
 // ============================================
@@ -1355,7 +1965,15 @@ function openEditPaciente() {
     f.pMedicoCabecera.value = p.medico_cabecera || '';
     f.pAlergias.value = p.alergias || '';
     f.pAntecedentes.value = p.antecedentes || '';
+    f.pDietaRestricciones.value = p.dieta_restricciones || '';
+    f.pMovilidad.value = p.movilidad || '';
+    f.pNivelDependencia.value = p.nivel_dependencia || '';
+    f.pRiesgoCaida.value = p.riesgo_caida || '';
+    f.pContinencia.value = p.continencia || '';
+    f.pAspectosCognitivos.value = p.aspectos_cognitivos || '';
     f.pNotas.value = p.notas_ingreso || '';
+    const careFieldset = f.querySelector('.care-profile-fieldset');
+    if (careFieldset) careFieldset.disabled = !canDo('editar_perfil_cuidado');
     openModal('modalEditPaciente');
 }
 
@@ -1363,11 +1981,16 @@ async function handleEditPaciente(e) {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     const data = { nombre: f.pNombre.value.trim(), apellido: f.pApellido.value.trim(), fecha_nacimiento: f.pFechaNac.value || null, dni: f.pDni.value.trim(), habitacion: f.pHabitacion.value.trim(), diagnostico: f.pDiagnostico.value.trim(), obra_social: f.pObraSocial.value.trim(), num_afiliado: f.pNumAfiliado.value.trim(), contacto_familiar_nombre: f.pContactoFamiliarNombre.value.trim(), contacto_familiar_tel: f.pContactoFamiliarTel.value.trim(), medico_cabecera: f.pMedicoCabecera.value.trim(), fecha_ingreso: f.pFechaIngreso.value || null, fecha_egreso: f.pFechaEgreso.value || null, motivo_egreso: f.pMotivoEgreso.value.trim(), alergias: f.pAlergias.value.trim(), antecedentes: f.pAntecedentes.value.trim(), notas_ingreso: f.pNotas.value.trim() };
+    if (canDo('editar_perfil_cuidado')) Object.assign(data, {
+        dieta_restricciones: f.pDietaRestricciones.value.trim(), movilidad: f.pMovilidad.value || null,
+        nivel_dependencia: f.pNivelDependencia.value || null, riesgo_caida: f.pRiesgoCaida.value || null,
+        continencia: f.pContinencia.value || null, aspectos_cognitivos: f.pAspectosCognitivos.value.trim(),
+    });
     try {
         await API_B2B.updatePaciente(_pacienteId, data);
         showToast('Paciente actualizado', 'success');
         closeModal('modalEditPaciente');
-        await loadPaciente();
+        await Promise.all([loadPaciente(), loadAlertas()]);
     } catch (err) { if (!handleOfflineWrite(err, { modal: 'modalEditPaciente', form: f })) showToast('Error: ' + err.message, 'error'); } finally { btn.disabled = false; }
 }
 
@@ -1376,6 +1999,7 @@ async function handleEditPaciente(e) {
 // ============================================
 function initForms() {
     const pairs = [
+        ['formEvolucion', handleSaveEvolucion],
         ['formMed', handleSaveMed],
         ['formCrearInsumoRapido', handleCrearInsumoRapido],
         ['formToma', handleSaveToma],
@@ -1385,6 +2009,10 @@ function initForms() {
         ['formSintoma', handleSaveSintoma],
         ['formSigno', handleSaveSigno],
         ['formContacto', handleSaveContacto],
+        ['formAlerta', handleSaveAlerta],
+        ['formIncidente', handleSaveIncidente],
+        ['formEstadoTemporal', handleSaveEstadoTemporal],
+        ['formDocumento', handleDocumentoUpload],
         ['formNota', handleSaveNota],
         ['formEditPaciente', handleEditPaciente],
         ['formEgreso', handleSaveEgreso],
