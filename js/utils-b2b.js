@@ -619,6 +619,22 @@ function formatDateTime(isoString) {
         return date.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
     } catch { return '—'; }
 }
+// Las columnas históricas TIMESTAMP (sin zona) representan la hora civil de la
+// institución. node-postgres puede serializarlas con una "Z" aparente; esa Z no
+// convierte el valor en un instante UTC y no debe desplazarlo otras tres horas.
+function formatInstitutionDateTime(value) {
+    if (!value) return '—';
+    try {
+        const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+        if (!match) return '—';
+        const [, year, month, day, hour, minute] = match;
+        const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+        if (Number.isNaN(date.getTime()) || date.getFullYear() !== Number(year)
+            || date.getMonth() + 1 !== Number(month) || date.getDate() !== Number(day)
+            || date.getHours() !== Number(hour) || date.getMinutes() !== Number(minute)) return '—';
+        return `${day}/${month}/${year}, ${hour}:${minute}`;
+    } catch { return '—'; }
+}
 function toApiDateTime(localDateTime) {
     if (localDateTime === null || localDateTime === undefined || localDateTime === '') return null;
     const date = localDateTime instanceof Date ? localDateTime : new Date(localDateTime);

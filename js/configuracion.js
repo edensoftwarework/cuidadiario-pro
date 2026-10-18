@@ -652,12 +652,10 @@ function esc(v) {
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function fDate(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}); } catch { return iso; }
+    return formatDate(iso);
 }
-function fDateTime(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}); } catch { return iso; }
+function fInstitutionDateTime(iso) {
+    return formatInstitutionDateTime(iso);
 }
 function tipoLabel(t) {
     const m = {geriatrico:'Geriátrico',discapacidad:'Centro discapacidad',salud_mental:'Salud mental',rehabilitacion:'Rehabilitación',oncologia:'Oncológico',dialisis:'Diálisis',hogar_convivencial:'Hogar convivencial',pediatrico_especial:'Pediátrico especial',cuidado_domiciliario:'Cuidado domiciliario',clinica:'Clínica',otro:'Otro'};
@@ -678,7 +676,7 @@ function buildExportHTML(d) {
     const sintomas = d.sintomas || [];
     const signos = d.signos_vitales || [];
     const notas = d.notas || [];
-    const exportadoEn = fDateTime(d.exportado_en);
+    const exportadoEn = formatDateTime(d.exportado_en);
 
     // ── helpers para construir tablas ──────────────────────────
     function table(headers, rows) {
@@ -743,27 +741,27 @@ function buildExportHTML(d) {
 
                     ${pTomas.length ? subsection(`Historial de tomas (últimas ${pTomas.length})`, table(
                         ['Fecha','Medicamento','Administrado por','Notas'],
-                        pTomas.map(t => [fDateTime(t.fecha), esc(t.medicamento_nombre), esc(t.administrador_nombre), esc(t.notas)])
+                        pTomas.map(t => [fInstitutionDateTime(t.fecha), esc(t.medicamento_nombre), esc(t.administrador_nombre), esc(t.notas)])
                     )) : ''}
 
                     ${pCitas.length ? subsection('Citas y turnos', table(
                         ['Fecha','Título','Especialidad','Médico','Estado'],
-                        pCitas.map(c => [fDateTime(c.fecha), esc(c.titulo), esc(c.especialidad), esc(c.medico), esc(c.estado)])
+                        pCitas.map(c => [fInstitutionDateTime(c.fecha), esc(c.titulo), esc(c.especialidad), esc(c.medico), esc(c.estado)])
                     )) : ''}
 
                     ${pSint.length ? subsection(`Síntomas registrados (últimos ${pSint.length})`, table(
                         ['Fecha','Descripción','Intensidad','Registrado por'],
-                        pSint.map(s => [fDateTime(s.fecha), esc(s.descripcion), s.intensidad?s.intensidad+'/10':'—', esc(s.registrador_nombre)])
+                        pSint.map(s => [fInstitutionDateTime(s.fecha), esc(s.descripcion), s.intensidad?s.intensidad+'/10':'—', esc(s.registrador_nombre)])
                     )) : ''}
 
                     ${pSignos.length ? subsection(`Signos vitales (últimos ${pSignos.length})`, table(
                         ['Fecha','Tipo','Valor','Unidad','Notas'],
-                        pSignos.map(s => [fDateTime(s.fecha), esc(s.tipo), esc(s.valor), esc(s.unidad), esc(s.notas)])
+                        pSignos.map(s => [fInstitutionDateTime(s.fecha), esc(s.tipo), esc(s.valor), esc(s.unidad), esc(s.notas)])
                     )) : ''}
 
                     ${pNotas.length ? subsection('Notas internas', table(
                         ['Fecha','Título','Contenido','Autor','Urgente'],
-                        pNotas.map(n => [fDateTime(n.created_at), esc(n.titulo), esc(n.contenido), esc(n.autor_nombre), n.urgente?'⚠️ Sí':'No'])
+                        pNotas.map(n => [fInstitutionDateTime(n.created_at), esc(n.titulo), esc(n.contenido), esc(n.autor_nombre), n.urgente?'⚠️ Sí':'No'])
                     )) : ''}
                 </div>
             </div>`;

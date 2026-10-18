@@ -193,8 +193,10 @@ async function run() {
     assert.equal(await unrelated.match(publicUrl) instanceof Response, true,
         'debe conservar caches ajenas/no-B2B');
     assert.equal((await sw.caches.keys()).includes('b2c-unrelated-cache'), true);
-    assert.equal((await sw.caches.keys()).includes('cuidadiario-pro-v5'), false,
-        'debe conservar la limpieza histórica de caches estáticas propias obsoletas');
+    assert.equal((await sw.caches.keys()).includes('cuidadiario-pro-v5'), true,
+        'no debe borrar el cache completo si contiene assets ajenos a la allowlist B2B');
+    assert.equal(await oldStatic.match('https://app.test/old.js') instanceof Response, true,
+        'debe preservar assets no-B2B aunque compartan un cache estático anterior');
 
     sw.context.fetch = async () => new Response('{"source":"network"}', {
         status: 200,
@@ -248,7 +250,7 @@ async function run() {
     assert.equal(await currentApi.match(b2bLookalikeUrl) instanceof Response, true,
         'una ruta parecida pero no-B2B debe conservar la estrategia API genérica');
 
-    const staticCache = await sw.caches.open('cuidadiario-pro-v6');
+    const staticCache = await sw.caches.open('cuidadiario-pro-v10');
     const shellUrl = 'https://app.test/pages/dashboard.html';
     await staticCache.put(shellUrl, new Response('<main>shell</main>', {
         headers: { 'Content-Type': 'text/html' }
@@ -257,7 +259,7 @@ async function run() {
     assert.equal(await offlineShell.text(), '<main>shell</main>',
         'shell PWA debe conservar stale-while-revalidate');
 
-    console.log('P0-1 cache tests: 35 assertions passed');
+    console.log('P0-1 cache tests: 36 assertions passed');
 }
 
 run().catch(error => {

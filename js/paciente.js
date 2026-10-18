@@ -974,7 +974,7 @@ function renderHistorialTomas(lista) {
             <div style="flex:1;min-width:0">
                 <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.medicamento_nombre || '—')} <span class="badge ${t.resultado === 'administrada' || !t.resultado ? 'badge-green' : 'badge-orange'}">${escapeHtml((t.resultado || 'administrada').replace('_',' '))}</span>${t.dosis ? `<span style="font-weight:400;color:var(--text-secondary)"> — ${escapeHtml(t.dosis)}</span>` : ''}${safeFiniteNumber(t.cantidad) > 1 ? `<span style="font-weight:400;color:var(--text-secondary)"> × ${safeFiniteNumber(t.cantidad)}</span>` : ''}</div>
                 <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
-                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.motivo_omision ? ` · Motivo: ${escapeHtml(t.motivo_omision)}` : ''}${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
+                    ${formatInstitutionDateTime(t.fecha)} · por <strong>${escapeHtml(t.administrador_nombre || '—')}</strong>${t.motivo_omision ? ` · Motivo: ${escapeHtml(t.motivo_omision)}` : ''}${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
                 </div>
             </div>
         </div>`).join('');
@@ -1437,7 +1437,7 @@ function renderCitasHistorial(lista) {
             <div class="item-icon badge-green">📋</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(h.titulo)}</div>
-                <div class="item-subtitle">📆 ${formatDateTime(h.fecha)} ${h.especialidad ? '· ' + escapeHtml(h.especialidad) : ''}</div>
+                <div class="item-subtitle">📆 ${formatInstitutionDateTime(h.fecha)} ${h.especialidad ? '· ' + escapeHtml(h.especialidad) : ''}</div>
                 ${h.medico ? `<div class="item-subtitle">🩺 Dr. ${escapeHtml(h.medico)}</div>` : ''}
                 ${h.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(h.lugar)}</div>` : ''}
                 <div class="item-meta"><span class="badge badge-green">✅ Realizada</span></div>
@@ -1462,7 +1462,7 @@ function renderCitas(lista) {
             <div class="item-icon badge-blue">📅</div>
             <div class="item-body">
                 <div class="item-title">${escapeHtml(c.titulo)}</div>
-                <div class="item-subtitle">📆 ${formatDateTime(c.fecha)} ${c.especialidad ? '· ' + escapeHtml(c.especialidad) : ''}</div>
+                <div class="item-subtitle">📆 ${formatInstitutionDateTime(c.fecha)} ${c.especialidad ? '· ' + escapeHtml(c.especialidad) : ''}</div>
                 ${c.medico ? `<div class="item-subtitle">🩺 Dr. ${escapeHtml(c.medico)}</div>` : ''}
                 ${c.lugar ? `<div class="item-subtitle">📍 ${escapeHtml(c.lugar)}</div>` : ''}
                 <div class="item-meta"><span class="badge ${estadoColor[c.estado] || 'badge-gray'}">${escapeHtml(c.estado || 'pendiente')}</span></div>
@@ -1600,7 +1600,7 @@ function renderHistorialTareas(lista) {
             <div style="flex:1;min-width:0">
                 <div style="font-size:.86rem;font-weight:600;color:var(--text-primary)">${escapeHtml(t.tarea_titulo || '—')}</div>
                 <div style="font-size:.78rem;color:var(--text-secondary);margin-top:2px">
-                    ${formatDateTime(t.fecha)} · por <strong>${escapeHtml(t.completador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
+                    ${formatInstitutionDateTime(t.fecha)} · por <strong>${escapeHtml(t.completador_nombre || '—')}</strong>${t.notas ? ` · <em>${escapeHtml(t.notas)}</em>` : ''}
                 </div>
             </div>
         </div>`).join('');
@@ -1680,7 +1680,7 @@ function renderSintomas(lista) {
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
                     ${s.intensidad !== null ? `<span class="badge ${safeFiniteNumber(s.intensidad) >= 7 ? 'badge-red' : safeFiniteNumber(s.intensidad) >= 4 ? 'badge-orange' : 'badge-teal'}">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
-                    <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
+                    <span class="badge badge-gray">${formatInstitutionDateTime(s.fecha)}</span>
                     <span class="badge badge-gray">Registrado por: ${escapeHtml(s.registrador_nombre || 'No disponible')}</span>
                 </div>
             </div>
@@ -1768,7 +1768,7 @@ function renderSignos(lista) {
         return `<tr>
             <td>${tipo ? uiIcon(tipo.icon) : ''} ${escapeHtml(tipo?.label || s.tipo)}</td>
             <td class="fw-bold">${escapeHtml(s.valor)} <span class="text-muted">${tipo?.unidad || ''}</span></td>
-            <td class="text-muted">${formatDateTime(s.fecha)}</td>
+            <td class="text-muted">${formatInstitutionDateTime(s.fecha)}</td>
             <td class="text-muted">${escapeHtml(s.registrador_nombre || 'No disponible')}</td>
             ${!_isReadOnly ? `<td><button class="btn btn-danger btn-icon btn-sm" onclick="deleteSigno(${safeRecordId(s.id)})">🗑</button></td>` : '<td></td>'}
         </tr>`;
@@ -1904,7 +1904,7 @@ function renderNotas(lista) {
                 ${n.contenido ? `<div class="item-subtitle mt-8">${escapeHtml(n.contenido)}</div>` : ''}
                 <div class="item-meta">
                     <span class="badge badge-gray">Registrado por: ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
-                    <span class="badge badge-gray">${formatDateTime(n.created_at)}</span>
+                    <span class="badge badge-gray">${formatInstitutionDateTime(n.created_at)}</span>
                 </div>
             </div>
             ${!_isReadOnly ? `<div class="item-actions">

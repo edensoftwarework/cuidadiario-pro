@@ -107,7 +107,7 @@ function renderCitasProximas(citas) {
             <div class="item-body">
                 <div style="font-size:.8rem;font-weight:700;color:var(--pro-primary);margin-bottom:2px">👤 ${escapeHtml(c.paciente_nombre)} ${escapeHtml(c.paciente_apellido || '')}</div>
                 <div class="item-title">${escapeHtml(c.titulo)}</div>
-                <div class="item-subtitle">${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatDateTime(c.fecha)}</div>
+                <div class="item-subtitle">${c.especialidad ? escapeHtml(c.especialidad) + ' · ' : ''}${formatInstitutionDateTime(c.fecha)}</div>
                 ${c.medico ? `<div class="item-meta"><span class="badge badge-gray">🩺 ${escapeHtml(c.medico)}</span></div>` : ''}
             </div>
             <a href="${patientContextHref(c.paciente_id, 'cita')}" class="btn btn-sm btn-secondary">Ver</a>
@@ -136,7 +136,7 @@ function renderSintomasRecientes(sintomas) {
                 <div class="item-title">${escapeHtml(s.descripcion)}</div>
                 <div class="item-meta">
                     ${s.intensidad ? `<span class="badge badge-orange">Intensidad: ${safeFiniteNumber(s.intensidad)}/10</span>` : ''}
-                    <span class="badge badge-gray">${formatDateTime(s.fecha)}</span>
+                    <span class="badge badge-gray">${formatInstitutionDateTime(s.fecha)}</span>
                     <span class="badge badge-gray">por ${escapeHtml(s.registrador_nombre || 'No disponible')}</span>
                 </div>
             </div>
@@ -167,7 +167,7 @@ function renderNotasUrgentes(notas) {
                 <div class="item-subtitle mt-8">${escapeHtml(n.contenido || '')}</div>
                 <div class="item-meta">
                     <span class="badge badge-gray">por ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
-                    <span class="badge badge-gray">${formatDateTime(n.created_at)}</span>
+                    <span class="badge badge-gray">${formatInstitutionDateTime(n.created_at)}</span>
                 </div>
             </div>
             <a href="${patientContextHref(n.paciente_id, 'nota_urgente')}" class="btn btn-sm btn-danger">Ver</a>

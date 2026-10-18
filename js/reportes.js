@@ -191,7 +191,7 @@ function renderReporte(data, checks) {
                 ${tomas.length ? `
                     <div style="margin-top:8px">
                         <div style="font-size:.8rem;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${tomas.length} toma(s) en el período:</div>
-                        <div class="tomas-list">${tomas.slice(0, 10).map(t => `<span class="toma-chip">${formatDateTime(t.fecha)} <span style="opacity:.7">— ${escapeHtml(t.administrador_nombre || 'No disponible')}</span></span>`).join('')}</div>
+                        <div class="tomas-list">${tomas.slice(0, 10).map(t => `<span class="toma-chip">${formatInstitutionDateTime(t.fecha)} <span style="opacity:.7">— ${escapeHtml(t.administrador_nombre || 'No disponible')}</span></span>`).join('')}</div>
                     </div>` : '<div style="margin-top:4px;font-size:.82rem;color:var(--text-secondary)">Sin tomas registradas en el período</div>'}
             </div>`;
         }).join('') || '<p style="color:var(--text-secondary)">Sin medicamentos en el período.</p>';
@@ -204,7 +204,7 @@ function renderReporte(data, checks) {
     if (checks.incCitas && citas.length) {
         document.getElementById('reporteCitasBody').innerHTML = `<table class="table"><thead><tr><th>Fecha</th><th>Título</th><th>Especialidad</th><th>Médico</th><th>Estado</th></tr></thead><tbody>
             ${citas.map(c => `<tr>
-                <td>${formatDateTime(c.fecha)}</td>
+                <td>${formatInstitutionDateTime(c.fecha)}</td>
                 <td>${escapeHtml(c.titulo)}</td>
                 <td>${escapeHtml(c.especialidad || '—')}</td>
                 <td>${escapeHtml(c.medico || '—')}</td>
@@ -220,7 +220,7 @@ function renderReporte(data, checks) {
     if (checks.incSintomas && sintomas.length) {
         document.getElementById('reporteSintomasBody').innerHTML = `<table class="table"><thead><tr><th>Fecha</th><th>Descripción</th><th>Intensidad</th><th>Registrado por</th></tr></thead><tbody>
             ${sintomas.map(s => `<tr>
-                <td>${formatDateTime(s.fecha)}</td>
+                <td>${formatInstitutionDateTime(s.fecha)}</td>
                 <td>${escapeHtml(s.descripcion)}</td>
                 <td>${intensidadBadge(s.intensidad)}</td>
                 <td>${escapeHtml(s.registrador_nombre || 'No disponible')}</td>
@@ -235,7 +235,7 @@ function renderReporte(data, checks) {
     if (checks.incSignos && signos.length) {
         document.getElementById('reporteSignosBody').innerHTML = `<table class="table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Valor</th><th>Unidad</th><th>Registrado por</th></tr></thead><tbody>
             ${signos.map(g => { const ts = tipoSignoBadge(g.tipo); return `<tr>
-                <td>${formatDateTime(g.fecha)}</td>
+                <td>${formatInstitutionDateTime(g.fecha)}</td>
                 <td><span class="badge ${ts.cls}">${escapeHtml(g.tipo ? g.tipo.replace(/_/g,' ') : '—')}</span></td>
                 <td><strong>${escapeHtml(String(g.valor))}</strong></td>
                 <td>${escapeHtml(g.unidad || '—')}</td>
@@ -263,7 +263,7 @@ function renderReporte(data, checks) {
                     <span class="badge badge-success">${t.completados.length} vez${t.completados.length !== 1 ? 'es' : ''} completada</span>
                 </div>
                 <div style="margin-top:6px;font-size:.82rem;color:var(--text-secondary)">
-                    Última: ${formatDateTime(t.completados[0].fecha)} — por ${escapeHtml(t.completados[0].completador_nombre || 'No disponible')}
+                    Última: ${formatInstitutionDateTime(t.completados[0].fecha)} — por ${escapeHtml(t.completados[0].completador_nombre || 'No disponible')}
                 </div>
             </div>`).join('');
         secTareas.style.display = 'block';
@@ -278,7 +278,7 @@ function renderReporte(data, checks) {
                 <div class="report-item-header">
                     ${n.urgente ? '<span class="badge badge-danger">URGENTE</span>' : ''}
                     <strong>${escapeHtml(n.titulo || 'Sin título')}</strong>
-                    <span style="color:var(--text-secondary);font-size:.8rem">${formatDateTime(n.created_at)} · ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
+                    <span style="color:var(--text-secondary);font-size:.8rem">${formatInstitutionDateTime(n.created_at)} · ${escapeHtml(n.autor_nombre || 'No disponible')}</span>
                 </div>
                 ${n.contenido ? `<div style="margin-top:6px;color:var(--text-primary)">${escapeHtml(n.contenido)}</div>` : ''}
             </div>`).join('') || '<p style="color:var(--text-secondary)">Sin notas en el período.</p>';

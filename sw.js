@@ -7,10 +7,11 @@
    - Stale-while-revalidate para páginas HTML
    ============================================================ */
 
-// UX-integral-2026-10-11: una nueva generación evita mezclar el shell anterior
-// con scripts actuales durante la primera navegación posterior a una actualización.
+// TZ-institucional-2026-10-18: una nueva generación evita mezclar renderizadores
+// temporales anteriores con la convención explícita de hora institucional durante
+// la primera navegación posterior a una actualización.
 // La activación sigue eliminando sólo caches estáticas propias antiguas.
-const CACHE_NAME = 'cuidadiario-pro-v9';
+const CACHE_NAME = 'cuidadiario-pro-v10';
 const CACHE_NAME_API = 'cuidadiario-pro-api-v6';
 
 const STATIC_ASSETS = [
