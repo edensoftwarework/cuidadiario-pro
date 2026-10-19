@@ -9,14 +9,36 @@
     <link rel="apple-touch-icon" href="icons/icon-512.png">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/styles-b2b.css">
+    <link rel="stylesheet" href="css/public-b2b.css">
 </head>
-<body>
-<div class="auth-bg">
-    <div class="auth-card">
+<body class="public-page auth-surface">
+<a class="public-skip" href="#acceso">Saltar al acceso</a>
+<header class="auth-public-header">
+    <nav class="public-shell public-nav" aria-label="Navegación de acceso">
+        <a class="public-brand" href="landing.html" aria-label="CuidaDiario PRO, inicio">
+            <span class="public-brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><path d="M5 5h14v14H5z" opacity=".45"/></svg></span>
+            <span class="public-brand-name">CuidaDiario <span class="public-brand-pro">PRO</span></span>
+        </a>
+        <div class="public-nav-actions"><a class="public-button public-button-secondary" href="landing.html">Conocer el servicio</a></div>
+    </nav>
+</header>
+
+<main class="auth-layout" id="acceso">
+    <section class="auth-story" aria-labelledby="authStoryTitle">
+        <h1 id="authStoryTitle">El turno cambia. La información continúa.</h1>
+        <p>Ingresá al espacio de tu institución para consultar y registrar el trabajo cotidiano según tu rol.</p>
+        <ul class="auth-story-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg><span>Residentes, medicación y seguimiento en un recorrido conectado.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7z"/></svg><span>Acceso limitado por institución, rol, permisos y asignaciones.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="m7 12 3 3 7-7"/></svg><span>Las operaciones institucionales requieren conexión y respuesta válida del servicio.</span></li>
+        </ul>
+    </section>
+
+    <section class="auth-panel" aria-label="Acceso institucional">
+    <div class="auth-card public-auth-card">
         <div class="auth-logo">
-            <span class="logo-emoji">🏥</span>
-            <h1>CuidaDiario <span>PRO</span></h1>
-            <p>Gestión de residentes y pacientes para instituciones de cuidado</p>
+            <h2>Ingresá a tu institución</h2>
+            <p>Usá tu cuenta institucional. Si trabajás en una estación compartida, seguí el procedimiento definido por tu administración.</p>
         </div>
 
         <div id="alertMsg"></div>
@@ -24,11 +46,11 @@
         <!-- Login Form -->
         <form id="loginForm" autocomplete="on">
             <div class="form-group">
-                <label class="form-label">Email institucional</label>
-                <input type="email" name="email" class="form-control" placeholder="admin@miinstitución.com" required autocomplete="email">
+                <label class="form-label" for="loginEmail">Email institucional</label>
+                <input type="email" id="loginEmail" name="email" class="form-control" placeholder="nombre@institución.com" required autocomplete="email">
             </div>
             <div class="form-group">
-                <label class="form-label">Contraseña</label>
+                <label class="form-label" for="loginPass">Contraseña</label>
                 <div class="input-group">
                     <input type="password" id="loginPass" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
                     <button type="button" class="input-group-btn" onclick="togglePass('loginPass',this)" title="Mostrar contraseña"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -38,8 +60,8 @@
                 Iniciar sesión
             </button>
             <div class="d-flex justify-between align-center mt-12">
-                <span class="auth-link" onclick="showForgot()">¿Olvidaste tu contraseña?</span>
-                <span class="auth-link" onclick="goRegister()">Registrar institución →</span>
+                <button type="button" class="auth-link" onclick="showForgot()">¿Olvidaste tu contraseña?</button>
+                <button type="button" class="auth-link" onclick="goRegister()">Registrar institución →</button>
             </div>
         </form>
 
@@ -47,23 +69,24 @@
         <form id="forgotForm" class="hidden" autocomplete="off">
             <div class="alert alert-info"><span class="alert-icon">ℹ️</span>Te enviaremos un link de recuperación a tu email.</div>
             <div class="form-group">
-                <label class="form-label">Email institucional</label>
-                <input type="email" name="email" class="form-control" placeholder="admin@miinstitución.com" required>
+                <label class="form-label" for="forgotEmail">Email institucional</label>
+                <input type="email" id="forgotEmail" name="email" class="form-control" placeholder="nombre@institución.com" required autocomplete="email">
             </div>
             <button type="submit" class="btn btn-primary btn-lg btn-block" id="forgotBtn">Enviar link de recuperación</button>
             <div class="text-center mt-12">
-                <span class="auth-link" onclick="showLogin()">← Volver al login</span>
+                <button type="button" class="auth-link" onclick="showLogin()">← Volver al acceso</button>
             </div>
         </form>
     </div>
-</div>
+</section>
+</main>
 
-<div style="text-align:center;padding:20px 0 8px;font-size:.78rem;color:#9CA3AF">
-    <a href="pages/privacy.html" style="color:#6B7280;text-decoration:none">Privacidad</a> &nbsp;·&nbsp;
-    <a href="pages/terms.html" style="color:#6B7280;text-decoration:none">Términos</a> &nbsp;·&nbsp;
-    <a href="mailto:edensoftwarework@gmail.com" style="color:#6B7280;text-decoration:none">Soporte</a> &nbsp;·&nbsp;
+<footer class="auth-footer">
+    <a href="pages/privacy.html">Privacidad</a> &nbsp;·&nbsp;
+    <a href="pages/terms.html">Términos</a> &nbsp;·&nbsp;
+    <a href="mailto:edensoftwarework@gmail.com">Soporte</a> &nbsp;·&nbsp;
     © 2026 EDEN SoftWork
-</div>
+</footer>
 
 <script src="js/api-b2b.js"></script>
 <script src="js/maintenance-b2b-v2.js?v=20261003-neutral-pending"></script>
